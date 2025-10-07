@@ -1,0 +1,78 @@
+=================================================================
+COMMITLY SETUP - STEP BY STEP INSTRUCTIONS
+=================================================================
+
+You've created your Supabase account! Here's what to do next:
+
+STEP 1: Create a New Project
+-----------------------------
+1. Go to https://supabase.com/dashboard
+2. Click "New Project"
+3. Fill in:
+   - Project Name: commitly (or any name you like)
+   - Database Password: (create a strong password - save it!)
+   - Region: Choose closest to you
+4. Click "Create new project"
+5. Wait 2-3 minutes for project to be ready
+
+STEP 2: Get Your API Keys
+--------------------------
+Once your project is ready:
+
+1. In your Supabase dashboard, click on your project
+2. Go to "Settings" (gear icon in sidebar)
+3. Click "API" in the settings menu
+4. You'll see:
+   - Project URL (looks like: https://xxxxx.supabase.co)
+   - anon public key (starts with: eyJhbG...)
+   - service_role key (starts with: eyJhbG...)
+
+STEP 3: Configure Your Environment
+-----------------------------------
+1. Open the file: /home/code/commitly/.env.local
+2. Replace the placeholder values with your actual keys:
+
+   NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...your_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=eyJhbG...your_service_role_key
+
+STEP 4: Initialize the Database
+--------------------------------
+Run this command in the terminal:
+
+   cd /home/code/commitly
+   node setup.js
+
+This will create all 11 tables, security policies, functions, and triggers.
+
+STEP 5: Configure Authentication
+---------------------------------
+1. In Supabase Dashboard, go to "Authentication" > "URL Configuration"
+2. Add these URLs:
+   - Site URL: http://localhost:3001
+   - Redirect URLs: http://localhost:3001/auth/callback
+
+STEP 6: Restart the Server
+---------------------------
+The server should automatically reload, but if not:
+
+   cd /home/code/commitly
+   bun run dev
+
+STEP 7: Test Your App!
+-----------------------
+1. Go to https://commitly-2.lindy.site
+2. The setup warning should be gone
+3. Click "Sign Up" to create your first account
+4. Check your email for verification
+5. Complete the KYC form
+6. Start creating goals!
+
+=================================================================
+NEED HELP?
+=================================================================
+- Check SETUP_GUIDE.md for detailed instructions
+- Check README.md for feature documentation
+- Check QUICK_REFERENCE.md for common tasks
+
+=================================================================
