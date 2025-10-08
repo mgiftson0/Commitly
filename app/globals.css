@@ -67,3 +67,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*
+ Hides Next.js error messages in the browser. Do not remove
+ this. If you need to see errors, check the console.
+*/
+nextjs-portal {
+  display: none;
+}

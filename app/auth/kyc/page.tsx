@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +20,32 @@ export default function KYCPage() {
   const router = useRouter()
   const supabase = getSupabaseClient()
 
+  useEffect(() => {
+    // Check if user is authenticated
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error("Please sign up first")
+        router.push("/auth/signup")
+        return
+      }
+
+      // Check if user profile already exists
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("id", user.id)
+        .single()
+
+      if (existingUser) {
+        toast.info("Profile already exists")
+        router.push("/dashboard")
+      }
+    }
+
+    checkAuth()
+  }, [router, supabase])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -28,24 +54,31 @@ export default function KYCPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Not authenticated")
 
-      const { error } = await supabase.from("users").insert({
+      // Insert user record
+      const { error: insertError } = await supabase.from("users").insert({
         id: user.id,
-        username,
+        username: username.toLowerCase(),
         display_name: displayName,
         phone_number: phoneNumber,
         email: user.email!,
         bio: bio || null,
       })
 
-      if (error) throw error
+      if (insertError) {
+        console.error("Insert error:", insertError)
+        throw insertError
+      }
 
       toast.success("Profile created successfully!")
       router.push("/dashboard")
     } catch (error: any) {
+      console.error("KYC error:", error)
       if (error.code === "23505") {
         toast.error("Username or phone number already taken")
+      } else if (error.message) {
+        toast.error(`Database error: ${error.message}`)
       } else {
-        toast.error(error.message || "Failed to create profile")
+        toast.error("Failed to create profile. Please try again.")
       }
     } finally {
       setLoading(false)
@@ -73,8 +106,9 @@ export default function KYCPage() {
                 onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                 required
                 pattern="[a-z0-9_]+"
+                minLength={3}
               />
-              <p className="text-xs text-slate-500">Lowercase letters, numbers, and underscores only</p>
+              <p className="text-xs text-slate-500">Lowercase letters, numbers, and underscores only (min 3 characters)</p>
             </div>
 
             <div className="space-y-2">
@@ -85,6 +119,7 @@ export default function KYCPage() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 required
+                minLength={2}
               />
             </div>
 
@@ -97,7 +132,9 @@ export default function KYCPage() {
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 required
+                pattern="[\+]?[0-9]{10,15}"
               />
+              <p className="text-xs text-slate-500">Include country code (e.g., +1234567890)</p>
             </div>
 
             <div className="space-y-2">
@@ -108,6 +145,7 @@ export default function KYCPage() {
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={3}
+                maxLength={500}
               />
             </div>
 
