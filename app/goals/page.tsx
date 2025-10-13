@@ -374,13 +374,17 @@ function GoalsGrid({ goals }: { goals: typeof mockGoals }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
-                    <Eye className="mr-2 h-4 w-4" />
-                    View Details
+                  <DropdownMenuItem asChild>
+                    <Link href={`/goals/${goal.id}`}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Details
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit Goal
+                  <DropdownMenuItem asChild>
+                    <Link href={`/goals/${goal.id}/edit`}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Goal
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />

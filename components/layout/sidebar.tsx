@@ -106,7 +106,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div className={cn(
       "flex h-full flex-col border-r bg-card transition-all duration-300",
-      collapsed ? "w-16" : "w-80",
+      collapsed ? "w-16" : "w-64 md:w-80",
       className
     )}>
       {/* Header */}

@@ -163,9 +163,11 @@ export function Header({ onMenuClick }: HeaderProps) {
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="hover-lift">
-            <Bell className="h-5 w-5" />
-          </Button>
+          <Link href="/notifications">
+            <Button variant="ghost" size="icon" className="hover-lift">
+              <Bell className="h-5 w-5" />
+            </Button>
+          </Link>
 
           {/* Theme toggle */}
           <ThemeToggle />
