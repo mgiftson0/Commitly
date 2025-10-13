@@ -36,6 +36,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getSupabaseClient } from "@/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -43,7 +44,7 @@ export default function CreateGoalPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [goalNature, setGoalNature] = useState<"single" | "group">("single")
-  const [goalType, setGoalType] = useState<"single-activity" | "multi-activity" | "recurring">("single-activity")
+  const [goalType, setGoalType] = useState<"single-activity" | "multi-activity" | "recurring" | "group">("single-activity")
   const [visibility, setVisibility] = useState<"public" | "private" | "restricted">("private")
   const [activities, setActivities] = useState<string[]>([""])
   const [recurrencePattern, setRecurrencePattern] = useState("daily")
@@ -84,6 +85,16 @@ export default function CreateGoalPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (isMockAuthEnabled()) {
+      setLoading(true)
+      await mockDelay(1000)
+      toast.success("Goal created successfully! (Mock Mode)")
+      router.push("/dashboard")
+      setLoading(false)
+      return
+    }
+    
     if (!supabase) {
       toast.error("Authentication service is not available")
       return
@@ -254,6 +265,33 @@ export default function CreateGoalPage() {
                       rows={3}
                       className="focus-ring"
                     />
+                  </div>
+
+                  {/* Category Selection */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Category</Label>
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger className="focus-ring">
+                        <SelectValue placeholder="Select a category for your goal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="health-fitness">Health & Fitness</SelectItem>
+                        <SelectItem value="career">Career & Business</SelectItem>
+                        <SelectItem value="learning">Learning & Education</SelectItem>
+                        <SelectItem value="personal">Personal Growth</SelectItem>
+                        <SelectItem value="relationships">Relationships</SelectItem>
+                        <SelectItem value="finance">Finance</SelectItem>
+                        <SelectItem value="travel">Travel</SelectItem>
+                        <SelectItem value="creative">Creative Arts</SelectItem>
+                        <SelectItem value="technology">Technology</SelectItem>
+                        <SelectItem value="sports">Sports</SelectItem>
+                        <SelectItem value="music">Music</SelectItem>
+                        <SelectItem value="reading">Reading</SelectItem>
+                        <SelectItem value="wellness">Wellness</SelectItem>
+                        <SelectItem value="productivity">Productivity</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Goal Type Selection */}
@@ -699,12 +737,21 @@ export default function CreateGoalPage() {
                       {goalType ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
                       Goal Type
                     </div>
+                    <div className={`flex items-center gap-2 text-sm ${category ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      {category ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
+                      Category
+                    </div>
                     <div className={`flex items-center gap-2 text-sm ${visibility ? 'text-green-600' : 'text-muted-foreground'}`}>
                       {visibility ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
                       Visibility
                     </div>
                   </div>
-                  <Progress value={title && goalType && visibility ? 100 : (title ? 33 : goalType ? 66 : 0)} className="h-2" />
+                  <Progress value={
+                    title && goalType && category && visibility ? 100 :
+                    (title && goalType && category ? 75 :
+                    (title && goalType ? 50 :
+                    (title ? 25 : 0)))
+                  } className="h-2" />
                 </div>
               </CardContent>
             </Card>

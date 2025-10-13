@@ -40,6 +40,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getSupabaseClient, type User, type Goal } from "@/lib/supabase"
+import { isMockAuthEnabled, getMockUser } from "@/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -58,6 +59,12 @@ export default function ProfilePage() {
   }, [])
 
   const loadProfile = async () => {
+    if (isMockAuthEnabled()) {
+      setUser(getMockUser() as unknown as User)
+      setLoading(false)
+      return
+    }
+    
     if (!supabase) return
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()

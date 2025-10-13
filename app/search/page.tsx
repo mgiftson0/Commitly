@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Target, ArrowLeft, Search, UserPlus } from "lucide-react"
 import Link from "next/link"
 import { getSupabaseClient, type User } from "@/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
 import { toast } from "sonner"
 
 export default function SearchPage() {
@@ -18,7 +19,18 @@ export default function SearchPage() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!searchQuery.trim() || !supabase) return
+    if (!searchQuery.trim()) return
+
+    if (isMockAuthEnabled()) {
+      setLoading(true)
+      await mockDelay(500)
+      toast.info("Search disabled in mock mode")
+      setSearchResults([])
+      setLoading(false)
+      return
+    }
+    
+    if (!supabase) return
 
     setLoading(true)
     try {
@@ -38,6 +50,12 @@ export default function SearchPage() {
   }
 
   const sendAccountabilityRequest = async (partnerId: string) => {
+    if (isMockAuthEnabled()) {
+      await mockDelay(500)
+      toast.info("Feature disabled in mock mode")
+      return
+    }
+    
     if (!supabase) return
     try {
       const { data: { user } } = await supabase.auth.getUser()

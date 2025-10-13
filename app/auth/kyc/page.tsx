@@ -31,6 +31,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { getSupabaseClient } from "@/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -46,6 +47,11 @@ export default function KYCPage() {
   useEffect(() => {
     // Check if user is authenticated
     const checkAuth = async () => {
+      if (isMockAuthEnabled()) {
+        // In mock mode, allow KYC to proceed
+        return
+      }
+      
       if (!supabase) return
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -72,6 +78,16 @@ export default function KYCPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (isMockAuthEnabled()) {
+      setLoading(true)
+      await mockDelay(1000)
+      toast.success("Profile created successfully! (Mock Mode)")
+      router.push("/dashboard")
+      setLoading(false)
+      return
+    }
+    
     if (!supabase) {
       toast.error("Authentication service is not available")
       return

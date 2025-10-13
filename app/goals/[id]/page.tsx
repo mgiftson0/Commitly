@@ -11,6 +11,7 @@ import { Target, ArrowLeft, CheckCircle2, Flame, Clock, Edit, Trash2, Pause, Pla
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { getSupabaseClient, type Goal, type Activity, type Streak } from "@/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
 import { toast } from "sonner"
 
 export default function GoalDetailPage() {
@@ -30,6 +31,13 @@ export default function GoalDetailPage() {
   }, [goalId])
 
   const loadGoalData = async () => {
+    if (isMockAuthEnabled()) {
+      setLoading(false)
+      toast.info("Viewing goals disabled in mock mode")
+      router.push("/dashboard")
+      return
+    }
+    
     if (!supabase) return
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -79,6 +87,10 @@ export default function GoalDetailPage() {
   }
 
   const toggleActivity = async (activityId: string, isCompleted: boolean) => {
+    if (isMockAuthEnabled()) {
+      toast.info("Feature disabled in mock mode")
+      return
+    }
     if (!supabase) return
     try {
       const { error } = await supabase
@@ -100,6 +112,10 @@ export default function GoalDetailPage() {
   }
 
   const completeGoal = async () => {
+    if (isMockAuthEnabled()) {
+      toast.info("Feature disabled in mock mode")
+      return
+    }
     if (!supabase) return
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -128,6 +144,10 @@ export default function GoalDetailPage() {
   }
 
   const toggleSuspend = async () => {
+    if (isMockAuthEnabled()) {
+      toast.info("Feature disabled in mock mode")
+      return
+    }
     if (!supabase) return
     try {
       const { error } = await supabase
@@ -145,6 +165,10 @@ export default function GoalDetailPage() {
   }
 
   const deleteGoal = async () => {
+    if (isMockAuthEnabled()) {
+      toast.info("Feature disabled in mock mode")
+      return
+    }
     if (!supabase) return
     if (!confirm("Are you sure you want to delete this goal?")) return
 
@@ -164,6 +188,10 @@ export default function GoalDetailPage() {
   }
 
   const addNote = async () => {
+    if (isMockAuthEnabled()) {
+      toast.info("Feature disabled in mock mode")
+      return
+    }
     if (!supabase) return
     if (!note.trim()) return
 

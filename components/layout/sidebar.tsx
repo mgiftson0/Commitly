@@ -33,6 +33,7 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [activeGoalsFilter, setActiveGoalsFilter] = useState("all")
   const pathname = usePathname()
 
   const navigation = [
@@ -79,29 +80,74 @@ export function Sidebar({ className }: SidebarProps) {
     }
   ]
 
-  const activeGoals = [
+  // Mock data with categories for filtering
+  const allGoals = [
     {
       id: 1,
       title: "Morning Workout",
       progress: 75,
       type: "recurring",
-      streak: 12
+      streak: 12,
+      category: "Health & Fitness"
     },
     {
       id: 2,
       title: "Read 30 minutes",
       progress: 45,
       type: "single",
-      streak: 5
+      streak: 5,
+      category: "Learning"
     },
     {
       id: 3,
       title: "Learn Spanish",
       progress: 30,
       type: "multi",
-      streak: 8
+      streak: 8,
+      category: "Learning"
+    },
+    {
+      id: 4,
+      title: "Meditation Practice",
+      progress: 60,
+      type: "recurring",
+      streak: 15,
+      category: "Wellness"
+    },
+    {
+      id: 5,
+      title: "Project Planning",
+      progress: 20,
+      type: "single",
+      streak: 3,
+      category: "Career"
     }
   ]
+
+  const filteredGoals = activeGoalsFilter === "all"
+    ? allGoals
+    : allGoals.filter(goal => {
+        switch (activeGoalsFilter) {
+          case "health":
+            return goal.category === "Health & Fitness"
+          case "learning":
+            return goal.category === "Learning"
+          case "career":
+            return goal.category === "Career"
+          case "wellness":
+            return goal.category === "Wellness"
+          case "recurring":
+            return goal.type === "recurring"
+          case "single":
+            return goal.type === "single"
+          case "multi":
+            return goal.type === "multi"
+          default:
+            return true
+        }
+      })
+
+  const activeGoals = filteredGoals.slice(0, 3) // Show top 3 filtered goals
 
   return (
     <div className={cn(

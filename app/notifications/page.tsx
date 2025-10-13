@@ -28,6 +28,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getSupabaseClient, type Notification } from "@/lib/supabase"
+import { isMockAuthEnabled } from "@/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -43,6 +44,12 @@ export default function NotificationsPage() {
   }, [])
 
   const loadNotifications = async () => {
+    if (isMockAuthEnabled()) {
+      // Use mock data (already defined in component)
+      setLoading(false)
+      return
+    }
+    
     if (!supabase) return
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -67,6 +74,10 @@ export default function NotificationsPage() {
   }
 
   const markAsRead = async (notificationId: string) => {
+    if (isMockAuthEnabled()) {
+      toast.info("Feature disabled in mock mode")
+      return
+    }
     if (!supabase) return
     try {
       const { error } = await supabase
@@ -82,6 +93,10 @@ export default function NotificationsPage() {
   }
 
   const markAllAsRead = async () => {
+    if (isMockAuthEnabled()) {
+      toast.info("Feature disabled in mock mode")
+      return
+    }
     if (!supabase) return
     try {
       const { data: { user } } = await supabase.auth.getUser()
