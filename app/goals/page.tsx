@@ -38,6 +38,8 @@ import {
   Eye
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
 // Mock data for goals
@@ -142,16 +144,21 @@ export default function GoalsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [filterCategory, setFilterCategory] = useState("all")
   const [sortBy, setSortBy] = useState("recent")
+  const router = useRouter()
 
   const filteredGoals = mockGoals.filter(goal => {
     const matchesSearch = goal.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          goal.description.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = filterType === "all" || goal.type === filterType
     const matchesStatus = filterStatus === "all" || goal.status === filterStatus
+    const matchesCategory = filterCategory === "all" || goal.category === filterCategory
 
-    return matchesSearch && matchesType && matchesStatus
+    return matchesSearch && matchesType && matchesStatus && matchesCategory
   })
+
+  const categories = Array.from(new Set(mockGoals.map(g => g.category)))
 
   const sortedGoals = [...filteredGoals].sort((a, b) => {
     switch (sortBy) {
@@ -269,7 +276,7 @@ export default function GoalsPage() {
               </div>
 
               {/* Filters */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Select value={filterType} onValueChange={setFilterType}>
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="Type" />
@@ -291,6 +298,19 @@ export default function GoalsPage() {
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="paused">Paused</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                  <SelectTrigger className="w-40">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 
@@ -320,19 +340,19 @@ export default function GoalsPage() {
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
-            <GoalsGrid goals={sortedGoals} />
+            <GoalsGrid goals={sortedGoals} router={router} />
           </TabsContent>
 
           <TabsContent value="active" className="space-y-4">
-            <GoalsGrid goals={sortedGoals.filter(g => g.status === "active")} />
+            <GoalsGrid goals={sortedGoals.filter(g => g.status === "active")} router={router} />
           </TabsContent>
 
           <TabsContent value="completed" className="space-y-4">
-            <GoalsGrid goals={sortedGoals.filter(g => g.status === "completed")} />
+            <GoalsGrid goals={sortedGoals.filter(g => g.status === "completed")} router={router} />
           </TabsContent>
 
           <TabsContent value="paused" className="space-y-4">
-            <GoalsGrid goals={sortedGoals.filter(g => g.status === "paused")} />
+            <GoalsGrid goals={sortedGoals.filter(g => g.status === "paused")} router={router} />
           </TabsContent>
         </Tabs>
       </div>
@@ -340,7 +360,22 @@ export default function GoalsPage() {
   )
 }
 
-function GoalsGrid({ goals }: { goals: typeof mockGoals }) {
+function GoalsGrid({ goals, router }: { goals: typeof mockGoals; router: ReturnType<typeof useRouter> }) {
+  const handleDelete = (goalId: number, goalTitle: string) => {
+    if (confirm(`Are you sure you want to delete "${goalTitle}"?`)) {
+      toast.success(`Goal "${goalTitle}" deleted successfully`)
+      // In real implementation, call API to delete
+    }
+  }
+
+  const handleViewDetails = (goalId: number) => {
+    router.push(`/goals/${goalId}`)
+  }
+
+  const handleEdit = (goalId: number) => {
+    router.push(`/goals/${goalId}/edit`)
+  }
+
   if (goals.length === 0) {
     return (
       <Card>
@@ -374,19 +409,18 @@ function GoalsGrid({ goals }: { goals: typeof mockGoals }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href={`/goals/${goal.id}`}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View Details
-                    </Link>
+                  <DropdownMenuItem onClick={() => handleViewDetails(goal.id)}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Details
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={`/goals/${goal.id}/edit`}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit Goal
-                    </Link>
+                  <DropdownMenuItem onClick={() => handleEdit(goal.id)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Goal
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem 
+                    className="text-destructive" 
+                    onClick={() => handleDelete(goal.id, goal.title)}
+                  >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete Goal
                   </DropdownMenuItem>

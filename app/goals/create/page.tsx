@@ -43,8 +43,8 @@ import { MainLayout } from "@/components/layout/main-layout"
 export default function CreateGoalPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [goalNature, setGoalNature] = useState<"single" | "group">("single")
-  const [goalType, setGoalType] = useState<"single-activity" | "multi-activity" | "recurring" | "group">("single-activity")
+  const [goalNature, setGoalNature] = useState<"personal" | "group">("personal")
+  const [goalType, setGoalType] = useState<"single-activity" | "multi-activity" | "recurring">("single-activity")
   const [visibility, setVisibility] = useState<"public" | "private" | "restricted">("private")
   const [activities, setActivities] = useState<string[]>([""])
   const [recurrencePattern, setRecurrencePattern] = useState("daily")
@@ -52,9 +52,17 @@ export default function CreateGoalPage() {
   const [defaultTimeAllocation, setDefaultTimeAllocation] = useState("")
   const [loading, setLoading] = useState(false)
   const [selectedPartners, setSelectedPartners] = useState<string[]>([])
-  const [groupGoal, setGroupGoal] = useState(false)
   const [groupMembers, setGroupMembers] = useState<string[]>([])
   const [activityAssignments, setActivityAssignments] = useState<{[key: number]: string[]}>({})
+  
+  // Mock partners data
+  const availablePartners = [
+    { id: "1", name: "Sarah Martinez", username: "sarah_m" },
+    { id: "2", name: "Mike Chen", username: "mike_c" },
+    { id: "3", name: "Emily Rodriguez", username: "emily_r" },
+    { id: "4", name: "John Doe", username: "john_d" },
+    { id: "5", name: "Jane Smith", username: "jane_s" },
+  ]
   const [category, setCategory] = useState("")
   const router = useRouter()
   const supabase = getSupabaseClient()
@@ -267,6 +275,123 @@ export default function CreateGoalPage() {
                     />
                   </div>
 
+                  {/* Goal Nature - Personal or Group */}
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium">Goal Nature</Label>
+                    <RadioGroup value={goalNature} onValueChange={(value: string) => setGoalNature(value as 'personal' | 'group')}>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${
+                          goalNature === 'personal' ? 'border-primary bg-primary/5' : 'border-border'
+                        }`}>
+                          <RadioGroupItem value="personal" id="personal" />
+                          <div className="flex-1">
+                            <Label htmlFor="personal" className="font-medium cursor-pointer">
+                              Personal Goal
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              Just for you
+                            </p>
+                          </div>
+                          <Target className="h-5 w-5 text-muted-foreground" />
+                        </div>
+
+                        <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${
+                          goalNature === 'group' ? 'border-primary bg-primary/5' : 'border-border'
+                        }`}>
+                          <RadioGroupItem value="group" id="group" />
+                          <div className="flex-1">
+                            <Label htmlFor="group" className="font-medium cursor-pointer">
+                              Group Goal
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              Up to 5 people
+                            </p>
+                          </div>
+                          <Users className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Group Members Selection (only for group goals) */}
+                  {goalNature === 'group' && (
+                    <div className="space-y-4 p-4 rounded-lg bg-muted/30 border-2 border-primary/20">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium">Group Members</Label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Select 1-5 members for your group goal
+                          </p>
+                        </div>
+                        <Badge variant="outline">
+                          {groupMembers.length}/5
+                        </Badge>
+                      </div>
+
+                      <Select
+                        value=""
+                        onValueChange={(value) => {
+                          if (!groupMembers.includes(value) && groupMembers.length < 5) {
+                            setGroupMembers([...groupMembers, value])
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="focus-ring">
+                          <SelectValue placeholder="Add a member..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availablePartners
+                            .filter(p => !groupMembers.includes(p.id))
+                            .map(partner => (
+                              <SelectItem key={partner.id} value={partner.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-medium">{partner.name}</div>
+                                    <div className="text-xs text-muted-foreground">@{partner.username}</div>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
+
+                      {groupMembers.length > 0 && (
+                        <div className="space-y-2">
+                          {groupMembers.map(memberId => {
+                            const member = availablePartners.find(p => p.id === memberId)
+                            if (!member) return null
+                            return (
+                              <div key={memberId} className="flex items-center justify-between p-2 rounded-md bg-background border">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span className="text-sm font-medium">{member.name.charAt(0)}</span>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-medium">{member.name}</div>
+                                    <div className="text-xs text-muted-foreground">@{member.username}</div>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setGroupMembers(groupMembers.filter(id => id !== memberId))}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Category Selection */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">Category</Label>
@@ -380,8 +505,8 @@ export default function CreateGoalPage() {
                               )}
                             </div>
 
-                            {/* Member Assignment for Multi-Activity */}
-                            {selectedPartners.length > 0 && (
+                            {/* Member Assignment for Multi-Activity (only for group goals) */}
+                            {goalNature === 'group' && groupMembers.length > 0 && (
                               <div className="ml-2 p-2 rounded-md bg-background/50 border">
                                 <Label className="text-xs font-medium text-muted-foreground mb-2 block">
                                   Assign to Members:
@@ -400,46 +525,42 @@ export default function CreateGoalPage() {
                                           [index]: current.filter(id => id !== "all")
                                         })
                                       } else {
-                                        setActivityAssignments({
-                                          ...activityAssignments,
-                                          [index]: ["all", ...selectedPartners]
-                                        })
+                                      setActivityAssignments({
+                                        ...activityAssignments,
+                                        [index]: ["all", ...groupMembers]
+                                      })
                                       }
                                     }}
                                   >
                                     All Members
                                   </Button>
-                                  {selectedPartners.map((partnerId) => {
-                                    const partner = [
-                                      { id: "1", name: "Sarah Martinez" },
-                                      { id: "2", name: "Mike Chen" },
-                                      { id: "3", name: "Emily Rodriguez" }
-                                    ].find(p => p.id === partnerId)
-                                    const isAssigned = activityAssignments[index]?.includes(partnerId)
+                                  {groupMembers.map((memberId) => {
+                                    const member = availablePartners.find(p => p.id === memberId)
+                                    const isAssigned = activityAssignments[index]?.includes(memberId)
 
                                     return (
                                       <Button
-                                        key={partnerId}
+                                        key={memberId}
                                         type="button"
                                         variant={isAssigned ? "default" : "outline"}
                                         size="sm"
                                         className="text-xs h-6"
                                         onClick={() => {
                                           const current = activityAssignments[index] || []
-                                          if (current.includes(partnerId)) {
+                                          if (current.includes(memberId)) {
                                             setActivityAssignments({
                                               ...activityAssignments,
-                                              [index]: current.filter(id => id !== partnerId)
+                                              [index]: current.filter(id => id !== memberId)
                                             })
                                           } else {
                                             setActivityAssignments({
                                               ...activityAssignments,
-                                              [index]: [...current.filter(id => id !== "all"), partnerId]
+                                              [index]: [...current.filter(id => id !== "all"), memberId]
                                             })
                                           }
                                         }}
                                       >
-                                        {partner?.name.split(" ")[0]}
+                                        {member?.name.split(" ")[0]}
                                       </Button>
                                     )
                                   })}
@@ -507,74 +628,77 @@ export default function CreateGoalPage() {
                     />
                   </div>
 
-                  {/* Accountability Partners */}
-                  <div className="space-y-4 p-4 rounded-lg bg-muted/30">
-                    <Label className="text-sm font-medium">Accountability Partners</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Select friends who will help keep you accountable for this goal
-                    </p>
-
-                    {/* Mock Partners List */}
-                    <div className="space-y-3">
-                      {[
-                        { id: "1", name: "Sarah Martinez", username: "sarah_m", avatar: "/placeholder-avatar.jpg" },
-                        { id: "2", name: "Mike Chen", username: "mike_c", avatar: "/placeholder-avatar.jpg" },
-                        { id: "3", name: "Emily Rodriguez", username: "emily_r", avatar: "/placeholder-avatar.jpg" }
-                      ].map((partner) => (
-                        <div key={partner.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50">
-                          <Checkbox
-                            checked={selectedPartners.includes(partner.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedPartners([...selectedPartners, partner.id])
-                              } else {
-                                setSelectedPartners(selectedPartners.filter(id => id !== partner.id))
-                              }
-                            }}
-                          />
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                              <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium">{partner.name}</div>
-                              <div className="text-xs text-muted-foreground">@{partner.username}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {selectedPartners.length > 0 && (
-                      <div className="pt-2 border-t">
-                        <p className="text-xs text-muted-foreground mb-2">
-                          Selected partners ({selectedPartners.length}):
+                  {/* Accountability Partners (only for personal goals) */}
+                  {goalNature === 'personal' && (
+                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                      <div>
+                        <Label className="text-sm font-medium">Accountability Partners</Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Optional: Select friends who will help keep you accountable
                         </p>
-                        <div className="flex flex-wrap gap-1">
-                          {selectedPartners.map((partnerId) => {
-                            const partner = [
-                              { id: "1", name: "Sarah Martinez" },
-                              { id: "2", name: "Mike Chen" },
-                              { id: "3", name: "Emily Rodriguez" }
-                            ].find(p => p.id === partnerId)
+                      </div>
+
+                      {/* Partners Dropdown */}
+                      <Select
+                        value=""
+                        onValueChange={(value) => {
+                          if (!selectedPartners.includes(value)) {
+                            setSelectedPartners([...selectedPartners, value])
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="focus-ring">
+                          <SelectValue placeholder="Add an accountability partner..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availablePartners
+                            .filter(p => !selectedPartners.includes(p.id))
+                            .map(partner => (
+                              <SelectItem key={partner.id} value={partner.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-medium">{partner.name}</div>
+                                    <div className="text-xs text-muted-foreground">@{partner.username}</div>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
+
+                      {selectedPartners.length > 0 && (
+                        <div className="space-y-2">
+                          {selectedPartners.map(partnerId => {
+                            const partner = availablePartners.find(p => p.id === partnerId)
+                            if (!partner) return null
                             return (
-                              <Badge key={partnerId} variant="secondary" className="text-xs">
-                                {partner?.name}
+                              <div key={partnerId} className="flex items-center justify-between p-2 rounded-md bg-background border">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
+                                  </div>
+                                  <div className="text-sm font-medium">{partner.name}</div>
+                                </div>
                                 <Button
+                                  type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="h-3 w-3 ml-1 hover:bg-destructive hover:text-destructive-foreground"
+                                  className="h-6 w-6"
                                   onClick={() => setSelectedPartners(selectedPartners.filter(id => id !== partnerId))}
                                 >
-                                  <X className="h-2 w-2" />
+                                  <X className="h-3 w-3" />
                                 </Button>
-                              </Badge>
+                              </div>
                             )
                           })}
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Visibility */}
                   <div className="space-y-3">

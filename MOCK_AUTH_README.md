@@ -60,9 +60,17 @@ or simply comment out the line:
 
 ### Modified Files
 - `.env.local` - Added `NEXT_PUBLIC_USE_MOCK_AUTH=true`
-- `app/auth/login/page.tsx` - Added mock auth bypass
-- `app/auth/signup/page.tsx` - Added mock auth bypass
-- `app/dashboard/page.tsx` - Added mock auth bypass
+- `lib/mock-auth.ts` - Mock authentication utilities
+- `app/auth/login/page.tsx` - Mock auth for login
+- `app/auth/signup/page.tsx` - Mock auth for signup
+- `app/auth/kyc/page.tsx` - Mock auth for profile creation
+- `app/auth/reset-password/page.tsx` - Mock auth for password reset
+- `app/dashboard/page.tsx` - Mock auth for dashboard
+- `app/profile/page.tsx` - Mock auth for profile viewing
+- `app/goals/create/page.tsx` - Mock auth for goal creation
+- `app/goals/[id]/page.tsx` - Mock auth for goal details
+- `app/search/page.tsx` - Mock auth for user search
+- `app/notifications/page.tsx` - Mock auth for notifications
 
 ## Mock User Data
 
