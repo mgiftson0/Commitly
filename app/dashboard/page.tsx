@@ -9,10 +9,11 @@ import { Target, Plus, Bell, User, Search, Flame, CheckCircle2, Clock } from "lu
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getSupabaseClient, type Goal, type Streak } from "@/lib/supabase"
+import { isMockAuthEnabled, getMockUser } from "@/lib/mock-auth"
 import { toast } from "sonner"
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null)
+  const [, setUser] = useState<unknown>(null)
   const [goals, setGoals] = useState<Goal[]>([])
   const [streaks, setStreaks] = useState<Streak[]>([])
   const [loading, setLoading] = useState(true)
@@ -21,9 +22,22 @@ export default function DashboardPage() {
 
   useEffect(() => {
     checkUser()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const checkUser = async () => {
+    // Check if mock auth is enabled
+    if (isMockAuthEnabled()) {
+      setUser(getMockUser())
+      setLoading(false)
+      // Don't try to load real data in mock mode
+      return
+    }
+    
+    if (!supabase) {
+      router.push("/auth/login")
+      return
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser()
       
@@ -43,6 +57,7 @@ export default function DashboardPage() {
   }
 
   const loadDashboardData = async (userId: string) => {
+    if (!supabase) return
     try {
       // Load goals
       const { data: goalsData, error: goalsError } = await supabase
@@ -62,12 +77,18 @@ export default function DashboardPage() {
 
       if (streaksError) throw streaksError
       setStreaks(streaksData || [])
-    } catch (error: any) {
+    } catch (_error: unknown) {
       toast.error("Failed to load dashboard data")
     }
   }
 
   const handleLogout = async () => {
+    if (isMockAuthEnabled()) {
+      router.push("/")
+      return
+    }
+    
+    if (!supabase) return
     await supabase.auth.signOut()
     router.push("/")
   }

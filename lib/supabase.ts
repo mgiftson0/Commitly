@@ -1,14 +1,30 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+// Get environment variables - these will be undefined on server during static generation
+const getSupabaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    return process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  }
+  return process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+}
+
+const getSupabaseAnonKey = () => {
+  if (typeof window !== 'undefined') {
+    return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  }
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+}
 
 // Lazy initialization of Supabase client
 let supabaseInstance: SupabaseClient | null = null
 
 export const getSupabase = () => {
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseAnonKey = getSupabaseAnonKey()
+  
   if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase URL or Anon Key not configured')
     return null
   }
   
@@ -23,14 +39,31 @@ export const getSupabase = () => {
 export const supabase = null
 
 export function getSupabaseClient() {
-  if (!supabaseUrl || !supabaseAnonKey) {
+  // Only run on client side
+  if (typeof window === 'undefined') {
     return null
   }
-  return createClientComponentClient()
+  
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseAnonKey = getSupabaseAnonKey()
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase URL or Anon Key not configured')
+    return null
+  }
+  
+  try {
+    return createClientComponentClient()
+  } catch (error) {
+    console.error('Error creating Supabase client:', error)
+    return null
+  }
 }
 
 // Helper to check if Supabase is configured
 export function isSupabaseConfigured() {
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseAnonKey = getSupabaseAnonKey()
   return !!(supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http'))
 }
 

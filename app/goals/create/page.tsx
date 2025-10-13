@@ -54,6 +54,10 @@ export default function CreateGoalPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!supabase) {
+      toast.error("Authentication service is not available")
+      return
+    }
     setLoading(true)
 
     try {
@@ -112,8 +116,9 @@ export default function CreateGoalPage() {
 
       toast.success("Goal created successfully!")
       router.push(`/goals/${goal.id}`)
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create goal")
+    } catch (error: unknown) {
+      const err = error as { message?: string }
+      toast.error(err.message || "Failed to create goal")
     } finally {
       setLoading(false)
     }
@@ -172,7 +177,7 @@ export default function CreateGoalPage() {
               {/* Goal Type */}
               <div className="space-y-2">
                 <Label>Goal Type *</Label>
-                <RadioGroup value={goalType} onValueChange={(value: any) => setGoalType(value)}>
+                <RadioGroup value={goalType} onValueChange={(value: string) => setGoalType(value as 'single' | 'multi' | 'recurring')}>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="single" id="single" />
                     <Label htmlFor="single" className="font-normal cursor-pointer">
@@ -281,7 +286,7 @@ export default function CreateGoalPage() {
               {/* Visibility */}
               <div className="space-y-2">
                 <Label htmlFor="visibility">Visibility</Label>
-                <Select value={visibility} onValueChange={(value: any) => setVisibility(value)}>
+                <Select value={visibility} onValueChange={(value: string) => setVisibility(value as 'private' | 'restricted' | 'public')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

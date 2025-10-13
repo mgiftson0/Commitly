@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Target, ArrowLeft, Users, Trophy, Calendar } from "lucide-react"
+import { Target, ArrowLeft, Trophy, Calendar } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getSupabaseClient, type User, type Goal } from "@/lib/supabase"
@@ -23,9 +23,11 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadProfile()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadProfile = async () => {
+    if (!supabase) return
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
@@ -68,7 +70,7 @@ export default function ProfilePage() {
         .eq("follower_id", authUser.id)
 
       setFollowing(followingCount || 0)
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error("Failed to load profile")
       console.error(error)
     } finally {
@@ -84,7 +86,7 @@ export default function ProfilePage() {
     )
   }
 
-  const publicGoals = goals.filter(g => g.visibility === "public")
+  // const publicGoals = goals.filter(g => g.visibility === "public")
   const completedGoals = goals.filter(g => g.completed_at)
   const activeGoals = goals.filter(g => !g.completed_at && !g.is_suspended)
 

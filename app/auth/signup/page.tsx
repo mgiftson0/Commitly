@@ -10,6 +10,7 @@ import { Target, Eye, EyeOff, Mail, Lock, Chrome } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getSupabaseClient } from "@/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
 import { toast } from "sonner"
 
 export default function SignUpPage() {
@@ -34,6 +35,16 @@ export default function SignUpPage() {
 
     if (!acceptTerms) {
       toast.error("Please accept the Terms of Service and Privacy Policy")
+      return
+    }
+
+    // Check if mock auth is enabled
+    if (isMockAuthEnabled()) {
+      setLoading(true)
+      await mockDelay(1000)
+      toast.success("Account created! (Mock Auth Mode)")
+      router.push("/auth/kyc")
+      setLoading(false)
       return
     }
 
@@ -68,6 +79,13 @@ export default function SignUpPage() {
   }
 
   const handleGoogleLogin = async () => {
+    if (isMockAuthEnabled()) {
+      await mockDelay(800)
+      toast.success("Google signup successful! (Mock Auth Mode)")
+      router.push("/auth/kyc")
+      return
+    }
+    
     if (!supabase) {
       toast.error("Authentication service is not available. Please check configuration.")
       return

@@ -23,6 +23,7 @@ export default function KYCPage() {
   useEffect(() => {
     // Check if user is authenticated
     const checkAuth = async () => {
+      if (!supabase) return
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         toast.error("Please sign up first")
@@ -48,6 +49,10 @@ export default function KYCPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!supabase) {
+      toast.error("Authentication service is not available")
+      return
+    }
     setLoading(true)
 
     try {
@@ -71,12 +76,13 @@ export default function KYCPage() {
 
       toast.success("Profile created successfully!")
       router.push("/dashboard")
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("KYC error:", error)
-      if (error.code === "23505") {
+      const err = error as { code?: string; message?: string }
+      if (err.code === "23505") {
         toast.error("Username or phone number already taken")
-      } else if (error.message) {
-        toast.error(`Database error: ${error.message}`)
+      } else if (err.message) {
+        toast.error(`Database error: ${err.message}`)
       } else {
         toast.error("Failed to create profile. Please try again.")
       }

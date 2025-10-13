@@ -18,7 +18,7 @@ export default function SearchPage() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!searchQuery.trim()) return
+    if (!searchQuery.trim() || !supabase) return
 
     setLoading(true)
     try {
@@ -30,7 +30,7 @@ export default function SearchPage() {
 
       if (error) throw error
       setSearchResults(data || [])
-    } catch (error: any) {
+    } catch (_error: unknown) {
       toast.error("Search failed")
     } finally {
       setLoading(false)
@@ -38,6 +38,7 @@ export default function SearchPage() {
   }
 
   const sendAccountabilityRequest = async (partnerId: string) => {
+    if (!supabase) return
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Not authenticated")
@@ -62,8 +63,9 @@ export default function SearchPage() {
       })
 
       toast.success("Request sent!")
-    } catch (error: any) {
-      if (error.code === "23505") {
+    } catch (error: unknown) {
+      const err = error as { code?: string }
+      if (err.code === "23505") {
         toast.error("Request already sent")
       } else {
         toast.error("Failed to send request")
@@ -161,7 +163,7 @@ export default function SearchPage() {
             <CardContent className="py-12 text-center">
               <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
               <p className="text-slate-600 dark:text-slate-400">
-                No users found matching "{searchQuery}"
+                No users found matching &quot;{searchQuery}&quot;
               </p>
             </CardContent>
           </Card>

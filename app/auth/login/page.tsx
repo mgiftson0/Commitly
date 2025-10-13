@@ -9,6 +9,7 @@ import { Target, Eye, EyeOff, Mail, Lock, Chrome } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getSupabaseClient } from "@/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
 import { toast } from "sonner"
 
 export default function LoginPage() {
@@ -21,6 +22,16 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Check if mock auth is enabled
+    if (isMockAuthEnabled()) {
+      setLoading(true)
+      await mockDelay(1000)
+      toast.success("Welcome back! (Mock Auth Mode)")
+      router.push("/dashboard")
+      setLoading(false)
+      return
+    }
     
     if (!supabase) {
       toast.error("Authentication service is not available. Please check configuration.")
@@ -50,6 +61,13 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = async () => {
+    if (isMockAuthEnabled()) {
+      await mockDelay(800)
+      toast.success("Google login successful! (Mock Auth Mode)")
+      router.push("/dashboard")
+      return
+    }
+    
     if (!supabase) {
       toast.error("Authentication service is not available. Please check configuration.")
       return

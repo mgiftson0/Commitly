@@ -18,9 +18,11 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     loadNotifications()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadNotifications = async () => {
+    if (!supabase) return
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -36,7 +38,7 @@ export default function NotificationsPage() {
 
       if (error) throw error
       setNotifications(data || [])
-    } catch (error: any) {
+    } catch (_error: unknown) {
       toast.error("Failed to load notifications")
     } finally {
       setLoading(false)
@@ -44,6 +46,7 @@ export default function NotificationsPage() {
   }
 
   const markAsRead = async (notificationId: string) => {
+    if (!supabase) return
     try {
       const { error } = await supabase
         .from("notifications")
@@ -52,12 +55,13 @@ export default function NotificationsPage() {
 
       if (error) throw error
       await loadNotifications()
-    } catch (error: any) {
+    } catch (_error: unknown) {
       toast.error("Failed to mark as read")
     }
   }
 
   const markAllAsRead = async () => {
+    if (!supabase) return
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -71,7 +75,7 @@ export default function NotificationsPage() {
       if (error) throw error
       await loadNotifications()
       toast.success("All notifications marked as read")
-    } catch (error: any) {
+    } catch (_error: unknown) {
       toast.error("Failed to mark all as read")
     }
   }

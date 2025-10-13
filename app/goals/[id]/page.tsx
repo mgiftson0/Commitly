@@ -7,8 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
-import { Target, ArrowLeft, CheckCircle2, Users, Flame, Clock, Edit, Trash2, Pause, Play } from "lucide-react"
+import { Target, ArrowLeft, CheckCircle2, Flame, Clock, Edit, Trash2, Pause, Play } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { getSupabaseClient, type Goal, type Activity, type Streak } from "@/lib/supabase"
@@ -27,9 +26,11 @@ export default function GoalDetailPage() {
 
   useEffect(() => {
     loadGoalData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goalId])
 
   const loadGoalData = async () => {
+    if (!supabase) return
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -69,7 +70,7 @@ export default function GoalDetailPage() {
 
       if (streakError && streakError.code !== "PGRST116") throw streakError
       setStreak(streakData)
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error("Failed to load goal")
       console.error(error)
     } finally {
@@ -78,6 +79,7 @@ export default function GoalDetailPage() {
   }
 
   const toggleActivity = async (activityId: string, isCompleted: boolean) => {
+    if (!supabase) return
     try {
       const { error } = await supabase
         .from("activities")
@@ -92,12 +94,13 @@ export default function GoalDetailPage() {
       // Reload activities
       await loadGoalData()
       toast.success(isCompleted ? "Activity unchecked" : "Activity completed!")
-    } catch (error: any) {
+    } catch (_error: unknown) {
       toast.error("Failed to update activity")
     }
   }
 
   const completeGoal = async () => {
+    if (!supabase) return
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Not authenticated")
@@ -119,12 +122,13 @@ export default function GoalDetailPage() {
 
       toast.success("🎉 Goal completed! Great job!")
       await loadGoalData()
-    } catch (error: any) {
+    } catch (_error: unknown) {
       toast.error("Failed to complete goal")
     }
   }
 
   const toggleSuspend = async () => {
+    if (!supabase) return
     try {
       const { error } = await supabase
         .from("goals")
@@ -135,12 +139,13 @@ export default function GoalDetailPage() {
 
       toast.success(goal?.is_suspended ? "Goal resumed" : "Goal suspended")
       await loadGoalData()
-    } catch (error: any) {
+    } catch (_error: unknown) {
       toast.error("Failed to update goal")
     }
   }
 
   const deleteGoal = async () => {
+    if (!supabase) return
     if (!confirm("Are you sure you want to delete this goal?")) return
 
     try {
@@ -153,12 +158,13 @@ export default function GoalDetailPage() {
 
       toast.success("Goal deleted")
       router.push("/dashboard")
-    } catch (error: any) {
+    } catch (_error: unknown) {
       toast.error("Failed to delete goal")
     }
   }
 
   const addNote = async () => {
+    if (!supabase) return
     if (!note.trim()) return
 
     try {
@@ -176,7 +182,7 @@ export default function GoalDetailPage() {
 
       toast.success("Note added")
       setNote("")
-    } catch (error: any) {
+    } catch (_error: unknown) {
       toast.error("Failed to add note")
     }
   }
