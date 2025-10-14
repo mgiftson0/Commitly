@@ -29,7 +29,9 @@ import {
   Settings,
   MoreHorizontal,
   Heart,
-  Star
+  Star,
+  GitFork,
+  Crown
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
@@ -44,6 +46,11 @@ export default function GoalDetailPage() {
   const [streak, setStreak] = useState<Streak | null>(null)
   const [note, setNote] = useState("")
   const [loading, setLoading] = useState(true)
+  const [activityAssignments, setActivityAssignments] = useState<{[key: string]: string[]}>({
+    '1': ['1', '2'], // Activity 1 assigned to Sarah and Mike
+    '2': ['all'],    // Activity 2 assigned to all members
+    '3': ['3']       // Activity 3 assigned to Emily only
+  })
   const router = useRouter()
   const params = useParams()
   const supabase = getSupabaseClient()
@@ -365,8 +372,44 @@ export default function GoalDetailPage() {
     { id: "3", name: "Emily Rodriguez", username: "emily_r", avatar: "/placeholder-avatar.jpg", role: "member" }
   ]
 
-  const isGroupGoal = false // For now, treating all goals as individual until group functionality is fully implemented
-  const isMultiActivity = goal && (goal.goal_type === "multi" || goal.goal_type === "multi-activity")
+  // Determine goal type and ownership
+  const isYourGoal = goal?.user_id === 'mock-user-id' // In real app, compare with current user ID
+  const isGroupGoal = false // TODO: Implement proper group goal detection
+  const isForkedGoal = goal?.title?.includes("(Forked)") || false
+  const isMultiActivity = goal && (goal.goal_type === "multi")
+
+  // Check if current user is an accountability partner for this goal (not the owner)
+  const isAccountabilityPartner = accountabilityPartners.some(p => p.id === 'mock-user-id') && !isYourGoal
+
+  // Check if this goal can be forked (not yours, public, and from a partner)
+  const canForkGoalProp = !isYourGoal && goal?.visibility === "public" && accountabilityPartners.some(p => p.id)
+
+  // Mock current user for demo purposes
+  const currentUser = { id: 'mock-user-id', name: 'You' }
+
+  // Enhanced group members with roles and assignments
+  const enhancedGroupMembers = [
+    { id: "1", name: "Sarah Martinez", username: "sarah_m", avatar: "/placeholder-avatar.jpg", role: "creator" },
+    { id: "2", name: "Mike Chen", username: "mike_c", avatar: "/placeholder-avatar.jpg", role: "member" },
+    { id: "3", name: "Emily Rodriguez", username: "emily_r", avatar: "/placeholder-avatar.jpg", role: "member" }
+  ]
+
+
+
+  // Helper function to get assigned members for an activity
+  const getAssignedMembers = (activityId: string) => {
+    const assignedIds = activityAssignments[activityId] || []
+    if (assignedIds.includes('all')) {
+      return enhancedGroupMembers
+    }
+    return enhancedGroupMembers.filter(member => assignedIds.includes(member.id))
+  }
+
+  // Helper function to check if current user is assigned to activity
+  const isUserAssignedToActivity = (activityId: string) => {
+    const assignedMembers = getAssignedMembers(activityId)
+    return assignedMembers.some(member => member.id === currentUser.id)
+  }
 
   return (
     <MainLayout>
@@ -402,11 +445,28 @@ export default function GoalDetailPage() {
                   <Badge variant="outline" className="capitalize">
                     {goal.visibility}
                   </Badge>
+                  {isGroupGoal && (
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                      <Users className="h-3 w-3 mr-1" />
+                      Group
+                    </Badge>
+                  )}
+                  {isForkedGoal && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      <GitFork className="h-3 w-3 mr-1" />
+                      Forked
+                    </Badge>
+                  )}
                   {goal.is_suspended && <Badge variant="destructive">Suspended</Badge>}
                   {goal.completed_at && <Badge className="bg-green-600">Completed</Badge>}
                 </div>
 
-                <CardTitle className="text-3xl mb-3">{goal.title}</CardTitle>
+                <CardTitle className="text-3xl mb-3 flex items-center gap-2">
+                  {goal.title}
+                  {isGroupGoal && (
+                    <Crown className="h-6 w-6 text-purple-600" />
+                  )}
+                </CardTitle>
                 {goal.description && (
                   <CardDescription className="text-base mb-4">
                     {goal.description}
@@ -464,10 +524,18 @@ export default function GoalDetailPage() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="hover-lift">
-                  <Copy className="h-4 w-4 mr-2" />
-                  Fork Goal
-                </Button>
+                {/* Fork Button - Only show for goals that can be forked */}
+                {canForkGoalProp && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hover-lift"
+                    onClick={forkGoal}
+                  >
+                    <GitFork className="h-4 w-4 mr-2" />
+                    Fork Goal
+                  </Button>
+                )}
                 <Link href={`/goals/${goal.id}/edit`}>
                   <Button variant="outline" size="sm" className="hover-lift">
                     <Edit className="h-4 w-4 mr-2" />
