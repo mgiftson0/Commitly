@@ -49,10 +49,11 @@ export default function GoalDetailPage() {
   const [loading, setLoading] = useState(true)
   const [storeMeta, setStoreMeta] = useState<{ dueDate?: string | null; recurrencePattern?: string; recurrenceDays?: string[] } | null>(null)
   const [activityAssignments, setActivityAssignments] = useState<{[key: string]: string[]}>({
-    '1': ['1', '2'], // Activity 1 assigned to Sarah and Mike
-    '2': ['all'],    // Activity 2 assigned to all members
-    '3': ['3']       // Activity 3 assigned to Emily only
+    '1': ['1', '2'],
+    '2': ['all'],
+    '3': ['3']
   })
+  const [storeRole, setStoreRole] = useState<{ isGroupGoal?: boolean; groupMembers?: { id: string; name: string; avatar?: string }[]; accountabilityPartners?: { id: string; name: string; avatar?: string }[] } | null>(null)
   const router = useRouter()
   const params = useParams()
   const supabase = getSupabaseClient()
@@ -96,6 +97,11 @@ export default function GoalDetailPage() {
             updated_at: new Date().toISOString()
           }))
           setActivities(acts)
+          setStoreRole({
+            isGroupGoal: !!g.isGroupGoal,
+            groupMembers: (g.groupMembers || []).map((m: any) => ({ id: m.id, name: m.name, avatar: '/placeholder-avatar.jpg' })),
+            accountabilityPartners: (g.accountabilityPartners || []).map((p: any) => ({ id: p.id, name: p.name, avatar: '/placeholder-avatar.jpg' }))
+          })
           setLoading(false)
           return
         }
@@ -364,30 +370,22 @@ export default function GoalDetailPage() {
   const totalActivities = activities.length
   const progress = totalActivities > 0 ? (completedActivities / totalActivities) * 100 : 0
 
-  // Mock data for enhanced goal details
-  const accountabilityPartners = [
-    { id: "1", name: "Sarah Martinez", username: "sarah_m", avatar: "/placeholder-avatar.jpg" },
-    { id: "2", name: "Mike Chen", username: "mike_c", avatar: "/placeholder-avatar.jpg" }
-  ]
-
-  const groupMembers = [
-    { id: "1", name: "Sarah Martinez", username: "sarah_m", avatar: "/placeholder-avatar.jpg", role: "member" },
-    { id: "2", name: "Mike Chen", username: "mike_c", avatar: "/placeholder-avatar.jpg", role: "member" },
-    { id: "3", name: "Emily Rodriguez", username: "emily_r", avatar: "/placeholder-avatar.jpg", role: "member" }
-  ]
+  // Partner and group info from store (mock mode)
+  const apList = storeRole?.accountabilityPartners || []
+  const groupMembersList = storeRole?.groupMembers || []
 
   // Determine goal type and ownership
   const currentUserId = 'mock-user-id' // In real app, get from auth
   const isYourGoal = goal?.user_id === currentUserId
-  const isGroupGoal = groupMembers.length > 0 // Has group members
+  const isGroupGoal = !!(storeRole?.isGroupGoal)
   const isForkedGoal = goal?.title?.includes("(Forked)") || false
   const isMultiActivity = goal && (goal.goal_type === "multi")
 
   // Check if current user is an accountability partner for this goal (not the owner, not a group member)
-  const isAccountabilityPartner = accountabilityPartners.some(p => p.id === currentUserId) && !isYourGoal && !isGroupGoal
+  const isAccountabilityPartner = apList.some(p => p.id === currentUserId) && !isYourGoal && !isGroupGoal
 
   // Check if user is a group member (can edit)
-  const isGroupMember = isGroupGoal && groupMembers.some(m => m.id === currentUserId)
+  const isGroupMember = isGroupGoal && groupMembersList.some(m => m.id === currentUserId)
 
   // Check if this goal can be forked (not yours, public, and from a partner)
   const canForkGoalProp = !isYourGoal && goal?.visibility === "public" && !isAccountabilityPartner && !isGroupMember
@@ -405,22 +403,16 @@ export default function GoalDetailPage() {
   // Get goal owner name for encouragement
   const goalOwnerName = isYourGoal ? "yourself" : (goal?.user_id ? "the goal owner" : "Goal Owner")
 
-  // Enhanced group members with roles and assignments
-  const enhancedGroupMembers = [
-    { id: "1", name: "Sarah Martinez", username: "sarah_m", avatar: "/placeholder-avatar.jpg", role: "creator" },
-    { id: "2", name: "Mike Chen", username: "mike_c", avatar: "/placeholder-avatar.jpg", role: "member" },
-    { id: "3", name: "Emily Rodriguez", username: "emily_r", avatar: "/placeholder-avatar.jpg", role: "member" }
-  ]
-
-
+  // Group members for assignment rendering (mock store)
+  const groupMembersForAssign = groupMembersList
 
   // Helper function to get assigned members for an activity
   const getAssignedMembers = (activityId: string) => {
     const assignedIds = activityAssignments[activityId] || []
     if (assignedIds.includes('all')) {
-      return enhancedGroupMembers
+      return groupMembersForAssign
     }
-    return enhancedGroupMembers.filter(member => assignedIds.includes(member.id))
+    return groupMembersForAssign.filter(member => assignedIds.includes(member.id))
   }
 
   // Helper function to check if current user is assigned to activity
@@ -492,12 +484,12 @@ export default function GoalDetailPage() {
                 )}
 
                 {/* Partner Avatars */}
-                {accountabilityPartners.length > 0 && !isGroupGoal && (
+                {apList.length > 0 && !isGroupGoal && (
                   <div className="flex items-center gap-3 mb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">Accountability Partners:</span>
                       <div className="flex -space-x-2">
-                        {accountabilityPartners.slice(0, 3).map((partner, index) => (
+                        {apList.slice(0, 3).map((partner) => (
                           <Avatar key={partner.id} className="h-8 w-8 border-2 border-background">
                             <AvatarImage src={partner.avatar} />
                             <AvatarFallback className="text-xs">
@@ -505,9 +497,9 @@ export default function GoalDetailPage() {
                             </AvatarFallback>
                           </Avatar>
                         ))}
-                        {accountabilityPartners.length > 3 && (
+                        {apList.length > 3 && (
                           <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground">+{accountabilityPartners.length - 3}</span>
+                            <span className="text-xs text-muted-foreground">+{apList.length - 3}</span>
                           </div>
                         )}
                       </div>
@@ -516,12 +508,12 @@ export default function GoalDetailPage() {
                 )}
 
                 {/* Group Members */}
-                {isGroupGoal && groupMembers.length > 0 && (
+                {isGroupGoal && groupMembersList.length > 0 && (
                   <div className="flex items-center gap-3 mb-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">Group Members:</span>
                       <div className="flex -space-x-2">
-                        {groupMembers.slice(0, 4).map((member, index) => (
+                        {groupMembersList.slice(0, 4).map((member) => (
                           <Avatar key={member.id} className="h-8 w-8 border-2 border-background">
                             <AvatarImage src={member.avatar} />
                             <AvatarFallback className="text-xs">
@@ -529,9 +521,9 @@ export default function GoalDetailPage() {
                             </AvatarFallback>
                           </Avatar>
                         ))}
-                        {groupMembers.length > 4 && (
+                        {groupMembersList.length > 4 && (
                           <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground">+{groupMembers.length - 4}</span>
+                            <span className="text-xs text-muted-foreground">+{groupMembersList.length - 4}</span>
                           </div>
                         )}
                       </div>

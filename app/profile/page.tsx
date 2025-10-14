@@ -475,6 +475,24 @@ export default function ProfilePage() {
                               <Badge variant="outline" className="text-xs">
                                 {goal.visibility}
                               </Badge>
+                              {isMockAuthEnabled() && (() => {
+                                try {
+                                  const store = require("@/lib/mock-store")
+                                  const sg = store.getGoals()
+                                  const s = sg.find((g: any) => String(g.id) === String(goal.id))
+                                  if (!s) return null
+                                  return (
+                                    <>
+                                      {s.dueDate && (
+                                        <Badge variant="outline" className="text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
+                                      )}
+                                      {s.recurrencePattern && (
+                                        <Badge variant="outline" className="text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
+                                      )}
+                                    </>
+                                  )
+                                } catch { return null }
+                              })()}
                             </div>
                           </div>
                           {goal.completed_at ? (
@@ -503,6 +521,24 @@ export default function ProfilePage() {
                               <Badge variant="outline" className="text-xs">
                                 {goal.visibility}
                               </Badge>
+                              {isMockAuthEnabled() && (() => {
+                                try {
+                                  const store = require("@/lib/mock-store")
+                                  const sg = store.getGoals()
+                                  const s = sg.find((g: any) => String(g.id) === String(goal.id))
+                                  if (!s) return null
+                                  return (
+                                    <>
+                                      {s.dueDate && (
+                                        <Badge variant="outline" className="text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
+                                      )}
+                                      {s.recurrencePattern && (
+                                        <Badge variant="outline" className="text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
+                                      )}
+                                    </>
+                                  )
+                                } catch { return null }
+                              })()}
                             </div>
                           </div>
                           <Badge variant="outline">Active</Badge>
@@ -527,6 +563,24 @@ export default function ProfilePage() {
                               <Badge variant="outline" className="text-xs">
                                 {goal.visibility}
                               </Badge>
+                              {isMockAuthEnabled() && (() => {
+                                try {
+                                  const store = require("@/lib/mock-store")
+                                  const sg = store.getGoals()
+                                  const s = sg.find((g: any) => String(g.id) === String(goal.id))
+                                  if (!s) return null
+                                  return (
+                                    <>
+                                      {s.dueDate && (
+                                        <Badge variant="outline" className="text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
+                                      )}
+                                      {s.recurrencePattern && (
+                                        <Badge variant="outline" className="text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
+                                      )}
+                                    </>
+                                  )
+                                } catch { return null }
+                              })()}
                             </div>
                           </div>
                           <Badge className="bg-green-600">Completed</Badge>

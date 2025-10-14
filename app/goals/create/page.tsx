@@ -745,8 +745,8 @@ export default function CreateGoalPage() {
                     </div>
                   )}
 
-                  {/* Recurring Schedule (once for multi-activity goals) */}
-                  {goalType === "multi-activity" && (
+                  {/* Recurring Schedule (once for multi-activity or recurring type) */}
+                  {(goalType === "multi-activity" || goalType === "recurring") && (
                     <div className="space-y-4 p-4 rounded-lg bg-muted/30">
                       <Label className="text-sm font-medium">Recurring Schedule</Label>
                       <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
@@ -783,62 +783,7 @@ export default function CreateGoalPage() {
                     </div>
                   )}
 
-                  {/* Recurrence Settings (for recurring goals) */}
-                  {goalType === "recurring" && (
-                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
-                      <Label className="text-sm font-medium">Recurrence Pattern</Label>
 
-                      <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
-                        <SelectTrigger className="focus-ring">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="custom">Custom Days</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      {recurrencePattern === "custom" && (
-                        <div className="space-y-3">
-                          <Label className="text-sm">Select Days</Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {weekDays.map((day) => (
-                              <div key={day} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={day}
-                                  checked={recurrenceDays.includes(day)}
-                                  onCheckedChange={() => toggleRecurrenceDay(day)}
-                                />
-                                <Label htmlFor={day} className="font-normal cursor-pointer capitalize text-sm">
-                                  {day}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Time Allocation (hidden for any single-activity) */}
-                  {goalType !== 'single-activity' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="time" className="text-sm font-medium">
-                      Time Allocation (minutes)
-                    </Label>
-                    <Input
-                      id="time"
-                      type="number"
-                      placeholder="How long does this usually take?"
-                      value={defaultTimeAllocation}
-                      onChange={(e) => setDefaultTimeAllocation(e.target.value)}
-                      min="1"
-                      className="focus-ring"
-                    />
-                  </div>
-                  )}
 
                   {/* Accountability Partners (only for personal goals) */}
                   {goalNature === 'personal' && (
