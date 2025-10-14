@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -667,6 +667,25 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
     return map
   })
 
+  useEffect(() => {
+    try {
+      const store = require("@/lib/mock-store")
+      const nextPartner = { ...partnerInvites }
+      const nextGroup = { ...groupInvites }
+      goals.forEach(g => {
+        const p = store.getInviteStatus('partner', g.id)
+        if (p) nextPartner[g.id] = p
+        if (g.isGroupGoal) {
+          const s = store.getInviteStatus('group', g.id)
+          if (s) nextGroup[g.id] = s
+        }
+      })
+      setPartnerInvites(nextPartner)
+      setGroupInvites(nextGroup)
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const canEditWithin5hFromCreated = (createdAt?: string) => {
     if (!createdAt) return false
     const created = new Date(createdAt).getTime()
@@ -719,8 +738,8 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
               <div className="mb-2 p-2 rounded-md bg-yellow-50 border border-yellow-200 flex items-center justify-between gap-2">
                 <span className="text-xs">Partner request pending</span>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setPartnerInvites({ ...partnerInvites, [goal.id]: 'accepted' }); toast.success('Invitation accepted') }}>Accept</Button>
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setPartnerInvites({ ...partnerInvites, [goal.id]: 'declined' }); toast.success('Invitation declined') }}>Decline</Button>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setPartnerInvites({ ...partnerInvites, [goal.id]: 'accepted' }); try { const { setInviteStatus, addNotification } = require("@/lib/mock-store"); setInviteStatus('partner', goal.id, 'accepted'); addNotification({ title: 'Partner Request Accepted', message: `You accepted a partner request for ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Invitation accepted') }}>Accept</Button>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setPartnerInvites({ ...partnerInvites, [goal.id]: 'declined' }); try { const { setInviteStatus, addNotification } = require("@/lib/mock-store"); setInviteStatus('partner', goal.id, 'declined'); addNotification({ title: 'Partner Request Declined', message: `You declined a partner request for ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Invitation declined') }}>Decline</Button>
                 </div>
               </div>
             )}
@@ -728,8 +747,8 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
               <div className="mb-2 p-2 rounded-md bg-yellow-50 border border-yellow-200 flex items-center justify-between gap-2">
                 <span className="text-xs">Group invite pending</span>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setGroupInvites({ ...groupInvites, [goal.id]: 'accepted' }); toast.success('Joined group') }}>Accept</Button>
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setGroupInvites({ ...groupInvites, [goal.id]: 'declined' }); toast.success('Declined invite') }}>Decline</Button>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setGroupInvites({ ...groupInvites, [goal.id]: 'accepted' }); try { const { setInviteStatus, addNotification } = require("@/lib/mock-store"); setInviteStatus('group', goal.id, 'accepted'); addNotification({ title: 'Group Invite Accepted', message: `You joined the group goal: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Joined group') }}>Accept</Button>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setGroupInvites({ ...groupInvites, [goal.id]: 'declined' }); try { const { setInviteStatus, addNotification } = require("@/lib/mock-store"); setInviteStatus('group', goal.id, 'declined'); addNotification({ title: 'Group Invite Declined', message: `You declined to join: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Declined invite') }}>Decline</Button>
                 </div>
               </div>
             )}
@@ -761,13 +780,25 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                   </div>
                 )}
                 {/* New messages indicator for owners/members */}
-                {!isPartnerView && getNewEncouragements(goal, isPartnerView) > 0 && (
-                  <div className="relative h-8 w-8 flex items-center justify-center">
-                    <MessageCircle className="h-4 w-4 text-primary" />
-                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] bg-primary text-primary-foreground">
-                      {getNewEncouragements(goal, isPartnerView)}
-                    </span>
-                  </div>
+                {!isPartnerView && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <div className="relative h-8 w-8 flex items-center justify-center cursor-pointer" title="View encouragement notes">
+                        <MessageCircle className="h-4 w-4 text-primary" />
+                        {getNewEncouragements(goal, isPartnerView) > 0 && (
+                          <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] bg-primary text-primary-foreground">
+                            {getNewEncouragements(goal, isPartnerView)}
+                          </span>
+                        )}
+                      </div>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Encouragement Notes</DialogTitle>
+                      </DialogHeader>
+                      <EncouragementCard goalId={goal.id} goalOwnerName={goal.goalOwner?.name || 'You'} />
+                    </DialogContent>
+                  </Dialog>
                 )}
                 {/* Fork Button - Only show for goals that can be forked (not owned by user) */}
                 {!isPartnerView && canForkGoal(goal) && (
@@ -896,23 +927,34 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
 
             {/* Meta info and Actions */}
             <div className="space-y-3">
-              {isPartnerView ? (
-                /* Partner view - Show completion status if goal is completed */
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+            {isPartnerView ? (
+              /* Partner view - Show completion status if goal is completed */
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-2">
                     <span>{goal.category}</span>
-                    {goal.status === "completed" ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-3 w-3 text-green-600" />
-                        <span className="text-green-600 font-medium">Completed</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${getStatusColor(goal.status)}`} />
-                        <span className="capitalize">{goal.status}</span>
-                      </div>
+                    {/* Invite status indicator */}
+                    {partnerInvites[goal.id] && (
+                      <Badge
+                        variant={partnerInvites[goal.id] === 'accepted' ? 'default' : (partnerInvites[goal.id] === 'pending' ? 'secondary' : 'outline')}
+                        className="text-[10px]"
+                      >
+                        {partnerInvites[goal.id] === 'accepted' ? 'Accepted' : partnerInvites[goal.id] === 'pending' ? 'Request Sent' : 'Declined'}
+                      </Badge>
                     )}
-                  </div>
+                  </span>
+                  {goal.status === "completed" ? (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      <span className="text-green-600 font-medium">Completed</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(goal.status)}`} />
+                      <span className="capitalize">{goal.status}</span>
+                    </div>
+                  )}
+                </div>
                   {/* Action Buttons for Partner Goals */}
                   <div className="flex gap-2 pt-2 border-t">
                   <Button
@@ -944,9 +986,20 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                   </div>
                 </div>
               ) : (
-                /* Owner view - Show full meta info */
+                /* Owner/member view - Show full meta info */
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{goal.category}</span>
+                  <span className="flex items-center gap-2">
+                    {goal.category}
+                    {/* Group invite membership indicator */
+                    goal.isGroupGoal && groupInvites[goal.id] && (
+                      <Badge
+                        variant={groupInvites[goal.id] === 'accepted' ? 'default' : (groupInvites[goal.id] === 'pending' ? 'secondary' : 'outline')}
+                        className="text-[10px]"
+                      >
+                        {groupInvites[goal.id] === 'accepted' ? 'Joined' : groupInvites[goal.id] === 'pending' ? 'Invite Sent' : 'Declined'}
+                      </Badge>
+                    )}
+                  </span>
                   <div className="flex items-center gap-2">
                     {goal.isForked && (
                       <div className="flex items-center gap-1">

@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -19,9 +20,12 @@ interface EncouragementMessage {
   timestamp: string
 }
 
+import { addEncouragement, getEncouragements, type EncouragementMessage as StoreEncouragementMessage } from "@/lib/mock-store"
+
 interface EncouragementCardProps {
   isPartner?: boolean
   goalOwnerName?: string
+  goalId?: string | number
   onSendEncouragement?: (message: string) => void
   messages?: EncouragementMessage[]
   newMessageCount?: number
@@ -30,12 +34,27 @@ interface EncouragementCardProps {
 export function EncouragementCard({
   isPartner = false,
   goalOwnerName = "Goal Owner",
+  goalId,
   onSendEncouragement,
   messages = [],
   newMessageCount = 0
 }: EncouragementCardProps) {
   const [note, setNote] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [storeMessages, setStoreMessages] = useState<EncouragementMessage[]>([])
+
+  const loadMessages = () => {
+    if (messages && messages.length > 0) return
+    if (goalId !== undefined) {
+      const raw = getEncouragements(goalId) as StoreEncouragementMessage[]
+      setStoreMessages(raw.map(m => ({ id: m.id, author: { name: m.authorName, avatar: "/placeholder-avatar.jpg" }, content: m.content, timestamp: new Date(m.timestamp).toLocaleString() })))
+    }
+  }
+
+  React.useEffect(() => {
+    loadMessages()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goalId])
 
   const handleSendEncouragement = async () => {
     if (!note.trim()) return
@@ -44,6 +63,10 @@ export function EncouragementCard({
     try {
       if (onSendEncouragement) {
         await onSendEncouragement(note)
+      } else if (goalId !== undefined) {
+        addEncouragement(goalId, note.trim(), 'You')
+        const raw = getEncouragements(goalId) as StoreEncouragementMessage[]
+        setStoreMessages(raw.map(m => ({ id: m.id, author: { name: m.authorName, avatar: "/placeholder-avatar.jpg" }, content: m.content, timestamp: new Date(m.timestamp).toLocaleString() })))
       }
       toast.success(`Encouragement sent to ${goalOwnerName}! 💪`)
       setNote("")
@@ -55,7 +78,7 @@ export function EncouragementCard({
   }
 
   // Mock messages if none provided
-  const displayMessages = messages.length > 0 ? messages : [
+  const displayMessages = (messages && messages.length > 0) ? messages : (storeMessages.length > 0 ? storeMessages : [
     {
       id: "1",
       author: {
@@ -74,7 +97,7 @@ export function EncouragementCard({
       content: "Keep up the amazing work! You&apos;re doing fantastic! 🎉",
       timestamp: "1 day ago"
     }
-  ]
+  ])
 
   return (
     <Card className="hover-lift">

@@ -115,6 +115,7 @@ export default function CreateGoalPage() {
     if (isMockAuthEnabled()) {
       setLoading(true)
       await mockDelay(1000)
+      try { const { addNotification } = require("@/lib/mock-store"); addNotification({ title: 'Goal Created', message: `You created a new goal: ${title || 'New Goal'}.`, type: 'goal_created', related_goal_id: null }); } catch {}
       toast.success("Goal created successfully! (Mock Mode)")
       router.push("/dashboard")
       setLoading(false)

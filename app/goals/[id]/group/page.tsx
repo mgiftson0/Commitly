@@ -19,6 +19,7 @@ import { MainLayout } from "@/components/layout/main-layout"
 export default function GroupGoalDetailPage() {
   const [personalNote, setPersonalNote] = useState("")
   const [personalNotes, setPersonalNotes] = useState<string[]>([])
+  const [inviteStatus, setInviteStatus] = useState<'pending' | 'accepted' | 'declined'>('accepted')
   const [goal, setGoal] = useState<Goal | null>(null)
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
@@ -155,6 +156,21 @@ export default function GroupGoalDetailPage() {
             )}
           </div>
         </div>
+
+        {inviteStatus === 'pending' && (
+          <Card className="hover-lift border-yellow-200 bg-yellow-50/50">
+            <CardContent className="p-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">You’ve been invited to join this group goal.</p>
+                <p className="text-xs text-muted-foreground">Accept to participate and add your own activities.</p>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => { setInviteStatus('accepted'); try { const { setInviteStatus: setInvite, addNotification } = require("@/lib/mock-store"); setInvite('group', goal.id, 'accepted'); addNotification({ title: 'Group Invite Accepted', message: `You joined the group goal: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} }}>Accept</Button>
+                <Button size="sm" variant="outline" onClick={() => { setInviteStatus('declined'); try { const { setInviteStatus: setInvite, addNotification } = require("@/lib/mock-store"); setInvite('group', goal.id, 'declined'); addNotification({ title: 'Group Invite Declined', message: `You declined to join: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} }}>Decline</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="hover-lift">
           <CardHeader>

@@ -31,6 +31,7 @@ import { getSupabaseClient, type Notification } from "@/lib/supabase"
 import { isMockAuthEnabled } from "@/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
+import { getNotifications as getMockNotificationsStore } from "@/lib/mock-store"
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -136,7 +137,7 @@ export default function NotificationsPage() {
   }
 
   // Mock data for rich notifications experience
-  const mockNotifications = [
+  const mockSeedNotifications = [
     {
       id: 1,
       title: "Goal Completed! 🎉",
@@ -203,6 +204,10 @@ export default function NotificationsPage() {
       }
     }
   ]
+
+  // Merge stored notifications with seed list (stored first)
+  const stored = getMockNotificationsStore()
+  const mockNotifications = [...stored, ...mockSeedNotifications]
 
   const unreadCount = mockNotifications.filter(n => !n.is_read).length
   const todayNotifications = mockNotifications.filter(n =>

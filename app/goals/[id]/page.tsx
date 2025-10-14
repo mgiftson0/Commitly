@@ -184,6 +184,7 @@ export default function GoalDetailPage() {
     if (isMockAuthEnabled()) {
       if (goal) {
         setGoal({ ...goal, completed_at: new Date().toISOString() })
+        try { const { addNotification } = require("@/lib/mock-store"); addNotification({ title: 'Goal Completed', message: `You completed: ${goal.title}.`, type: 'goal_completed', related_goal_id: goal.id }); } catch {}
         toast.success("🎉 Goal completed! Great job!")
       }
       return
