@@ -7,12 +7,36 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
-import { Target, ArrowLeft, CheckCircle2, Flame, Clock, Edit, Trash2, Pause, Play } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Target,
+  ArrowLeft,
+  CheckCircle2,
+  Flame,
+  Clock,
+  Edit,
+  Trash2,
+  Pause,
+  Play,
+  Copy,
+  Users,
+  MessageCircle,
+  Calendar,
+  TrendingUp,
+  Award,
+  UserPlus,
+  Settings,
+  MoreHorizontal,
+  Heart,
+  Star
+} from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { getSupabaseClient, type Goal, type Activity, type Streak } from "@/lib/supabase"
 import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
 import { toast } from "sonner"
+import { MainLayout } from "@/components/layout/main-layout"
 
 export default function GoalDetailPage() {
   const [goal, setGoal] = useState<Goal | null>(null)
@@ -47,9 +71,9 @@ export default function GoalDetailPage() {
       }
       
       const mockActivities: Activity[] = [
-        { id: '1', goal_id: goalId, title: '10 push-ups', description: null, is_completed: false, order_index: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: '2', goal_id: goalId, title: '20 sit-ups', description: null, is_completed: true, completed_at: new Date().toISOString(), order_index: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: '3', goal_id: goalId, title: '5 minute plank', description: null, is_completed: false, order_index: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: '1', goal_id: goalId, title: '10 push-ups', description: undefined, is_completed: false, order_index: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: '2', goal_id: goalId, title: '20 sit-ups', description: undefined, is_completed: true, completed_at: new Date().toISOString(), order_index: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: '3', goal_id: goalId, title: '5 minute plank', description: undefined, is_completed: false, order_index: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       ]
       
       const mockStreak: Streak = {
@@ -89,7 +113,7 @@ export default function GoalDetailPage() {
       setGoal(goalData)
 
       // Load activities if multi-activity goal
-      if (goalData.goal_type === "multi") {
+      if (goalData.goal_type === "multi" || goalData.goal_type === "multi-activity") {
         const { data: activitiesData, error: activitiesError } = await supabase
           .from("activities")
           .select("*")
@@ -264,6 +288,46 @@ export default function GoalDetailPage() {
     }
   }
 
+  const forkGoal = async () => {
+    if (isMockAuthEnabled()) {
+      toast.success("Goal forked successfully! (Mock Mode)")
+      router.push("/goals/create")
+      return
+    }
+    if (!supabase) return
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("Not authenticated")
+
+      // Check if user is a partner of the goal creator
+      // For now, allow forking of public goals
+      if (goal.visibility === "public") {
+        // Create a new goal based on the current one
+        const { data: forkedGoal, error: forkError } = await supabase
+          .from("goals")
+          .insert({
+            user_id: user.id,
+            title: `${goal.title} (Forked)`,
+            description: goal.description,
+            goal_type: goal.goal_type,
+            visibility: "private", // Default to private for forked goals
+          })
+          .select()
+          .single()
+
+        if (forkError) throw forkError
+
+        toast.success("Goal forked! You can now customize it.")
+        router.push(`/goals/${forkedGoal.id}/edit`)
+      } else {
+        toast.error("You can only fork public goals")
+      }
+    } catch (_error: unknown) {
+      toast.error("Failed to fork goal")
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -289,144 +353,339 @@ export default function GoalDetailPage() {
   const totalActivities = activities.length
   const progress = totalActivities > 0 ? (completedActivities / totalActivities) * 100 : 0
 
+  // Mock data for enhanced goal details
+  const accountabilityPartners = [
+    { id: "1", name: "Sarah Martinez", username: "sarah_m", avatar: "/placeholder-avatar.jpg" },
+    { id: "2", name: "Mike Chen", username: "mike_c", avatar: "/placeholder-avatar.jpg" }
+  ]
+
+  const groupMembers = [
+    { id: "1", name: "Sarah Martinez", username: "sarah_m", avatar: "/placeholder-avatar.jpg", role: "member" },
+    { id: "2", name: "Mike Chen", username: "mike_c", avatar: "/placeholder-avatar.jpg", role: "member" },
+    { id: "3", name: "Emily Rodriguez", username: "emily_r", avatar: "/placeholder-avatar.jpg", role: "member" }
+  ]
+
+  const isGroupGoal = false // For now, treating all goals as individual until group functionality is fully implemented
+  const isMultiActivity = goal && (goal.goal_type === "multi" || goal.goal_type === "multi-activity")
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
+    <MainLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Goal Details</h1>
+            <p className="text-muted-foreground">
+              Track your progress and stay motivated
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/goals">
+              <Button variant="outline" className="hover-lift">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Goals
               </Button>
             </Link>
-            <Target className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold">Goal Details</h1>
           </div>
         </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Goal Header */}
-        <Card className="mb-6">
+        {/* Goal Header Card */}
+        <Card className="hover-lift">
           <CardHeader>
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex gap-2">
-                <Badge>{goal.goal_type}</Badge>
-                <Badge variant="outline">{goal.visibility}</Badge>
-                {goal.is_suspended && <Badge variant="destructive">Suspended</Badge>}
-                {goal.completed_at && <Badge variant="default" className="bg-green-600">Completed</Badge>}
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+              {/* Goal Info */}
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <Badge variant="outline" className="capitalize">
+                    {goal.goal_type.replace('-', ' ')}
+                  </Badge>
+                  <Badge variant="outline" className="capitalize">
+                    {goal.visibility}
+                  </Badge>
+                  {goal.is_suspended && <Badge variant="destructive">Suspended</Badge>}
+                  {goal.completed_at && <Badge className="bg-green-600">Completed</Badge>}
+                </div>
+
+                <CardTitle className="text-3xl mb-3">{goal.title}</CardTitle>
+                {goal.description && (
+                  <CardDescription className="text-base mb-4">
+                    {goal.description}
+                  </CardDescription>
+                )}
+
+                {/* Partner Avatars */}
+                {accountabilityPartners.length > 0 && !isGroupGoal && (
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Accountability Partners:</span>
+                      <div className="flex -space-x-2">
+                        {accountabilityPartners.slice(0, 3).map((partner, index) => (
+                          <Avatar key={partner.id} className="h-8 w-8 border-2 border-background">
+                            <AvatarImage src={partner.avatar} />
+                            <AvatarFallback className="text-xs">
+                              {partner.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                        {accountabilityPartners.length > 3 && (
+                          <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground">+{accountabilityPartners.length - 3}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Group Members */}
+                {isGroupGoal && groupMembers.length > 0 && (
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Group Members:</span>
+                      <div className="flex -space-x-2">
+                        {groupMembers.slice(0, 4).map((member, index) => (
+                          <Avatar key={member.id} className="h-8 w-8 border-2 border-background">
+                            <AvatarImage src={member.avatar} />
+                            <AvatarFallback className="text-xs">
+                              {member.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                        {groupMembers.length > 4 && (
+                          <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground">+{groupMembers.length - 4}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="icon">
-                  <Edit className="h-4 w-4" />
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" className="hover-lift">
+                  <Copy className="h-4 w-4 mr-2" />
+                  Fork Goal
                 </Button>
-                <Button variant="ghost" size="icon" onClick={toggleSuspend}>
-                  {goal.is_suspended ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                <Link href={`/goals/${goal.id}/edit`}>
+                  <Button variant="outline" size="sm" className="hover-lift">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSuspend}
+                  className="hover-lift"
+                >
+                  {goal.is_suspended ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
+                  {goal.is_suspended ? "Resume" : "Pause"}
                 </Button>
-                <Button variant="ghost" size="icon" onClick={deleteGoal}>
-                  <Trash2 className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={deleteGoal}
+                  className="hover-lift text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
                 </Button>
               </div>
             </div>
-            <CardTitle className="text-3xl">{goal.title}</CardTitle>
-            {goal.description && (
-              <CardDescription className="text-base mt-2">{goal.description}</CardDescription>
-            )}
           </CardHeader>
         </Card>
 
-        {/* Stats */}
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Current Streak</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Flame className="h-6 w-6 text-orange-600" />
-                {streak?.current_streak || 0} days
-              </CardTitle>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Longest Streak</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
-                {streak?.longest_streak || 0} days
-              </CardTitle>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Total Completions</CardDescription>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Clock className="h-6 w-6 text-blue-600" />
-                {streak?.total_completions || 0}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Activities Checklist */}
-        {goal.goal_type === "multi" && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Activities</CardTitle>
-              <CardDescription>
-                {completedActivities} of {totalActivities} completed
-              </CardDescription>
-              <Progress value={progress} className="mt-2" />
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {activities.map((activity) => (
-                <div key={activity.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-                  <Checkbox
-                    checked={activity.is_completed}
-                    onCheckedChange={() => toggleActivity(activity.id, activity.is_completed)}
-                  />
-                  <span className={activity.is_completed ? "line-through text-slate-500" : ""}>
-                    {activity.title}
-                  </span>
+        {/* Current Streak */}
+        <Card className="hover-lift">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center gap-6">
+              <div className="text-center">
+                <div className="p-4 rounded-full bg-orange-500/10 mb-3">
+                  <Flame className="h-12 w-12 text-orange-600" />
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Complete Goal Button */}
-        {!goal.completed_at && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <Button onClick={completeGoal} className="w-full" size="lg">
-                <CheckCircle2 className="h-5 w-5 mr-2" />
-                Mark Goal as Complete
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Notes Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notes & Encouragement</CardTitle>
-            <CardDescription>Add personal notes or receive encouragement from partners</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Textarea
-                placeholder="Add a note..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={3}
-              />
-              <Button onClick={addNote} disabled={!note.trim()}>
-                Add Note
-              </Button>
+                <p className="text-sm text-muted-foreground mb-1">Current Streak</p>
+                <p className="text-5xl font-bold text-orange-600">{streak?.current_streak || 0}</p>
+                <p className="text-sm text-muted-foreground">days</p>
+              </div>
+              <div className="text-center">
+                <div className="p-4 rounded-full bg-green-500/10 mb-3">
+                  <Award className="h-12 w-12 text-green-600" />
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">Best Streak</p>
+                <p className="text-5xl font-bold text-green-600">{streak?.longest_streak || 0}</p>
+                <p className="text-sm text-muted-foreground">days</p>
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            {/* Activities Section */}
+            {isMultiActivity && (
+              <Card className="hover-lift">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="h-5 w-5" />
+                        Activities
+                      </CardTitle>
+                      <CardDescription>
+                        {completedActivities} of {totalActivities} completed
+                      </CardDescription>
+                    </div>
+                    <Progress value={progress} className="w-32 h-2" />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {activities.map((activity, index) => (
+                    <div key={activity.id} className="flex items-center gap-4 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                      <Checkbox
+                        checked={activity.is_completed}
+                        onCheckedChange={() => toggleActivity(activity.id, activity.is_completed)}
+                      />
+                      <div className="flex-1">
+                        <span className={`font-medium ${activity.is_completed ? "line-through text-muted-foreground" : ""}`}>
+                          {activity.title}
+                        </span>
+                        {activity.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {activity.description}
+                          </p>
+                        )}
+                      </div>
+                      {activity.is_completed && (
+                        <Badge className="bg-green-600">Done</Badge>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Complete Goal Button */}
+            {!goal.completed_at && (
+              <Card className="hover-lift">
+                <CardContent className="p-6">
+                  <Button onClick={completeGoal} className="w-full h-12 text-lg hover-lift">
+                    <CheckCircle2 className="h-5 w-5 mr-2" />
+                    Mark Goal as Complete
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Notes Section */}
+            <Card className="hover-lift">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5" />
+                  Notes & Encouragement
+                </CardTitle>
+                <CardDescription>
+                  Add personal notes or receive encouragement from partners
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <Textarea
+                    placeholder="Add a note about your progress, challenges, or wins..."
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={3}
+                    className="focus-ring"
+                  />
+                  <Button onClick={addNote} disabled={!note.trim()} className="hover-lift">
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Add Note
+                  </Button>
+                </div>
+
+                {/* Mock Notes */}
+                <div className="space-y-3 pt-4 border-t">
+                  <div className="flex gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src="/placeholder-avatar.jpg" />
+                      <AvatarFallback>SM</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Sarah Martinez</p>
+                      <p className="text-sm text-muted-foreground">
+                        Great progress! You're crushing this goal! 💪
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <Card className="hover-lift">
+              <CardHeader>
+                <CardTitle className="text-lg">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="outline" className="w-full justify-start hover-lift">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Message Partners
+                </Button>
+                <Button variant="outline" className="w-full justify-start hover-lift">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  View Calendar
+                </Button>
+                <Button variant="outline" className="w-full justify-start hover-lift">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  View Analytics
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Progress History */}
+            <Card className="hover-lift">
+              <CardHeader>
+                <CardTitle className="text-lg">This Week</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => (
+                    <div key={day} className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{day}</span>
+                      <div className="flex items-center gap-2">
+                        {index < 5 && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                        {index === 5 && <Clock className="h-4 w-4 text-orange-600" />}
+                        {index === 6 && <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Encouragement */}
+            <Card className="hover-lift">
+              <CardContent className="p-4">
+                <div className="text-center space-y-3">
+                  <div className="text-4xl">💪</div>
+                  <div>
+                    <p className="font-medium">Keep it up!</p>
+                    <p className="text-sm text-muted-foreground">
+                      You're doing great. Stay consistent!
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
-    </div>
+    </MainLayout>
   )
 }

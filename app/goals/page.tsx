@@ -42,7 +42,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
-// Mock data for goals
+// Mock data for goals with enhanced features
 const mockGoals = [
   {
     id: 1,
@@ -57,7 +57,15 @@ const mockGoals = [
     createdAt: "2024-01-15",
     dueDate: "2024-12-31",
     category: "Health & Fitness",
-    priority: "high"
+    priority: "high",
+    isForked: false,
+    forkedFrom: null,
+    accountabilityPartners: [
+      { id: "1", name: "Sarah Martinez", avatar: "/placeholder-avatar.jpg" },
+      { id: "2", name: "Mike Chen", avatar: "/placeholder-avatar.jpg" }
+    ],
+    isGroupGoal: false,
+    groupMembers: []
   },
   {
     id: 2,
@@ -72,7 +80,12 @@ const mockGoals = [
     createdAt: "2024-01-20",
     dueDate: "2024-12-31",
     category: "Education",
-    priority: "medium"
+    priority: "medium",
+    isForked: true,
+    forkedFrom: "Emily Rodriguez",
+    accountabilityPartners: [],
+    isGroupGoal: false,
+    groupMembers: []
   },
   {
     id: 3,
@@ -87,11 +100,43 @@ const mockGoals = [
     createdAt: "2024-02-01",
     dueDate: "2024-06-30",
     category: "Language",
-    priority: "high"
+    priority: "high",
+    isForked: false,
+    forkedFrom: null,
+    accountabilityPartners: [
+      { id: "3", name: "Alex Thompson", avatar: "/placeholder-avatar.jpg" }
+    ],
+    isGroupGoal: false,
+    groupMembers: []
   },
   {
     id: 4,
-    title: "Complete Project Portfolio",
+    title: "Team Fitness Challenge",
+    description: "Group workout challenge with friends",
+    type: "group",
+    status: "active",
+    progress: 60,
+    streak: 0,
+    totalCompletions: 0,
+    visibility: "restricted",
+    createdAt: "2024-02-05",
+    dueDate: "2024-03-31",
+    category: "Health & Fitness",
+    priority: "high",
+    isForked: false,
+    forkedFrom: null,
+    accountabilityPartners: [],
+    isGroupGoal: true,
+    groupMembers: [
+      { id: "1", name: "Sarah Martinez", avatar: "/placeholder-avatar.jpg", role: "creator" },
+      { id: "2", name: "Mike Chen", avatar: "/placeholder-avatar.jpg", role: "member" },
+      { id: "3", name: "Alex Thompson", avatar: "/placeholder-avatar.jpg", role: "member" },
+      { id: "4", name: "Jessica Liu", avatar: "/placeholder-avatar.jpg", role: "member" }
+    ]
+  },
+  {
+    id: 5,
+    title: "Complete Project Portfolio (Forked)",
     description: "Build and showcase development projects",
     type: "single",
     status: "completed",
@@ -102,10 +147,15 @@ const mockGoals = [
     createdAt: "2024-01-01",
     dueDate: "2024-03-31",
     category: "Career",
-    priority: "high"
+    priority: "high",
+    isForked: true,
+    forkedFrom: "David Kim",
+    accountabilityPartners: [],
+    isGroupGoal: false,
+    groupMembers: []
   },
   {
-    id: 5,
+    id: 6,
     title: "Meditation Practice",
     description: "10 minutes of daily mindfulness",
     type: "recurring",
@@ -117,7 +167,14 @@ const mockGoals = [
     createdAt: "2024-01-10",
     dueDate: "2024-12-31",
     category: "Wellness",
-    priority: "medium"
+    priority: "medium",
+    isForked: false,
+    forkedFrom: null,
+    accountabilityPartners: [
+      { id: "5", name: "Rachel Green", avatar: "/placeholder-avatar.jpg" }
+    ],
+    isGroupGoal: false,
+    groupMembers: []
   }
 ]
 
@@ -440,6 +497,9 @@ function GoalsGrid({ goals, router }: { goals: typeof mockGoals; router: ReturnT
 
           <CardContent className="space-y-4">
             {/* Progress */}
+
+
+            {/* Progress */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Progress</span>
@@ -466,6 +526,11 @@ function GoalsGrid({ goals, router }: { goals: typeof mockGoals; router: ReturnT
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{goal.category}</span>
               <div className="flex items-center gap-2">
+                {goal.isForked && (
+                  <Badge variant="outline" className="text-xs">
+                    Forked from {goal.forkedFrom}
+                  </Badge>
+                )}
                 <div className={`w-2 h-2 rounded-full ${getStatusColor(goal.status)}`} />
                 <span className="capitalize">{goal.status}</span>
               </div>
