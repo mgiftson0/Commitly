@@ -50,6 +50,8 @@ export default function ProfilePage() {
   const [followers, setFollowers] = useState(0)
   const [following, setFollowing] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [myStoreGoals, setMyStoreGoals] = useState<any[]>([])
+  const [partnerStoreGoals, setPartnerStoreGoals] = useState<any[]>([])
   const router = useRouter()
   const supabase = getSupabaseClient()
 
@@ -58,9 +60,68 @@ export default function ProfilePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Live update mock goals in Profile when localStorage changes
+  useEffect(() => {
+    if (!isMockAuthEnabled()) return
+    const onStorage = () => {
+      try {
+        const store = require("@/lib/mock-store")
+        const sg = store.getGoals()
+        const mapped = sg.map((g: any) => ({
+          id: String(g.id),
+          user_id: g.goalOwner?.id || 'mock-user-id',
+          title: g.title,
+          description: g.description,
+          goal_type: g.type,
+          visibility: g.visibility,
+          is_suspended: g.status === 'paused',
+          created_at: g.createdAt,
+          updated_at: g.createdAt,
+          completed_at: g.status === 'completed' ? new Date().toISOString() : null,
+          start_date: g.createdAt,
+        }))
+        setGoals(mapped as any)
+        const myS = sg.filter((g: any) => (g.goalOwner?.id || 'mock-user-id') === 'mock-user-id')
+        const partnerS = sg.filter((g: any) => Array.isArray(g.accountabilityPartners) && g.accountabilityPartners.some((p: any) => p.id === 'mock-user-id') && (g.goalOwner?.id || 'mock-user-id') !== 'mock-user-id')
+        setMyStoreGoals(myS)
+        setPartnerStoreGoals(partnerS)
+      } catch {}
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', onStorage)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', onStorage)
+      }
+    }
+  }, [])
+
   const loadProfile = async () => {
     if (isMockAuthEnabled()) {
       setUser(getMockUser() as unknown as User)
+      try {
+        const store = require("@/lib/mock-store")
+        const sg = store.getGoals()
+        const mapped = sg.map((g: any) => ({
+          id: String(g.id),
+          user_id: g.goalOwner?.id || 'mock-user-id',
+          title: g.title,
+          description: g.description,
+          goal_type: g.type,
+          visibility: g.visibility,
+          is_suspended: g.status === 'paused',
+          created_at: g.createdAt,
+          updated_at: g.createdAt,
+          completed_at: g.status === 'completed' ? new Date().toISOString() : null,
+          start_date: g.createdAt,
+        }))
+        setGoals(mapped as any)
+        const myS = sg.filter((g: any) => (g.goalOwner?.id || 'mock-user-id') === 'mock-user-id')
+        const partnerS = sg.filter((g: any) => Array.isArray(g.accountabilityPartners) && g.accountabilityPartners.some((p: any) => p.id === 'mock-user-id') && (g.goalOwner?.id || 'mock-user-id') !== 'mock-user-id')
+        setMyStoreGoals(myS)
+        setPartnerStoreGoals(partnerS)
+      } catch {}
       setLoading(false)
       return
     }
@@ -476,6 +537,43 @@ export default function ProfilePage() {
                 </Tabs>
               </CardContent>
             </Card>
+
+            {/* Partner Goals (Mock) */}
+            {isMockAuthEnabled() && partnerStoreGoals.length > 0 && (
+              <Card className="hover-lift mt-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Partner Goals
+                    </CardTitle>
+                    <Badge variant="outline">{partnerStoreGoals.length}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {partnerStoreGoals.slice(0, 5).map((g: any) => (
+                    <Link key={g.id} href={`/goals/${g.id}/partner`}>
+                      <div className="flex items-center gap-4 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                        <div className="p-2 rounded-lg bg-muted">
+                          <Target className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{g.title}</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">{g.type}</Badge>
+                            <Badge variant="outline" className="text-xs">{g.visibility}</Badge>
+                            {g.recurrencePattern && (
+                              <Badge variant="outline" className="text-xs">{g.recurrencePattern === 'custom' ? 'Custom' : (g.recurrencePattern.charAt(0).toUpperCase() + g.recurrencePattern.slice(1))}</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Badge variant="outline">Partner</Badge>
+                      </div>
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Sidebar */}

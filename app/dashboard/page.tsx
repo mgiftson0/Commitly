@@ -46,7 +46,60 @@ export default function DashboardPage() {
 
   useEffect(() => {
     checkUser()
+    if (isMockAuthEnabled()) {
+      try {
+        const store = require("@/lib/mock-store")
+        const sg = store.getGoals()
+        const mapped = sg.map((g: any) => ({
+          id: String(g.id),
+          user_id: 'mock-user-id',
+          title: g.title,
+          description: g.description,
+          goal_type: g.type,
+          visibility: g.visibility,
+          start_date: g.createdAt,
+          is_suspended: g.status === 'paused',
+          created_at: g.createdAt,
+          updated_at: g.createdAt,
+          completed_at: g.status === 'completed' ? new Date().toISOString() : null,
+        }))
+        setGoals(mapped as any)
+      } catch {}
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Live update when localStorage changes
+  useEffect(() => {
+    if (!isMockAuthEnabled()) return
+    const onStorage = () => {
+      try {
+        const store = require("@/lib/mock-store")
+        const sg = store.getGoals()
+        const mapped = sg.map((g: any) => ({
+          id: String(g.id),
+          user_id: 'mock-user-id',
+          title: g.title,
+          description: g.description,
+          goal_type: g.type,
+          visibility: g.visibility,
+          start_date: g.createdAt,
+          is_suspended: g.status === 'paused',
+          created_at: g.createdAt,
+          updated_at: g.createdAt,
+          completed_at: g.status === 'completed' ? new Date().toISOString() : null,
+        }))
+        setGoals(mapped as any)
+      } catch {}
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', onStorage)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', onStorage)
+      }
+    }
   }, [])
 
   const checkUser = async () => {

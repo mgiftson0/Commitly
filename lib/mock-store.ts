@@ -84,3 +84,85 @@ export function addEncouragement(goalId: string | number, content: string, autho
   map[String(goalId)] = [msg, ...cur]
   safeWrite(ENCOURAGEMENTS_KEY, map)
 }
+
+// Goals store (frontend-only)
+export type StoredGoal = {
+  id: number
+  title: string
+  description?: string
+  type: 'single' | 'multi' | 'recurring'
+  status: 'active' | 'completed' | 'paused'
+  progress: number
+  streak: number
+  totalCompletions: number
+  visibility: 'private' | 'restricted' | 'public'
+  createdAt: string
+  category: string
+  priority: 'low' | 'medium' | 'high'
+  // Optional recurrence and activity details for richer mock persistence
+  recurrencePattern?: 'daily' | 'weekly' | 'monthly' | 'custom' | string
+  recurrenceDays?: string[]
+  defaultTimeAllocation?: number | null
+  activities?: { title: string; orderIndex: number; assignedTo?: string[] }[]
+  dueDate?: string | null
+  // Ownership and visibility
+  isForked?: boolean
+  isGroupGoal?: boolean
+  groupMembers?: { id: string; name: string; role?: string }[]
+  accountabilityPartners?: { id: string; name: string }[]
+  goalOwner?: { id: string; name: string }
+  is_suspended?: boolean
+  completed_at?: string | null
+}
+
+const GOALS_KEY = 'commitly_mock_goals'
+
+export function getGoals(): StoredGoal[] {
+  return safeRead<StoredGoal[]>(GOALS_KEY, [])
+}
+
+export function addGoal(goal: Omit<StoredGoal, 'id' | 'createdAt'> & Partial<Pick<StoredGoal, 'createdAt'>>) {
+  const all = getGoals()
+  const id = Date.now()
+  const createdAt = goal.createdAt || new Date().toISOString()
+  const next: StoredGoal = {
+    id,
+    createdAt,
+    title: goal.title,
+    description: goal.description,
+    type: goal.type,
+    status: goal.status ?? 'active',
+    progress: goal.progress ?? 0,
+    streak: goal.streak ?? 0,
+    totalCompletions: goal.totalCompletions ?? 0,
+    visibility: goal.visibility,
+    category: goal.category ?? 'Personal',
+    priority: goal.priority ?? 'medium',
+    // New optional fields
+    recurrencePattern: goal.recurrencePattern,
+    recurrenceDays: goal.recurrenceDays,
+    defaultTimeAllocation: typeof goal.defaultTimeAllocation === 'number' ? goal.defaultTimeAllocation : (goal.defaultTimeAllocation ?? null),
+    activities: goal.activities,
+    dueDate: goal.dueDate ?? null,
+    // Ownership and collaboration
+    isForked: goal.isForked ?? false,
+    isGroupGoal: goal.isGroupGoal ?? false,
+    groupMembers: goal.groupMembers ?? [],
+    accountabilityPartners: goal.accountabilityPartners ?? [],
+    goalOwner: goal.goalOwner ?? { id: 'mock-user-id', name: 'You' },
+    is_suspended: goal.is_suspended ?? false,
+    completed_at: goal.completed_at ?? null,
+  }
+  all.unshift(next)
+  safeWrite(GOALS_KEY, all)
+  return next
+}
+
+export function updateGoal(id: number, changes: Partial<StoredGoal>) {
+  const all = getGoals()
+  const idx = all.findIndex(g => g.id === id)
+  if (idx >= 0) {
+    all[idx] = { ...all[idx], ...changes }
+    safeWrite(GOALS_KEY, all)
+  }
+}

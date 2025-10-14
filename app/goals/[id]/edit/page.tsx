@@ -50,6 +50,10 @@ export default function EditGoalPage() {
   const [recurrencePattern, setRecurrencePattern] = useState("daily")
   const [recurrenceDays, setRecurrenceDays] = useState<string[]>([])
   const [defaultTimeAllocation, setDefaultTimeAllocation] = useState("")
+  // Single-activity personal
+  const [singleActivity, setSingleActivity] = useState("")
+  const [scheduleType, setScheduleType] = useState<'date' | 'recurring'>('date')
+  const [singleDate, setSingleDate] = useState("")
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const router = useRouter()
@@ -66,7 +70,36 @@ export default function EditGoalPage() {
 
   const loadGoalData = async () => {
     if (isMockAuthEnabled()) {
-      // Mock data for edit form
+      try {
+        const store = require("@/lib/mock-store")
+        const sg = store.getGoals()
+        const g = sg.find((x: any) => String(x.id) === String(goalId))
+        if (g) {
+          setTitle(g.title || "")
+          setDescription(g.description || "")
+          setGoalType((g.type === 'multi' ? 'multi-activity' : (g.type === 'recurring' ? 'recurring' : 'single-activity')) as any)
+          setVisibility(g.visibility || 'private')
+          if (Array.isArray(g.activities) && g.activities.length > 0) {
+            if (g.type === 'multi') {
+              setActivities(g.activities.map((a: any) => a.title))
+            } else {
+              setSingleActivity(g.activities[0].title || "")
+            }
+          }
+          if (g.recurrencePattern) {
+            setScheduleType('recurring')
+            setRecurrencePattern(g.recurrencePattern)
+            setRecurrenceDays(g.recurrenceDays || [])
+          } else if (g.dueDate) {
+            setScheduleType('date')
+            setSingleDate(g.dueDate)
+          }
+          setDefaultTimeAllocation("")
+          setLoading(false)
+          return
+        }
+      } catch {}
+      // Fallback mock
       setTitle("Morning Workout Routine")
       setDescription("Daily exercise to build strength and endurance")
       setGoalType("multi-activity")
@@ -147,6 +180,41 @@ export default function EditGoalPage() {
     if (isMockAuthEnabled()) {
       setSaving(true)
       await mockDelay(1000)
+      try {
+        const store = require("@/lib/mock-store")
+        const type = goalType === 'single-activity' ? 'single' : (goalType === 'multi-activity' ? 'multi' : 'recurring')
+        const changes: any = {
+          title,
+          description,
+          type,
+          visibility,
+          defaultTimeAllocation: (goalType === 'single-activity') ? null : (defaultTimeAllocation ? parseInt(defaultTimeAllocation) : null),
+        }
+        if (goalType === 'single-activity') {
+          if (singleActivity.trim()) {
+            changes.activities = [{ title: singleActivity.trim(), orderIndex: 0, assignedTo: [] }]
+          }
+          if (scheduleType === 'date') {
+            changes.dueDate = singleDate || null
+            changes.recurrencePattern = undefined
+            changes.recurrenceDays = undefined
+          } else {
+            changes.dueDate = null
+            changes.recurrencePattern = recurrencePattern
+            changes.recurrenceDays = recurrencePattern === 'custom' ? recurrenceDays : undefined
+          }
+        }
+        if (goalType === 'multi-activity') {
+          changes.activities = activities.filter(a => a.trim()).map((t, idx) => ({ title: t, orderIndex: idx }))
+          changes.recurrencePattern = recurrencePattern
+          changes.recurrenceDays = recurrencePattern === 'custom' ? recurrenceDays : undefined
+        }
+        if (goalType === 'recurring') {
+          changes.recurrencePattern = recurrencePattern
+          changes.recurrenceDays = recurrencePattern === 'custom' ? recurrenceDays : undefined
+        }
+        store.updateGoal(Number(goalId), changes)
+      } catch {}
       toast.success("Goal updated successfully! (Mock Mode)")
       router.push(`/goals/${goalId}`)
       setSaving(false)
@@ -342,6 +410,90 @@ export default function EditGoalPage() {
                     </RadioGroup>
                   </div>
 
+                  {/* Activity (for single-activity goals) */}
+                  {goalType === "single-activity" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="singleActivity" className="text-sm font-medium">Activity <span className="text-destructive">*</span></Label>
+                      <Input
+                        id="singleActivity"
+                        placeholder="e.g., Run 5K, Submit portfolio"
+                        value={singleActivity}
+                        onChange={(e) => setSingleActivity(e.target.value)}
+                        className="focus-ring"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  {/* Schedule (date or recurring) for single-activity */}
+                  {goalType === "single-activity" && (
+                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                      <Label className="text-sm font-medium">Schedule</Label>
+                      <RadioGroup value={scheduleType} onValueChange={(v: 'date' | 'recurring') => setScheduleType(v)}>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${scheduleType === 'date' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                            <RadioGroupItem value="date" id="edit-schedule-date" />
+                            <div className="flex-1">
+                              <Label htmlFor="edit-schedule-date" className="font-medium cursor-pointer">Specific Date</Label>
+                              <p className="text-sm text-muted-foreground">Pick the day to complete this</p>
+                            </div>
+                            <Calendar className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${scheduleType === 'recurring' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                            <RadioGroupItem value="recurring" id="edit-schedule-recurring" />
+                            <div className="flex-1">
+                              <Label htmlFor="edit-schedule-recurring" className="font-medium cursor-pointer">Recurring</Label>
+                              <p className="text-sm text-muted-foreground">Repeat on a schedule</p>
+                            </div>
+                            <Flame className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </RadioGroup>
+
+                      {scheduleType === 'date' ? (
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-singleDate" className="text-sm font-medium">Select Date</Label>
+                          <Input id="edit-singleDate" type="date" value={singleDate} onChange={(e) => setSingleDate(e.target.value)} className="focus-ring" />
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <Label className="text-sm font-medium">Recurrence Pattern</Label>
+                          <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
+                            <SelectTrigger className="focus-ring">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="custom">Custom Days</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {recurrencePattern === "custom" && (
+                            <div className="space-y-3">
+                              <Label className="text-sm">Select Days</Label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {weekDays.map((day) => (
+                                  <div key={day} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`edit-sa-${day}`}
+                                      checked={recurrenceDays.includes(day)}
+                                      onCheckedChange={() => toggleRecurrenceDay(day)}
+                                    />
+                                    <Label htmlFor={`edit-sa-${day}`} className="font-normal cursor-pointer capitalize text-sm">
+                                      {day}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Activities (for multi-activity goals) */}
                   {goalType === "multi-activity" && (
                     <div className="space-y-4 p-4 rounded-lg bg-muted/30">
@@ -375,6 +527,43 @@ export default function EditGoalPage() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Recurring Schedule (once for multi-activity goals) */}
+                  {goalType === "multi-activity" && (
+                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                      <Label className="text-sm font-medium">Recurring Schedule</Label>
+                      <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
+                        <SelectTrigger className="focus-ring">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="custom">Custom Days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {recurrencePattern === "custom" && (
+                        <div className="space-y-3">
+                          <Label className="text-sm">Select Days</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {weekDays.map((day) => (
+                              <div key={day} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`edit-multi-${day}`}
+                                  checked={recurrenceDays.includes(day)}
+                                  onCheckedChange={() => toggleRecurrenceDay(day)}
+                                />
+                                <Label htmlFor={`edit-multi-${day}`} className="font-normal cursor-pointer capitalize text-sm">
+                                  {day}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -417,7 +606,8 @@ export default function EditGoalPage() {
                     </div>
                   )}
 
-                  {/* Time Allocation */}
+                  {/* Time Allocation (hidden for single-activity) */}
+                  {goalType !== 'single-activity' && (
                   <div className="space-y-2">
                     <Label htmlFor="time" className="text-sm font-medium">
                       Time Allocation (minutes)
@@ -432,6 +622,7 @@ export default function EditGoalPage() {
                       className="focus-ring"
                     />
                   </div>
+                  )}
 
                   {/* Visibility */}
                   <div className="space-y-3">

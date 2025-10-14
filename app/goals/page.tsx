@@ -40,7 +40,8 @@ import {
   Crown,
   User,
   MessageCircle,
-  Lock
+  Lock,
+  Globe
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -48,6 +49,7 @@ import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
+import * as React from "react"
 
 // Mock data for goals with enhanced features
 const mockGoals = [
@@ -342,6 +344,18 @@ const getTypeIcon = (type: string) => {
   }
 }
 
+const formatRecurrence = (goal: any) => {
+  const pattern = goal?.recurrencePattern
+  if (!pattern) return null
+  if (pattern !== 'custom') return pattern.charAt(0).toUpperCase() + pattern.slice(1)
+  const days: string[] = goal?.recurrenceDays || []
+  const map: Record<string, string> = {
+    monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun'
+  }
+  if (days.length === 0) return 'Custom'
+  return days.map(d => map[d] || d).slice(0, 3).join('/')
+}
+
 const isSingleActivity = (goal: typeof mockGoals[0]) => goal.type === 'single' || goal.type === 'single-activity'
 
 // Mock: list of user partners (not per-goal accountability partners)
@@ -395,10 +409,39 @@ export default function GoalsPage() {
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterCategory, setFilterCategory] = useState("all")
   const [sortBy, setSortBy] = useState("recent")
+  const [storeGoals, setStoreGoals] = useState<any[]>([])
   const router = useRouter()
 
+  // Load goals from local store
+  React.useEffect(() => {
+    try {
+      const store = require("@/lib/mock-store")
+      setStoreGoals(store.getGoals())
+    } catch {}
+  }, [])
+
+  // Live update when localStorage changes (e.g., from other tabs)
+  React.useEffect(() => {
+    const onStorage = () => {
+      try {
+        const store = require("@/lib/mock-store")
+        setStoreGoals(store.getGoals())
+      } catch {}
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', onStorage)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', onStorage)
+      }
+    }
+  }, [])
+
+  const allGoals = React.useMemo(() => [...storeGoals, ...mockGoals], [storeGoals])
+
   // Filter goals based on current view and user role
-  const filteredGoals = mockGoals.filter(goal => {
+  const filteredGoals = allGoals.filter(goal => {
     const matchesSearch = goal.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          goal.description.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = filterType === "all" || goal.type === filterType
@@ -410,11 +453,20 @@ export default function GoalsPage() {
 
   // Separate goals into user's goals and partner goals
   const userGoals = filteredGoals.filter(goal => isGoalOwner(goal))
-  const partnerGoals = filteredGoals.filter(goal =>
-    goal.accountabilityPartners.some(partner => partner.id === 'mock-user-id') && !isGoalOwner(goal)
-  )
+  const partnerGoals = filteredGoals
+    .filter(goal => goal.accountabilityPartners.some(partner => partner.id === 'mock-user-id') && !isGoalOwner(goal))
+    .filter(goal => {
+      try {
+        const store = require("@/lib/mock-store")
+        const status = store.getInviteStatus('partner', goal.id)
+        // Only show accepted partner goals; if no status (seed data), allow
+        return status ? status === 'accepted' : true
+      } catch {
+        return true
+      }
+    })
 
-  const categories = Array.from(new Set(mockGoals.map(g => g.category)))
+  const categories = Array.from(new Set(allGoals.map(g => g.category)))
 
   const sortedGoals = [...filteredGoals].sort((a, b) => {
     switch (sortBy) {
@@ -435,10 +487,10 @@ export default function GoalsPage() {
 
 
   const stats = {
-    total: mockGoals.length,
-    active: mockGoals.filter(g => g.status === "active").length,
-    completed: mockGoals.filter(g => g.status === "completed").length,
-    paused: mockGoals.filter(g => g.status === "paused").length
+    total: allGoals.length,
+    active: allGoals.filter(g => g.status === "active").length,
+    completed: allGoals.filter(g => g.status === "completed").length,
+    paused: allGoals.filter(g => g.status === "paused").length
   }
 
   return (
@@ -733,25 +785,7 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
       {goals.map((goal) => (
         <Card key={goal.id} className={`hover-lift group ${getGoalCardStyle(goal)}`}>
           <CardHeader className="pb-3">
-            {/* Invite banners on card */}
-            {isPartnerView && partnerInvites[goal.id] === 'pending' && (
-              <div className="mb-2 p-2 rounded-md bg-yellow-50 border border-yellow-200 flex items-center justify-between gap-2">
-                <span className="text-xs">Partner request pending</span>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setPartnerInvites({ ...partnerInvites, [goal.id]: 'accepted' }); try { const { setInviteStatus, addNotification } = require("@/lib/mock-store"); setInviteStatus('partner', goal.id, 'accepted'); addNotification({ title: 'Partner Request Accepted', message: `You accepted a partner request for ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Invitation accepted') }}>Accept</Button>
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setPartnerInvites({ ...partnerInvites, [goal.id]: 'declined' }); try { const { setInviteStatus, addNotification } = require("@/lib/mock-store"); setInviteStatus('partner', goal.id, 'declined'); addNotification({ title: 'Partner Request Declined', message: `You declined a partner request for ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Invitation declined') }}>Decline</Button>
-                </div>
-              </div>
-            )}
-            {!isPartnerView && goal.isGroupGoal && groupInvites[goal.id] === 'pending' && (
-              <div className="mb-2 p-2 rounded-md bg-yellow-50 border border-yellow-200 flex items-center justify-between gap-2">
-                <span className="text-xs">Group invite pending</span>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setGroupInvites({ ...groupInvites, [goal.id]: 'accepted' }); try { const { setInviteStatus, addNotification } = require("@/lib/mock-store"); setInviteStatus('group', goal.id, 'accepted'); addNotification({ title: 'Group Invite Accepted', message: `You joined the group goal: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Joined group') }}>Accept</Button>
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setGroupInvites({ ...groupInvites, [goal.id]: 'declined' }); try { const { setInviteStatus, addNotification } = require("@/lib/mock-store"); setInviteStatus('group', goal.id, 'declined'); addNotification({ title: 'Group Invite Declined', message: `You declined to join: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Declined invite') }}>Decline</Button>
-                </div>
-              </div>
-            )}
+            {/* Requests handled in Notifications. Status shown below. */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
                 {getTypeIcon(goal.type)}
@@ -762,6 +796,13 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                   <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
                     <Users className="h-3 w-3 mr-1" />
                     Group
+                  </Badge>
+                )}
+                {/* Recurrence badge if available */}
+                {(goal as any).recurrencePattern && (
+                  <Badge variant="outline" className="text-xs">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    {formatRecurrence(goal) as any}
                   </Badge>
                 )}
                 {/* Only show forked badge if user owns the goal */}
@@ -827,7 +868,7 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                         <Eye className="mr-2 h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(goal.id)}>
+                      <DropdownMenuItem onClick={() => handleEdit(goal.id)} disabled={goal.status === 'completed' || !!(goal as any).completed_at} className={(goal.status === 'completed' || !!(goal as any).completed_at) ? 'opacity-50 pointer-events-none' : ''}>
                         <Edit className="mr-2 h-4 w-4" />
                         Edit Goal
                       </DropdownMenuItem>
@@ -898,8 +939,8 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
 
             {/* Stats - Different for partner goals */}
             {isPartnerView ? (
-              /* For partner goals, only show goal owner info */
-              <div className="flex items-center justify-center text-sm">
+              /* For partner goals, show owner and visibility */
+              <div className="flex items-center justify-between text-xs">
                 {goal.goalOwner && (
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
@@ -907,6 +948,11 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                     <span className="font-medium">{goal.goalOwner.name}</span>
                   </div>
                 )}
+                <div className="flex items-center gap-2">
+                  {goal.visibility === 'private' && <Lock className="h-3 w-3 text-muted-foreground" title="Private" />}
+                  {goal.visibility === 'restricted' && <Users className="h-3 w-3 text-muted-foreground" title="Partners Only" />}
+                  {goal.visibility === 'public' && <Globe className="h-3 w-3 text-muted-foreground" title="Public" />}
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 text-sm">

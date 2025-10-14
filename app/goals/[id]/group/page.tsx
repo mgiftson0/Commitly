@@ -28,16 +28,10 @@ export default function GroupGoalDetailPage() {
   const goalId = params.id as string
 
   const currentUser = { id: 'mock-user-id', name: 'You' }
-  const groupMembers = useMemo(() => ([
-    { id: 'mock-user-id', name: 'You', role: 'member', avatar: '/placeholder-avatar.jpg' },
-    { id: '2', name: 'Mike Chen', role: 'member', avatar: '/placeholder-avatar.jpg' },
-    { id: '3', name: 'Emily Rodriguez', role: 'creator', avatar: '/placeholder-avatar.jpg' },
-  ]), [])
+  const [groupMembers, setGroupMembers] = useState<{ id: string; name: string; role?: string; avatar?: string }[]>([])
 
-  const [activityAssignments, setActivityAssignments] = useState<{[key: string]: string[]}>({
-    '1': ['all'],
-    '2': ['mock-user-id', '2'],
-  })
+  const [activityAssignments, setActivityAssignments] = useState<{[key: string]: string[]}>({})
+  const [storeMeta, setStoreMeta] = useState<{ dueDate?: string | null; recurrencePattern?: string; recurrenceDays?: string[] } | null>(null)
 
   useEffect(() => {
     loadGoalData()
@@ -46,6 +40,58 @@ export default function GroupGoalDetailPage() {
 
   const loadGoalData = async () => {
     if (isMockAuthEnabled()) {
+      try {
+        const store = require("@/lib/mock-store")
+        const sg = store.getGoals()
+        const stored = sg.find((g: any) => String(g.id) === String(goalId))
+        if (stored) {
+          const mappedGoal: Goal = {
+            id: String(stored.id),
+            user_id: stored.goalOwner?.id || 'mock-user-id',
+            title: stored.title,
+            description: stored.description,
+            goal_type: stored.type as any,
+            visibility: stored.visibility as any,
+            start_date: stored.createdAt,
+            is_suspended: false,
+            created_at: stored.createdAt,
+            updated_at: stored.createdAt,
+          }
+          setGoal(mappedGoal)
+          const members = (stored.groupMembers || []).map((m: any) => ({ id: m.id, name: m.name, role: m.role || 'member', avatar: '/placeholder-avatar.jpg' }))
+          setGroupMembers(members)
+          const acts: Activity[] = (stored.activities || []).map((a: any) => ({
+            id: String(a.orderIndex),
+            goal_id: String(stored.id),
+            title: a.title,
+            description: undefined,
+            is_completed: false,
+            order_index: a.orderIndex,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }))
+          setActivities(acts)
+          setStoreMeta({ dueDate: stored.dueDate || null, recurrencePattern: stored.recurrencePattern, recurrenceDays: stored.recurrenceDays })
+          const ids = members.map((m: any) => m.id)
+          const assignments: { [key: string]: string[] } = {}
+          ;(stored.activities || []).forEach((a: any) => {
+            const assigned = Array.isArray(a.assignedTo) ? a.assignedTo : []
+            const key = String(a.orderIndex)
+            if (assigned.length > 0 && ids.length > 0 && assigned.every((id: string) => ids.includes(id)) && assigned.length === ids.length) {
+              assignments[key] = ['all', ...ids]
+            } else {
+              assignments[key] = assigned
+            }
+          })
+          setActivityAssignments(assignments)
+          try {
+            const status = store.getInviteStatus('group', stored.id)
+            if (status) setInviteStatus(status)
+          } catch {}
+          setLoading(false)
+          return
+        }
+      } catch {}
       const mockGoal: Goal = {
         id: goalId,
         user_id: '3',
@@ -63,6 +109,11 @@ export default function GroupGoalDetailPage() {
         { id: '2', goal_id: goalId, title: 'Strength (10 min)', description: undefined, is_completed: true, completed_at: new Date().toISOString(), order_index: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       ]
       setGoal(mockGoal)
+      setGroupMembers([
+        { id: 'mock-user-id', name: 'You', role: 'member', avatar: '/placeholder-avatar.jpg' },
+        { id: '2', name: 'Mike Chen', role: 'member', avatar: '/placeholder-avatar.jpg' },
+        { id: '3', name: 'Emily Rodriguez', role: 'creator', avatar: '/placeholder-avatar.jpg' },
+      ])
       setActivities(mockActivities)
       setLoading(false)
       return
@@ -208,6 +259,31 @@ export default function GroupGoalDetailPage() {
                   </Avatar>
                 ))}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Dates */}
+        <Card className="hover-lift">
+          <CardHeader>
+            <CardTitle className="text-lg">Dates</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <div className="text-sm flex items-center justify-between">
+              <span className="text-muted-foreground">Created on</span>
+              <span className="font-medium">{goal.created_at ? new Date(goal.created_at).toLocaleString() : '—'}</span>
+            </div>
+            <div className="text-sm flex items-center justify-between">
+              <span className="text-muted-foreground">Updated on</span>
+              <span className="font-medium">{goal.updated_at ? new Date(goal.updated_at).toLocaleString() : '—'}</span>
+            </div>
+            <div className="text-sm flex items-center justify-between">
+              <span className="text-muted-foreground">Due date</span>
+              <span className="font-medium">{storeMeta?.dueDate ? new Date(storeMeta.dueDate).toLocaleDateString() : 'Not set'}</span>
+            </div>
+            <div className="text-sm flex items-center justify-between">
+              <span className="text-muted-foreground">Completed on</span>
+              <span className="font-medium">{(goal as any).completed_at ? new Date((goal as any).completed_at).toLocaleString() : '—'}</span>
             </div>
           </CardContent>
         </Card>

@@ -54,6 +54,10 @@ export default function CreateGoalPage() {
   const [selectedPartners, setSelectedPartners] = useState<string[]>([])
   const [groupMembers, setGroupMembers] = useState<string[]>([]) // includes owner by default when group
   const [activityAssignments, setActivityAssignments] = useState<{[key: number]: string[]}>({})
+  // Single-activity personal specific fields
+  const [singleActivity, setSingleActivity] = useState("")
+  const [scheduleType, setScheduleType] = useState<'date' | 'recurring'>('date')
+  const [singleDate, setSingleDate] = useState("")
   
   // Mock current user (owner)
   const currentUser = { id: "mock-user-id", name: "You", username: "you" }
@@ -115,9 +119,71 @@ export default function CreateGoalPage() {
     if (isMockAuthEnabled()) {
       setLoading(true)
       await mockDelay(1000)
-      try { const { addNotification } = require("@/lib/mock-store"); addNotification({ title: 'Goal Created', message: `You created a new goal: ${title || 'New Goal'}.`, type: 'goal_created', related_goal_id: null }); } catch {}
+      try {
+        const store = require("@/lib/mock-store")
+        const type = goalType === 'single-activity' ? 'single' : (goalType === 'multi-activity' ? 'multi' : 'recurring')
+        const owner = { id: 'mock-user-id', name: 'You' }
+        const group = goalNature === 'group'
+        const groupMembersFull = group ? [owner, ...groupMembers.map((id) => {
+          const p = availablePartners.find(pp => pp.id === id)
+          return { id, name: p?.name || 'Member' }
+        })] : []
+        const newGoal = store.addGoal({
+          title: title || 'Untitled Goal',
+          description,
+          type,
+          visibility,
+          status: 'active',
+          progress: 0,
+          streak: 0,
+          totalCompletions: 0,
+          category: category || 'Personal',
+          priority: 'medium',
+          // Persist recurrence and time allocation in mock mode
+          recurrencePattern: ((goalType === 'single-activity' && scheduleType === 'recurring') || goalType === 'recurring' || goalType === 'multi-activity') ? (recurrencePattern as any) : undefined,
+          recurrenceDays: (((goalType === 'single-activity' && scheduleType === 'recurring') || goalType === 'recurring' || goalType === 'multi-activity') && recurrencePattern === 'custom') ? recurrenceDays : undefined,
+          defaultTimeAllocation: (goalType === 'single-activity') ? null : (defaultTimeAllocation ? parseInt(defaultTimeAllocation) : null),
+          dueDate: (goalType === 'single-activity' && scheduleType === 'date') ? (singleDate || null) : null,
+          // Persist activities and assignments
+          activities: goalType === 'multi-activity'
+            ? activities
+                .map((a, idx) => ({ a: a.trim(), idx }))
+                .filter(({ a }) => a.length > 0)
+                .map(({ a, idx }) => {
+                  const current = activityAssignments[idx] || []
+                  const assignedTo = goalNature === 'group'
+                    ? (current.includes('all') ? groupMembers : current)
+                    : []
+                  return { title: a, orderIndex: idx, assignedTo }
+                })
+            : (goalNature === 'personal' && goalType === 'single-activity' && singleActivity.trim())
+              ? [{ title: singleActivity.trim(), orderIndex: 0, assignedTo: [] }]
+              : undefined,
+          isGroupGoal: group,
+          groupMembers: groupMembersFull,
+          accountabilityPartners: goalNature === 'personal' ? selectedPartners.slice(0, 2).map(id => { const p = availablePartners.find(pp => pp.id === id); return { id, name: p?.name || 'Partner' } }) : [],
+          goalOwner: owner,
+        })
+        // Create notifications for invites
+        if (goalNature === 'personal' && selectedPartners.length > 0) {
+          selectedPartners.forEach((id) => {
+            const p = availablePartners.find(pp => pp.id === id)
+            store.addNotification({ title: 'Partner Request', message: `Request sent to ${p?.name || 'Partner'} for ${title || 'your goal'}.`, type: 'accountability_request', related_goal_id: newGoal.id })
+          })
+        }
+        if (group && groupMembers.length > 0) {
+          // Do not send an invite to the owner
+          groupMembers
+            .filter((id) => id !== currentUser.id)
+            .forEach((id) => {
+              const p = availablePartners.find(pp => pp.id === id)
+              store.addNotification({ title: 'Group Invite', message: `Invite sent to ${p?.name || 'Member'} for ${title || 'your goal'}.`, type: 'group_invite', related_goal_id: newGoal.id })
+            })
+        }
+        store.addNotification({ title: 'Goal Created', message: `You created a new goal: ${title || 'New Goal'}.`, type: 'goal_created', related_goal_id: newGoal.id })
+      } catch {}
       toast.success("Goal created successfully! (Mock Mode)")
-      router.push("/dashboard")
+      router.push("/goals")
       setLoading(false)
       return
     }
@@ -494,6 +560,90 @@ export default function CreateGoalPage() {
                     </RadioGroup>
                   </div>
 
+                  {/* Activity (for any single-activity goal) */}
+                  {goalType === 'single-activity' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="singleActivity" className="text-sm font-medium">Activity <span className="text-destructive">*</span></Label>
+                      <Input
+                        id="singleActivity"
+                        placeholder="e.g., Run 5K, Submit portfolio"
+                        value={singleActivity}
+                        onChange={(e) => setSingleActivity(e.target.value)}
+                        className="focus-ring"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  {/* Schedule (date or recurring) for any single-activity */}
+                  {goalType === 'single-activity' && (
+                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                      <Label className="text-sm font-medium">Schedule</Label>
+                      <RadioGroup value={scheduleType} onValueChange={(v: 'date' | 'recurring') => setScheduleType(v)}>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${scheduleType === 'date' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                            <RadioGroupItem value="date" id="schedule-date" />
+                            <div className="flex-1">
+                              <Label htmlFor="schedule-date" className="font-medium cursor-pointer">Specific Date</Label>
+                              <p className="text-sm text-muted-foreground">Pick the day to complete this</p>
+                            </div>
+                            <Calendar className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${scheduleType === 'recurring' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                            <RadioGroupItem value="recurring" id="schedule-recurring" />
+                            <div className="flex-1">
+                              <Label htmlFor="schedule-recurring" className="font-medium cursor-pointer">Recurring</Label>
+                              <p className="text-sm text-muted-foreground">Repeat on a schedule</p>
+                            </div>
+                            <Flame className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </RadioGroup>
+
+                      {scheduleType === 'date' ? (
+                        <div className="space-y-2">
+                          <Label htmlFor="singleDate" className="text-sm font-medium">Select Date</Label>
+                          <Input id="singleDate" type="date" value={singleDate} onChange={(e) => setSingleDate(e.target.value)} className="focus-ring" />
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <Label className="text-sm font-medium">Recurrence Pattern</Label>
+                          <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
+                            <SelectTrigger className="focus-ring">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="custom">Custom Days</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {recurrencePattern === "custom" && (
+                            <div className="space-y-3">
+                              <Label className="text-sm">Select Days</Label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {weekDays.map((day) => (
+                                  <div key={day} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`sa-${day}`}
+                                      checked={recurrenceDays.includes(day)}
+                                      onCheckedChange={() => toggleRecurrenceDay(day)}
+                                    />
+                                    <Label htmlFor={`sa-${day}`} className="font-normal cursor-pointer capitalize text-sm">
+                                      {day}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Activities (for multi-activity goals) */}
                   {goalType === "multi-activity" && (
                     <div className="space-y-4 p-4 rounded-lg bg-muted/30">
@@ -595,6 +745,44 @@ export default function CreateGoalPage() {
                     </div>
                   )}
 
+                  {/* Recurring Schedule (once for multi-activity goals) */}
+                  {goalType === "multi-activity" && (
+                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                      <Label className="text-sm font-medium">Recurring Schedule</Label>
+                      <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
+                        <SelectTrigger className="focus-ring">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="custom">Custom Days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {recurrencePattern === "custom" && (
+                        <div className="space-y-3">
+                          <Label className="text-sm">Select Days</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {weekDays.map((day) => (
+                              <div key={day} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`multi-${day}`}
+                                  checked={recurrenceDays.includes(day)}
+                                  onCheckedChange={() => toggleRecurrenceDay(day)}
+                                />
+                                <Label htmlFor={`multi-${day}`}
+                                  className="font-normal cursor-pointer capitalize text-sm">
+                                  {day}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Recurrence Settings (for recurring goals) */}
                   {goalType === "recurring" && (
                     <div className="space-y-4 p-4 rounded-lg bg-muted/30">
@@ -634,7 +822,8 @@ export default function CreateGoalPage() {
                     </div>
                   )}
 
-                  {/* Time Allocation */}
+                  {/* Time Allocation (hidden for any single-activity) */}
+                  {goalType !== 'single-activity' && (
                   <div className="space-y-2">
                     <Label htmlFor="time" className="text-sm font-medium">
                       Time Allocation (minutes)
@@ -649,6 +838,7 @@ export default function CreateGoalPage() {
                       className="focus-ring"
                     />
                   </div>
+                  )}
 
                   {/* Accountability Partners (only for personal goals) */}
                   {goalNature === 'personal' && (
@@ -664,6 +854,10 @@ export default function CreateGoalPage() {
                       <Select
                         value=""
                         onValueChange={(value) => {
+                          if (selectedPartners.length >= 2) {
+                            try { toast.error('You can select up to 2 partners') } catch {}
+                            return
+                          }
                           if (!selectedPartners.includes(value)) {
                             setSelectedPartners([...selectedPartners, value])
                           }
@@ -691,6 +885,8 @@ export default function CreateGoalPage() {
                           }
                         </SelectContent>
                       </Select>
+
+                      <div className="text-xs text-muted-foreground">Selected {selectedPartners.length}/2</div>
 
                       {selectedPartners.length > 0 && (
                         <div className="space-y-2">

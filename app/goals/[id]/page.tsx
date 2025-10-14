@@ -47,6 +47,7 @@ export default function GoalDetailPage() {
   const [streak, setStreak] = useState<Streak | null>(null)
   const [note, setNote] = useState("")
   const [loading, setLoading] = useState(true)
+  const [storeMeta, setStoreMeta] = useState<{ dueDate?: string | null; recurrencePattern?: string; recurrenceDays?: string[] } | null>(null)
   const [activityAssignments, setActivityAssignments] = useState<{[key: string]: string[]}>({
     '1': ['1', '2'], // Activity 1 assigned to Sarah and Mike
     '2': ['all'],    // Activity 2 assigned to all members
@@ -64,40 +65,41 @@ export default function GoalDetailPage() {
 
   const loadGoalData = async () => {
     if (isMockAuthEnabled()) {
-      // Mock goal data for frontend display
-      const mockGoal: Goal = {
-        id: goalId,
-        user_id: 'mock-user-id',
-        title: 'Morning Workout Routine',
-        description: 'Daily exercise to build strength and endurance',
-        goal_type: 'multi' as const,
-        visibility: 'public' as const,
-        start_date: new Date().toISOString(),
-        is_suspended: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-      
-      const mockActivities: Activity[] = [
-        { id: '1', goal_id: goalId, title: '10 push-ups', description: undefined, is_completed: false, order_index: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: '2', goal_id: goalId, title: '20 sit-ups', description: undefined, is_completed: true, completed_at: new Date().toISOString(), order_index: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: '3', goal_id: goalId, title: '5 minute plank', description: undefined, is_completed: false, order_index: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      ]
-      
-      const mockStreak: Streak = {
-        id: '1',
-        goal_id: goalId,
-        user_id: 'mock-user-id',
-        current_streak: 12,
-        longest_streak: 15,
-        total_completions: 45,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-      
-      setGoal(mockGoal)
-      setActivities(mockActivities)
-      setStreak(mockStreak)
+      try {
+        const store = require("@/lib/mock-store")
+        const sg = store.getGoals()
+        const g = sg.find((x: any) => String(x.id) === String(goalId))
+        if (g) {
+          const mapped: Goal = {
+            id: String(g.id),
+            user_id: g.goalOwner?.id || 'mock-user-id',
+            title: g.title,
+            description: g.description,
+            goal_type: (g.type as any),
+            visibility: g.visibility as any,
+            start_date: g.createdAt,
+            is_suspended: g.status === 'paused',
+            created_at: g.createdAt,
+            updated_at: g.createdAt,
+            completed_at: g.completed_at || null,
+          }
+          setGoal(mapped)
+          setStoreMeta({ dueDate: g.dueDate || null, recurrencePattern: g.recurrencePattern, recurrenceDays: g.recurrenceDays })
+          const acts: Activity[] = (g.activities || []).map((a: any) => ({
+            id: String(a.orderIndex),
+            goal_id: String(g.id),
+            title: a.title,
+            description: undefined,
+            is_completed: false,
+            order_index: a.orderIndex,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }))
+          setActivities(acts)
+          setLoading(false)
+          return
+        }
+      } catch {}
       setLoading(false)
       return
     }
@@ -606,31 +608,30 @@ export default function GoalDetailPage() {
           </CardHeader>
         </Card>
 
-        {/* Current Streak (hide for single-activity goals) */}
-        {goal.goal_type !== 'single' && goal.goal_type !== 'single-activity' && (
-          <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-center gap-6">
-                <div className="text-center">
-                  <div className="p-4 rounded-full bg-orange-500/10 mb-3">
-                    <Flame className="h-12 w-12 text-orange-600" />
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-1">Current Streak</p>
-                  <p className="text-5xl font-bold text-orange-600">{streak?.current_streak || 0}</p>
-                  <p className="text-sm text-muted-foreground">days</p>
-                </div>
-                <div className="text-center">
-                  <div className="p-4 rounded-full bg-green-500/10 mb-3">
-                    <Award className="h-12 w-12 text-green-600" />
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-1">Best Streak</p>
-                  <p className="text-5xl font-bold text-green-600">{streak?.longest_streak || 0}</p>
-                  <p className="text-sm text-muted-foreground">days</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Dates */}
+        <Card className="hover-lift">
+          <CardHeader>
+            <CardTitle className="text-lg">Dates</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <div className="text-sm flex items-center justify-between">
+              <span className="text-muted-foreground">Created on</span>
+              <span className="font-medium">{goal.created_at ? new Date(goal.created_at).toLocaleString() : '—'}</span>
+            </div>
+            <div className="text-sm flex items-center justify-between">
+              <span className="text-muted-foreground">Updated on</span>
+              <span className="font-medium">{goal.updated_at ? new Date(goal.updated_at).toLocaleString() : '—'}</span>
+            </div>
+            <div className="text-sm flex items-center justify-between">
+              <span className="text-muted-foreground">Due date</span>
+              <span className="font-medium">{storeMeta?.dueDate ? new Date(storeMeta.dueDate).toLocaleDateString() : 'Not set'}</span>
+            </div>
+            <div className="text-sm flex items-center justify-between">
+              <span className="text-muted-foreground">Completed on</span>
+              <span className="font-medium">{goal.completed_at ? new Date(goal.completed_at).toLocaleString() : '—'}</span>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}

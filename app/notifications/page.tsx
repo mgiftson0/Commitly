@@ -470,6 +470,49 @@ function NotificationCard({ notification }: { notification: NotificationItem }) 
               </div>
             </div>
 
+            {/* Request Actions (Accept/Decline) */}
+            {(notification.type === 'accountability_request' || notification.type === 'group_invite') && (
+              <div className="mt-3 pt-3 border-t flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    try {
+                      const store = require("@/lib/mock-store")
+                      const goalId = (notification as any).related_goal_id
+                      if (goalId) {
+                        store.setInviteStatus(notification.type === 'accountability_request' ? 'partner' : 'group', goalId, 'accepted')
+                        store.addNotification({ title: notification.type === 'accountability_request' ? 'Partner Request Accepted' : 'Group Invite Accepted', message: 'Request accepted.', type: 'partner_update', related_goal_id: goalId })
+                        toast.success('Accepted')
+                      } else {
+                        toast.info('No goal attached to this request')
+                      }
+                    } catch {}
+                  }}
+                >
+                  Accept
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    try {
+                      const store = require("@/lib/mock-store")
+                      const goalId = (notification as any).related_goal_id
+                      if (goalId) {
+                        store.setInviteStatus(notification.type === 'accountability_request' ? 'partner' : 'group', goalId, 'declined')
+                        store.addNotification({ title: notification.type === 'accountability_request' ? 'Partner Request Declined' : 'Group Invite Declined', message: 'Request declined.', type: 'partner_update', related_goal_id: goalId })
+                        toast.success('Declined')
+                      } else {
+                        toast.info('No goal attached to this request')
+                      }
+                    } catch {}
+                  }}
+                >
+                  Decline
+                </Button>
+              </div>
+            )}
+
             {/* Related Goal Action */}
             {notification.related_goal_id && (
               <div className="mt-3 pt-3 border-t">
