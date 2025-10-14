@@ -201,22 +201,22 @@ export default function DashboardPage() {
         {/* Welcome Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               Welcome back, <span className="text-gradient-primary">John!</span>
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               You're on a {todayStats.streak}-day streak! Keep up the great work! 🔥
             </p>
           </div>
           <div className="flex gap-2">
             <Link href="/goals/create">
-              <Button className="hover-lift">
-                <Plus className="h-4 w-4 mr-2" />
-                New Goal
+              <Button className="hover-lift" size="sm">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">New Goal</span>
               </Button>
             </Link>
-            <Link href="/partners/find">
-              <Button variant="outline" className="hover-lift">
+            <Link href="/partners/find" className="hidden sm:block">
+              <Button variant="outline" className="hover-lift" size="sm">
                 <Users className="h-4 w-4 mr-2" />
                 Find Partners
               </Button>
@@ -225,58 +225,58 @@ export default function DashboardPage() {
         </div>
 
         {/* Today's Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-green-500/10">
-                  <CheckCircle2 className="h-6 w-6 text-green-600" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-full bg-green-500/10 w-fit">
+                  <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Completed Today</p>
-                  <p className="text-3xl font-bold">{todayStats.completed}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{todayStats.completed}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-orange-500/10">
-                  <Clock className="h-6 w-6 text-orange-600" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-full bg-orange-500/10 w-fit">
+                  <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Pending Today</p>
-                  <p className="text-3xl font-bold">{todayStats.pending}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{todayStats.pending}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-blue-500/10">
-                  <Flame className="h-6 w-6 text-blue-600" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-full bg-blue-500/10 w-fit">
+                  <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Current Streak</p>
-                  <p className="text-3xl font-bold">{todayStats.streak}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Streak</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{todayStats.streak}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-purple-500/10">
-                  <Award className="h-6 w-6 text-purple-600" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-full bg-purple-500/10 w-fit">
+                  <Award className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Best Streak</p>
-                  <p className="text-3xl font-bold">{todayStats.longestStreak}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Best</p>
+                  <p className="text-2xl sm:text-3xl font-bold">{todayStats.longestStreak}</p>
                 </div>
               </div>
             </CardContent>

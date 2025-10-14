@@ -32,9 +32,41 @@ export default function GoalDetailPage() {
 
   const loadGoalData = async () => {
     if (isMockAuthEnabled()) {
+      // Mock goal data for frontend display
+      const mockGoal: Goal = {
+        id: goalId,
+        user_id: 'mock-user-id',
+        title: 'Morning Workout Routine',
+        description: 'Daily exercise to build strength and endurance',
+        goal_type: 'multi' as const,
+        visibility: 'public' as const,
+        start_date: new Date().toISOString(),
+        is_suspended: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      
+      const mockActivities: Activity[] = [
+        { id: '1', goal_id: goalId, title: '10 push-ups', description: null, is_completed: false, order_index: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: '2', goal_id: goalId, title: '20 sit-ups', description: null, is_completed: true, completed_at: new Date().toISOString(), order_index: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: '3', goal_id: goalId, title: '5 minute plank', description: null, is_completed: false, order_index: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      ]
+      
+      const mockStreak: Streak = {
+        id: '1',
+        goal_id: goalId,
+        user_id: 'mock-user-id',
+        current_streak: 12,
+        longest_streak: 15,
+        total_completions: 45,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      
+      setGoal(mockGoal)
+      setActivities(mockActivities)
+      setStreak(mockStreak)
       setLoading(false)
-      toast.info("Viewing goals disabled in mock mode")
-      router.push("/dashboard")
       return
     }
     
@@ -88,7 +120,12 @@ export default function GoalDetailPage() {
 
   const toggleActivity = async (activityId: string, isCompleted: boolean) => {
     if (isMockAuthEnabled()) {
-      toast.info("Feature disabled in mock mode")
+      setActivities(activities.map(a => 
+        a.id === activityId 
+          ? { ...a, is_completed: !isCompleted, completed_at: !isCompleted ? new Date().toISOString() : undefined }
+          : a
+      ))
+      toast.success(isCompleted ? "Activity unchecked" : "Activity completed!")
       return
     }
     if (!supabase) return
@@ -113,7 +150,10 @@ export default function GoalDetailPage() {
 
   const completeGoal = async () => {
     if (isMockAuthEnabled()) {
-      toast.info("Feature disabled in mock mode")
+      if (goal) {
+        setGoal({ ...goal, completed_at: new Date().toISOString() })
+        toast.success("🎉 Goal completed! Great job!")
+      }
       return
     }
     if (!supabase) return
@@ -145,7 +185,10 @@ export default function GoalDetailPage() {
 
   const toggleSuspend = async () => {
     if (isMockAuthEnabled()) {
-      toast.info("Feature disabled in mock mode")
+      if (goal) {
+        setGoal({ ...goal, is_suspended: !goal.is_suspended })
+        toast.success(goal.is_suspended ? "Goal resumed" : "Goal suspended")
+      }
       return
     }
     if (!supabase) return
@@ -166,7 +209,10 @@ export default function GoalDetailPage() {
 
   const deleteGoal = async () => {
     if (isMockAuthEnabled()) {
-      toast.info("Feature disabled in mock mode")
+      if (confirm("Are you sure you want to delete this goal?")) {
+        toast.success("Goal deleted")
+        router.push("/dashboard")
+      }
       return
     }
     if (!supabase) return
@@ -189,7 +235,10 @@ export default function GoalDetailPage() {
 
   const addNote = async () => {
     if (isMockAuthEnabled()) {
-      toast.info("Feature disabled in mock mode")
+      if (note.trim()) {
+        toast.success("Note added")
+        setNote("")
+      }
       return
     }
     if (!supabase) return

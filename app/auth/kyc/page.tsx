@@ -167,320 +167,300 @@ export default function KYCPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]" />
+
+      <div className="relative min-h-screen flex items-center justify-center p-4">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/60 rounded-full blur opacity-75" />
-              <div className="relative bg-background rounded-full p-4 border">
-                <Target className="h-12 w-12 text-primary" />
+        <div className="absolute top-0 left-0 right-0 p-6">
+          <div className="flex items-center justify-between max-w-md mx-auto">
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/60 rounded-lg blur opacity-75" />
+                <div className="relative bg-white dark:bg-slate-900 rounded-lg p-2 border shadow-lg">
+                  <Target className="h-6 w-6 text-primary" />
+                </div>
               </div>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">Commitly</span>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Step 1 of 1
             </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Complete Your Profile</h1>
-            <p className="text-muted-foreground">
-              Help us personalize your experience and connect you with the right goals and partners
+        </div>
+
+        {/* Main Content */}
+        <div className="w-full max-w-2xl">
+          {/* Welcome Header */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/60 rounded-full blur opacity-75 animate-pulse" />
+                <div className="relative bg-white dark:bg-slate-900 rounded-full p-4 border shadow-2xl">
+                  <Target className="h-16 w-16 text-primary" />
+                </div>
+              </div>
+            </div>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
+              Welcome to Commitly!
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-md mx-auto">
+              Let's set up your profile to personalize your goal-setting experience
+            </p>
+          </div>
+
+          {/* Form Card */}
+          <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 shadow-2xl border-0 shadow-blue-100/50 dark:shadow-slate-900/50">
+            <CardHeader className="text-center pb-6">
+              <CardTitle className="text-2xl text-gray-900 dark:text-white">
+                Complete Your Profile
+              </CardTitle>
+              <CardDescription className="text-base">
+                Help us create the best experience for you
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Profile Picture */}
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    <Avatar className="h-24 w-24 border-4 border-primary/20">
+                      <AvatarImage src={profilePicture} />
+                      <AvatarFallback className="text-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+                        {displayName.charAt(0) || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full hover-lift shadow-lg"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Profile Picture</p>
+                    <p className="text-xs text-muted-foreground">
+                      Optional - you can add this later
+                    </p>
+                  </div>
+                </div>
+
+                {/* Basic Information */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Username <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="username"
+                      placeholder="johndoe"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                      className="focus-ring"
+                      required
+                      pattern="[a-z0-9_]+"
+                      minLength={3}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Lowercase letters, numbers, and underscores only (min 3 characters)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Display Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="displayName"
+                      placeholder="John Doe"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="focus-ring"
+                      required
+                      minLength={2}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Phone Number <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="phoneNumber"
+                      type="tel"
+                      placeholder="+1 (555) 123-4567"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="focus-ring"
+                      required
+                      pattern="[\+]?[0-9\s\-\(\)]{10,15}"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Include country code (e.g., +1234567890)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="location" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Location
+                    </Label>
+                    <Input
+                      id="location"
+                      placeholder="San Francisco, CA"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="focus-ring"
+                    />
+                  </div>
+                </div>
+
+                {/* Bio */}
+                <div className="space-y-2">
+                  <Label htmlFor="bio" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Bio
+                  </Label>
+                  <Textarea
+                    id="bio"
+                    placeholder="Tell us about yourself, your interests, and what motivates you..."
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    rows={4}
+                    className="focus-ring"
+                    maxLength={500}
+                  />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {bio.length}/500 characters
+                  </p>
+                </div>
+
+                {/* Website */}
+                <div className="space-y-2">
+                  <Label htmlFor="website" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Website
+                  </Label>
+                  <Input
+                    id="website"
+                    placeholder="https://yourwebsite.com"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    className="focus-ring"
+                  />
+                </div>
+
+                {/* Interests */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Interests</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Select topics that interest you (helps us suggest relevant goals and partners)
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {interestOptions.map((interest) => (
+                      <Button
+                        key={interest}
+                        type="button"
+                        variant={interests.includes(interest) ? "default" : "outline"}
+                        size="sm"
+                        className="justify-start text-xs h-8 hover-lift"
+                        onClick={() => toggleInterest(interest)}
+                      >
+                        {interest}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Goal Categories */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Goal Categories</Label>
+                  <p className="text-xs text-muted-foreground">
+                    What types of goals are you most interested in?
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {categoryOptions.map((category) => (
+                      <Button
+                        key={category}
+                        type="button"
+                        variant={goalCategories.includes(category) ? "default" : "outline"}
+                        size="sm"
+                        className="justify-start text-xs h-8 hover-lift"
+                        onClick={() => toggleCategory(category)}
+                      >
+                        {category}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="pt-4">
+                  <Button
+                    type="submit"
+                    className="w-full h-12 text-lg font-semibold hover-lift shadow-lg hover:shadow-xl transition-all duration-200"
+                    disabled={loading || !username || !displayName || !phoneNumber}
+                  >
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Creating Profile...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5" />
+                        Complete Setup & Start Goal Setting!
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Progress Indicator */}
+          <div className="mt-6">
+            <Card className="backdrop-blur-xl bg-white/60 dark:bg-slate-900/60 border-0">
+              <CardContent className="p-4">
+                <div className="text-center space-y-3">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Setup Progress</div>
+                  <div className="flex justify-center gap-4 text-sm">
+                    <div className={`flex items-center gap-1 ${username ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      {username ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
+                      Username
+                    </div>
+                    <div className={`flex items-center gap-1 ${displayName ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      {displayName ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
+                      Display Name
+                    </div>
+                    <div className={`flex items-center gap-1 ${phoneNumber ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      {phoneNumber ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
+                      Phone
+                    </div>
+                  </div>
+                  <Progress
+                    value={
+                      (username ? 25 : 0) +
+                      (displayName ? 25 : 0) +
+                      (phoneNumber ? 25 : 0) +
+                      (interests.length > 0 ? 15 : 0) +
+                      (bio ? 10 : 0)
+                    }
+                    className="h-2"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center mt-8">
+            <p className="text-sm text-muted-foreground">
+              By completing your profile, you'll get better goal recommendations and can connect with accountability partners
             </p>
           </div>
         </div>
-
-        <div className="grid gap-6 lg:grid-cols-3 max-w-4xl mx-auto">
-          {/* Main Form */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit}>
-              <Card className="hover-lift">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    Personal Information
-                  </CardTitle>
-                  <CardDescription>
-                    Tell us about yourself to get started
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Profile Picture */}
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="relative">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src={profilePicture} />
-                        <AvatarFallback className="text-lg bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                          {displayName.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="outline"
-                        className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full hover-lift"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-medium">Profile Picture</p>
-                      <p className="text-xs text-muted-foreground">
-                        JPG, PNG or GIF. Max size 2MB.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Basic Information */}
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="username" className="text-sm font-medium">
-                        Username <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="username"
-                        placeholder="johndoe"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                        className="focus-ring"
-                        required
-                        pattern="[a-z0-9_]+"
-                        minLength={3}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Lowercase letters, numbers, and underscores only (min 3 characters)
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="displayName" className="text-sm font-medium">
-                        Display Name <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="displayName"
-                        placeholder="John Doe"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        className="focus-ring"
-                        required
-                        minLength={2}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phoneNumber" className="text-sm font-medium">
-                        Phone Number <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="phoneNumber"
-                        type="tel"
-                        placeholder="+1 (555) 123-4567"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        className="focus-ring"
-                        required
-                        pattern="[\+]?[0-9\s\-\(\)]{10,15}"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Include country code (e.g., +1234567890)
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="location" className="text-sm font-medium">
-                        Location
-                      </Label>
-                      <Input
-                        id="location"
-                        placeholder="San Francisco, CA"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        className="focus-ring"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Bio */}
-                  <div className="space-y-2">
-                    <Label htmlFor="bio" className="text-sm font-medium">
-                      Bio
-                    </Label>
-                    <Textarea
-                      id="bio"
-                      placeholder="Tell us about yourself, your interests, and what motivates you..."
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      rows={4}
-                      className="focus-ring"
-                      maxLength={500}
-                    />
-                    <p className="text-xs text-muted-foreground text-right">
-                      {bio.length}/500 characters
-                    </p>
-                  </div>
-
-                  {/* Website */}
-                  <div className="space-y-2">
-                    <Label htmlFor="website" className="text-sm font-medium">
-                      Website
-                    </Label>
-                    <Input
-                      id="website"
-                      placeholder="https://yourwebsite.com"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                      className="focus-ring"
-                    />
-                  </div>
-
-                  {/* Interests */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Interests</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Select topics that interest you (helps us suggest relevant goals and partners)
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {interestOptions.map((interest) => (
-                        <Button
-                          key={interest}
-                          type="button"
-                          variant={interests.includes(interest) ? "default" : "outline"}
-                          size="sm"
-                          className="justify-start text-xs h-8"
-                          onClick={() => toggleInterest(interest)}
-                        >
-                          {interest}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Goal Categories */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Goal Categories</Label>
-                    <p className="text-xs text-muted-foreground">
-                      What types of goals are you most interested in?
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {categoryOptions.map((category) => (
-                        <Button
-                          key={category}
-                          type="button"
-                          variant={goalCategories.includes(category) ? "default" : "outline"}
-                          size="sm"
-                          className="justify-start text-xs h-8"
-                          onClick={() => toggleCategory(category)}
-                        >
-                          {category}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Submit */}
-                  <div className="pt-4">
-                    <Button type="submit" className="w-full hover-lift" disabled={loading || !username || !displayName || !phoneNumber}>
-                      {loading ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Creating Profile...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4" />
-                          Complete Setup
-                        </div>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </form>
-          </div>
-
-          {/* Sidebar - Progress & Tips */}
-          <div className="space-y-6">
-            {/* Progress Card */}
-            <Card className="hover-lift">
-              <CardHeader>
-                <CardTitle className="text-lg">Setup Progress</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className={`flex items-center gap-2 text-sm ${username ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    {username ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
-                    Username
-                  </div>
-                  <div className={`flex items-center gap-2 text-sm ${displayName ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    {displayName ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
-                    Display Name
-                  </div>
-                  <div className={`flex items-center gap-2 text-sm ${phoneNumber ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    {phoneNumber ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
-                    Phone Number
-                  </div>
-                  <div className={`flex items-center gap-2 text-sm ${interests.length > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                    {interests.length > 0 ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
-                    Interests ({interests.length})
-                  </div>
-                </div>
-                <Progress value={
-                  (username ? 20 : 0) +
-                  (displayName ? 20 : 0) +
-                  (phoneNumber ? 20 : 0) +
-                  (interests.length > 0 ? 20 : 0) +
-                  (bio ? 10 : 0) +
-                  (location ? 10 : 0)
-                } className="h-2" />
-              </CardContent>
-            </Card>
-
-            {/* Tips Card */}
-            <Card className="hover-lift">
-              <CardHeader>
-                <CardTitle className="text-lg">💡 Why This Matters</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="text-sm space-y-2">
-                  <div className="flex items-start gap-2">
-                    <Target className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                    <span className="text-muted-foreground">
-                      Better goal recommendations based on your interests
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Users className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                    <span className="text-muted-foreground">
-                      Connect with like-minded people for accountability
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                    <span className="text-muted-foreground">
-                      Personalized experience tailored to your goals
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Selected Interests Preview */}
-            {interests.length > 0 && (
-              <Card className="hover-lift">
-                <CardHeader>
-                  <CardTitle className="text-lg">Your Interests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-1">
-                    {interests.map((interest) => (
-                      <Badge key={interest} variant="secondary" className="text-xs">
-                        {interest}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
       </div>
-    </MainLayout>
+    </div>
   )
 }
