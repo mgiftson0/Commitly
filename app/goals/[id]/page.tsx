@@ -36,9 +36,10 @@ import {
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { getSupabaseClient, type Goal, type Activity, type Streak } from "@/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
+import { isMockAuthEnabled } from "@/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
+import { EncouragementCard } from "@/components/goals/encouragement-card"
 
 export default function GoalDetailPage() {
   const [goal, setGoal] = useState<Goal | null>(null)
@@ -301,7 +302,7 @@ export default function GoalDetailPage() {
       router.push("/goals/create")
       return
     }
-    if (!supabase) return
+    if (!supabase || !goal) return
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -373,19 +374,33 @@ export default function GoalDetailPage() {
   ]
 
   // Determine goal type and ownership
-  const isYourGoal = goal?.user_id === 'mock-user-id' // In real app, compare with current user ID
-  const isGroupGoal = false // TODO: Implement proper group goal detection
+  const currentUserId = 'mock-user-id' // In real app, get from auth
+  const isYourGoal = goal?.user_id === currentUserId
+  const isGroupGoal = groupMembers.length > 0 // Has group members
   const isForkedGoal = goal?.title?.includes("(Forked)") || false
   const isMultiActivity = goal && (goal.goal_type === "multi")
 
-  // Check if current user is an accountability partner for this goal (not the owner)
-  const isAccountabilityPartner = accountabilityPartners.some(p => p.id === 'mock-user-id') && !isYourGoal
+  // Check if current user is an accountability partner for this goal (not the owner, not a group member)
+  const isAccountabilityPartner = accountabilityPartners.some(p => p.id === currentUserId) && !isYourGoal && !isGroupGoal
+
+  // Check if user is a group member (can edit)
+  const isGroupMember = isGroupGoal && groupMembers.some(m => m.id === currentUserId)
 
   // Check if this goal can be forked (not yours, public, and from a partner)
-  const canForkGoalProp = !isYourGoal && goal?.visibility === "public" && accountabilityPartners.some(p => p.id)
+  const canForkGoalProp = !isYourGoal && goal?.visibility === "public" && !isAccountabilityPartner && !isGroupMember
 
   // Mock current user for demo purposes
-  const currentUser = { id: 'mock-user-id', name: 'You' }
+  const currentUser = { id: currentUserId, name: 'You' }
+  
+  // Check if goal is completed
+  const isGoalCompleted = goal?.completed_at !== undefined && goal?.completed_at !== null
+
+  // 5-hour edit window from goal creation
+  const createdAtTs = goal?.created_at ? new Date(goal.created_at).getTime() : Date.now()
+  const canEditWithin5h = (Date.now() - createdAtTs) <= (5 * 60 * 60 * 1000)
+  
+  // Get goal owner name for encouragement
+  const goalOwnerName = isYourGoal ? "yourself" : (goal?.user_id ? "the goal owner" : "Goal Owner")
 
   // Enhanced group members with roles and assignments
   const enhancedGroupMembers = [
@@ -524,70 +539,97 @@ export default function GoalDetailPage() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2">
-                {/* Fork Button - Only show for goals that can be forked */}
-                {canForkGoalProp && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="hover-lift"
-                    onClick={forkGoal}
-                  >
-                    <GitFork className="h-4 w-4 mr-2" />
-                    Fork Goal
-                  </Button>
-                )}
+                {isAccountabilityPartner ? (
+                  /* Accountability Partner View - Only show view button, no edit */
+                  <Badge variant="outline" className="px-3 py-2 text-sm">
+                    <Users className="h-4 w-4 mr-2" />
+                    Accountability Partner - View Only
+                  </Badge>
+                ) : isGroupMember && !isYourGoal ? (
+                  /* Group Member View - Can edit */
+                  <>
+                    <Link href={`/goals/${goal.id}/edit`}>
+                      <Button variant="outline" size="sm" className="hover-lift">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit as Member
+                      </Button>
+                    </Link>
+                    <Badge variant="outline" className="px-3 py-2 text-sm">
+                      <Crown className="h-4 w-4 mr-2" />
+                      Group Member
+                    </Badge>
+                  </>
+                ) : (
+                  /* Owner View - Show all management actions */
+                  <>
+                    {/* Fork Button - Only show for goals that can be forked */}
+                    {canForkGoalProp && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="hover-lift"
+                        onClick={forkGoal}
+                      >
+                        <GitFork className="h-4 w-4 mr-2" />
+                        Fork Goal
+                      </Button>
+                    )}
                 <Link href={`/goals/${goal.id}/edit`}>
-                  <Button variant="outline" size="sm" className="hover-lift">
+                  <Button variant="outline" size="sm" className="hover-lift" disabled={!canEditWithin5h} title={!canEditWithin5h ? "Editing period ended (5 hours)" : undefined}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit
                   </Button>
                 </Link>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleSuspend}
-                  className="hover-lift"
-                >
-                  {goal.is_suspended ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
-                  {goal.is_suspended ? "Resume" : "Pause"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={deleteGoal}
-                  className="hover-lift text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleSuspend}
+                      className="hover-lift"
+                    >
+                      {goal.is_suspended ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
+                      {goal.is_suspended ? "Resume" : "Pause"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={deleteGoal}
+                      className="hover-lift text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </CardHeader>
         </Card>
 
-        {/* Current Streak */}
-        <Card className="hover-lift">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-center gap-6">
-              <div className="text-center">
-                <div className="p-4 rounded-full bg-orange-500/10 mb-3">
-                  <Flame className="h-12 w-12 text-orange-600" />
+        {/* Current Streak (hide for single-activity goals) */}
+        {goal.goal_type !== 'single' && goal.goal_type !== 'single-activity' && (
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center gap-6">
+                <div className="text-center">
+                  <div className="p-4 rounded-full bg-orange-500/10 mb-3">
+                    <Flame className="h-12 w-12 text-orange-600" />
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-1">Current Streak</p>
+                  <p className="text-5xl font-bold text-orange-600">{streak?.current_streak || 0}</p>
+                  <p className="text-sm text-muted-foreground">days</p>
                 </div>
-                <p className="text-sm text-muted-foreground mb-1">Current Streak</p>
-                <p className="text-5xl font-bold text-orange-600">{streak?.current_streak || 0}</p>
-                <p className="text-sm text-muted-foreground">days</p>
-              </div>
-              <div className="text-center">
-                <div className="p-4 rounded-full bg-green-500/10 mb-3">
-                  <Award className="h-12 w-12 text-green-600" />
+                <div className="text-center">
+                  <div className="p-4 rounded-full bg-green-500/10 mb-3">
+                    <Award className="h-12 w-12 text-green-600" />
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-1">Best Streak</p>
+                  <p className="text-5xl font-bold text-green-600">{streak?.longest_streak || 0}</p>
+                  <p className="text-sm text-muted-foreground">days</p>
                 </div>
-                <p className="text-sm text-muted-foreground mb-1">Best Streak</p>
-                <p className="text-5xl font-bold text-green-600">{streak?.longest_streak || 0}</p>
-                <p className="text-sm text-muted-foreground">days</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
@@ -615,6 +657,7 @@ export default function GoalDetailPage() {
                       <Checkbox
                         checked={activity.is_completed}
                         onCheckedChange={() => toggleActivity(activity.id, activity.is_completed)}
+                        disabled={isAccountabilityPartner}
                       />
                       <div className="flex-1">
                         <span className={`font-medium ${activity.is_completed ? "line-through text-muted-foreground" : ""}`}>
@@ -624,6 +667,28 @@ export default function GoalDetailPage() {
                           <p className="text-sm text-muted-foreground mt-1">
                             {activity.description}
                           </p>
+                        )}
+                        {/* Show assigned members for group goals */}
+                        {isGroupGoal && activityAssignments[activity.id] && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs text-muted-foreground">Assigned to:</span>
+                            {activityAssignments[activity.id].includes('all') ? (
+                              <Badge variant="outline" className="text-xs">All Members</Badge>
+                            ) : (
+                              <div className="flex -space-x-1">
+                                {getAssignedMembers(activity.id).slice(0, 3).map((member) => (
+                                  <div key={member.id} className="w-5 h-5 rounded-full bg-purple-100 border border-background flex items-center justify-center">
+                                    <span className="text-xs font-medium text-purple-700">{member.name.charAt(0)}</span>
+                                  </div>
+                                ))}
+                                {getAssignedMembers(activity.id).length > 3 && (
+                                  <div className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center">
+                                    <span className="text-xs text-muted-foreground">+{getAssignedMembers(activity.id).length - 3}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                       {activity.is_completed && (
@@ -635,8 +700,8 @@ export default function GoalDetailPage() {
               </Card>
             )}
 
-            {/* Complete Goal Button */}
-            {!goal.completed_at && (
+            {/* Complete Goal Button - Only for owners and group members */}
+            {!isAccountabilityPartner && !goal.completed_at && (
               <Card className="hover-lift">
                 <CardContent className="p-6">
                   <Button onClick={completeGoal} className="w-full h-12 text-lg hover-lift">
@@ -646,51 +711,38 @@ export default function GoalDetailPage() {
                 </CardContent>
               </Card>
             )}
-
-            {/* Notes Section */}
-            <Card className="hover-lift">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5" />
-                  Notes & Encouragement
-                </CardTitle>
-                <CardDescription>
-                  Add personal notes or receive encouragement from partners
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <Textarea
-                    placeholder="Add a note about your progress, challenges, or wins..."
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    rows={3}
-                    className="focus-ring"
-                  />
-                  <Button onClick={addNote} disabled={!note.trim()} className="hover-lift">
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Add Note
-                  </Button>
-                </div>
-
-                {/* Mock Notes */}
-                <div className="space-y-3 pt-4 border-t">
-                  <div className="flex gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder-avatar.jpg" />
-                      <AvatarFallback>SM</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Sarah Martinez</p>
-                      <p className="text-sm text-muted-foreground">
-                        Great progress! You're crushing this goal! 💪
+            
+            {/* Partner View - Show goal completion status */}
+            {isAccountabilityPartner && isGoalCompleted && (
+              <Card className="hover-lift border-green-200 bg-green-50/50">
+                <CardContent className="p-6">
+                  <div className="text-center space-y-2">
+                    <div className="text-4xl">🎉</div>
+                    <div>
+                      <p className="font-semibold text-green-700">Goal Completed!</p>
+                      <p className="text-sm text-green-600">
+                        The goal owner has successfully completed this goal.
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Encouragement Section - Use the new component */}
+            <EncouragementCard 
+              isPartner={isAccountabilityPartner}
+              goalOwnerName={goalOwnerName}
+              onSendEncouragement={async (message) => {
+                // In mock mode, just show toast (handled by component)
+                if (isMockAuthEnabled()) {
+                  return
+                }
+                // Real implementation would save to database
+                await addNote()
+              }}
+              newMessageCount={isAccountabilityPartner ? 0 : 2}
+            />
           </div>
 
           {/* Sidebar */}
@@ -745,7 +797,7 @@ export default function GoalDetailPage() {
                   <div>
                     <p className="font-medium">Keep it up!</p>
                     <p className="text-sm text-muted-foreground">
-                      You're doing great. Stay consistent!
+                      You&apos;re doing great. Stay consistent!
                     </p>
                   </div>
                 </div>

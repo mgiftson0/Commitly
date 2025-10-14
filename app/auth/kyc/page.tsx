@@ -206,7 +206,7 @@ export default function KYCPage() {
               Welcome to Commitly!
             </h1>
             <p className="text-lg text-muted-foreground max-w-md mx-auto">
-              Let's set up your profile to personalize your goal-setting experience
+              Let&apos;s set up your profile to personalize your goal-setting experience
             </p>
           </div>
 
@@ -456,7 +456,7 @@ export default function KYCPage() {
           {/* Footer */}
           <div className="text-center mt-8">
             <p className="text-sm text-muted-foreground">
-              By completing your profile, you'll get better goal recommendations and can connect with accountability partners
+              By completing your profile, you&apos;ll get better goal recommendations and can connect with accountability partners
             </p>
           </div>
         </div>

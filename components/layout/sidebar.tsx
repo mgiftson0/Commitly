@@ -288,7 +288,7 @@ export function Sidebar({ className }: SidebarProps) {
             <Separator className="mx-4" />
             <div className="p-4">
               <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Today's Summary
+                Today&apos;s Summary
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center p-3 rounded-lg bg-muted/50">

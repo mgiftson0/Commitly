@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -52,9 +52,12 @@ export default function CreateGoalPage() {
   const [defaultTimeAllocation, setDefaultTimeAllocation] = useState("")
   const [loading, setLoading] = useState(false)
   const [selectedPartners, setSelectedPartners] = useState<string[]>([])
-  const [groupMembers, setGroupMembers] = useState<string[]>([])
+  const [groupMembers, setGroupMembers] = useState<string[]>([]) // includes owner by default when group
   const [activityAssignments, setActivityAssignments] = useState<{[key: number]: string[]}>({})
   
+  // Mock current user (owner)
+  const currentUser = { id: "mock-user-id", name: "You", username: "you" }
+
   // Mock partners data
   const availablePartners = [
     { id: "1", name: "Sarah Martinez", username: "sarah_m" },
@@ -68,6 +71,21 @@ export default function CreateGoalPage() {
   const supabase = getSupabaseClient()
 
   const weekDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+  // All candidates for group membership (owner + partners)
+  const allGroupCandidates = useMemo(() => [currentUser, ...availablePartners], [])
+
+  // Ensure owner is included when group is selected and counts toward max 5
+  useEffect(() => {
+    if (goalNature === 'group') {
+      setGroupMembers((prev) => {
+        if (prev.includes(currentUser.id)) return prev
+        return [currentUser.id, ...prev].slice(0, 5)
+      })
+    } else {
+      setGroupMembers([])
+    }
+  }, [goalNature])
 
   const addActivity = () => {
     setActivities([...activities, ""])
@@ -304,7 +322,7 @@ export default function CreateGoalPage() {
                               Group Goal
                             </Label>
                             <p className="text-sm text-muted-foreground">
-                              Up to 5 people
+                              Owner included + up to 4 others (max 5)
                             </p>
                           </div>
                           <Users className="h-5 w-5 text-muted-foreground" />
@@ -320,7 +338,7 @@ export default function CreateGoalPage() {
                         <div>
                           <Label className="text-sm font-medium">Group Members</Label>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Select 1-5 members for your group goal
+                            The owner is automatically included. Add up to 4 more members (max 5 total).
                           </p>
                         </div>
                         <Badge variant="outline">
@@ -340,7 +358,8 @@ export default function CreateGoalPage() {
                           <SelectValue placeholder="Add a member..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {availablePartners
+                          {allGroupCandidates
+                            .filter(p => p.id !== currentUser.id)
                             .filter(p => !groupMembers.includes(p.id))
                             .map(partner => (
                               <SelectItem key={partner.id} value={partner.id}>
@@ -362,7 +381,7 @@ export default function CreateGoalPage() {
                       {groupMembers.length > 0 && (
                         <div className="space-y-2">
                           {groupMembers.map(memberId => {
-                            const member = availablePartners.find(p => p.id === memberId)
+                            const member = allGroupCandidates.find(p => p.id === memberId)
                             if (!member) return null
                             return (
                               <div key={memberId} className="flex items-center justify-between p-2 rounded-md bg-background border">
@@ -375,15 +394,17 @@ export default function CreateGoalPage() {
                                     <div className="text-xs text-muted-foreground">@{member.username}</div>
                                   </div>
                                 </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => setGroupMembers(groupMembers.filter(id => id !== memberId))}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
+                                {memberId !== currentUser.id && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => setGroupMembers(groupMembers.filter(id => id !== memberId))}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             )
                           })}
@@ -535,7 +556,7 @@ export default function CreateGoalPage() {
                                     All Members
                                   </Button>
                                   {groupMembers.map((memberId) => {
-                                    const member = availablePartners.find(p => p.id === memberId)
+                                    const member = allGroupCandidates.find(p => p.id === memberId)
                                     const isAssigned = activityAssignments[index]?.includes(memberId)
 
                                     return (

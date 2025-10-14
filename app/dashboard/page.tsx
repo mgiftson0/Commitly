@@ -205,7 +205,7 @@ export default function DashboardPage() {
               Welcome back, <span className="text-gradient-primary">John!</span>
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              You're on a {todayStats.streak}-day streak! Keep up the great work! 🔥
+              You&apos;re on a {todayStats.streak}-day streak! Keep up the great work! 🔥
             </p>
           </div>
           <div className="flex gap-2">
@@ -442,7 +442,7 @@ export default function DashboardPage() {
                 Category Progress
               </CardTitle>
               <CardDescription>
-                How you're doing across different areas
+                How you&apos;re doing across different areas
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -263,7 +263,7 @@ export default function SettingsPage() {
                   <div>
                     <p className="font-medium">Active Sessions</p>
                     <p className="text-sm text-muted-foreground">
-                      Manage where you're signed in
+                      Manage where you&apos;re signed in
                     </p>
                   </div>
                   <Button variant="outline">View Sessions</Button>

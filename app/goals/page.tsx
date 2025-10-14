@@ -39,12 +39,15 @@ import {
   GitFork,
   Crown,
   User,
-  MessageCircle
+  MessageCircle,
+  Lock
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { EncouragementCard } from "@/components/goals/encouragement-card"
 
 // Mock data for goals with enhanced features
 const mockGoals = [
@@ -339,16 +342,40 @@ const getTypeIcon = (type: string) => {
   }
 }
 
-// Check if current user can fork this goal (not their own goal)
-const canForkGoal = (goal: typeof mockGoals[0], currentUserId: string = 'mock-user-id') => {
-  // Only allow forking if user is the goal owner
-  return isGoalOwner(goal, currentUserId) && goal.visibility === "public"
+const isSingleActivity = (goal: typeof mockGoals[0]) => goal.type === 'single' || goal.type === 'single-activity'
+
+// Mock: list of user partners (not per-goal accountability partners)
+const myPartnerIds = new Set<string>(['6','7','9','10','11','12'])
+
+const isPartnerWithOwner = (goal: typeof mockGoals[0], currentUserId: string = 'mock-user-id') => {
+  if (!goal.goalOwner) return false
+  if (goal.accountabilityPartners.some(p => p.id === currentUserId)) return false // not allowed if AP on this goal
+  return myPartnerIds.has(goal.goalOwner.id)
 }
 
 // Check if current user owns this goal (can edit/delete)
 const isGoalOwner = (goal: typeof mockGoals[0], currentUserId: string = 'mock-user-id') => {
-  // Check if user is NOT in accountability partners (meaning they own the goal)
+  if (goal.goalOwner) {
+    return goal.goalOwner.id === currentUserId
+  }
   return !goal.accountabilityPartners.some(partner => partner.id === currentUserId)
+}
+
+// Check if current user can fork this goal per rule: must be partners with owner (not AP on this goal) and goal is public
+const canForkGoal = (goal: typeof mockGoals[0], currentUserId: string = 'mock-user-id') => {
+  return !isGoalOwner(goal, currentUserId) && goal.visibility === "public" && isPartnerWithOwner(goal, currentUserId)
+}
+
+const getNewEncouragements = (goal: typeof mockGoals[0], isPartnerView?: boolean) => {
+  if (isPartnerView) return 0
+  // Mock: show 2 new for goals with partners or group goals
+  if (goal.accountabilityPartners.length > 0 || goal.isGroupGoal) return 2
+  return 0
+}
+
+// Check if current user is an accountability partner (not owner)
+const isAccountabilityPartner = (goal: typeof mockGoals[0], currentUserId: string = 'mock-user-id') => {
+  return goal.accountabilityPartners.some(partner => partner.id === currentUserId) && !isGoalOwner(goal, currentUserId)
 }
 
 // Get goal card styling based on type
@@ -629,6 +656,22 @@ export default function GoalsPage() {
 }
 
 function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof mockGoals; router: ReturnType<typeof useRouter>; isPartnerView?: boolean }) {
+  const [partnerInvites, setPartnerInvites] = useState<Record<number, 'pending' | 'accepted' | 'declined'>>(() => {
+    const map: Record<number, 'pending' | 'accepted' | 'declined'> = {}
+    goals.forEach(g => { map[g.id] = (isPartnerView && g.id % 5 === 0) ? 'pending' : 'accepted' })
+    return map
+  })
+  const [groupInvites, setGroupInvites] = useState<Record<number, 'pending' | 'accepted' | 'declined'>>(() => {
+    const map: Record<number, 'pending' | 'accepted' | 'declined'> = {}
+    goals.forEach(g => { map[g.id] = (g.isGroupGoal && !isPartnerView && g.id % 4 === 0) ? 'pending' : 'accepted' })
+    return map
+  })
+
+  const canEditWithin5hFromCreated = (createdAt?: string) => {
+    if (!createdAt) return false
+    const created = new Date(createdAt).getTime()
+    return (Date.now() - created) <= (5 * 60 * 60 * 1000)
+  }
   const handleDelete = (goalId: number, goalTitle: string) => {
     if (confirm(`Are you sure you want to delete "${goalTitle}"?`)) {
       toast.success(`Goal "${goalTitle}" deleted successfully`)
@@ -636,7 +679,15 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
     }
   }
 
-  const handleViewDetails = (goalId: number) => {
+  const handleViewDetails = (goalId: number, goal: typeof mockGoals[0]) => {
+    if (isPartnerView) {
+      router.push(`/goals/${goalId}/partner`)
+      return
+    }
+    if (goal.isGroupGoal) {
+      router.push(`/goals/${goalId}/group`)
+      return
+    }
     router.push(`/goals/${goalId}`)
   }
 
@@ -663,6 +714,25 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
       {goals.map((goal) => (
         <Card key={goal.id} className={`hover-lift group ${getGoalCardStyle(goal)}`}>
           <CardHeader className="pb-3">
+            {/* Invite banners on card */}
+            {isPartnerView && partnerInvites[goal.id] === 'pending' && (
+              <div className="mb-2 p-2 rounded-md bg-yellow-50 border border-yellow-200 flex items-center justify-between gap-2">
+                <span className="text-xs">Partner request pending</span>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setPartnerInvites({ ...partnerInvites, [goal.id]: 'accepted' }); toast.success('Invitation accepted') }}>Accept</Button>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setPartnerInvites({ ...partnerInvites, [goal.id]: 'declined' }); toast.success('Invitation declined') }}>Decline</Button>
+                </div>
+              </div>
+            )}
+            {!isPartnerView && goal.isGroupGoal && groupInvites[goal.id] === 'pending' && (
+              <div className="mb-2 p-2 rounded-md bg-yellow-50 border border-yellow-200 flex items-center justify-between gap-2">
+                <span className="text-xs">Group invite pending</span>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setGroupInvites({ ...groupInvites, [goal.id]: 'accepted' }); toast.success('Joined group') }}>Accept</Button>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => { setGroupInvites({ ...groupInvites, [goal.id]: 'declined' }); toast.success('Declined invite') }}>Decline</Button>
+                </div>
+              </div>
+            )}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
                 {getTypeIcon(goal.type)}
@@ -675,7 +745,8 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                     Group
                   </Badge>
                 )}
-                {goal.isForked && !isPartnerView && (
+                {/* Only show forked badge if user owns the goal */}
+                {goal.isForked && isGoalOwner(goal) && (
                   <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                     <GitFork className="h-3 w-3 mr-1" />
                     Forked
@@ -683,8 +754,23 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {/* Fork Button - Only show for goals that can be forked */}
-                {canForkGoal(goal) && (
+                {/* Edit lock indicator if 5h window ended (owners/members) */}
+                {!isPartnerView && !canEditWithin5hFromCreated(goal.createdAt) && (
+                  <div className="h-8 w-8 flex items-center justify-center" title="Editing period ended (5 hours)">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+                {/* New messages indicator for owners/members */}
+                {!isPartnerView && getNewEncouragements(goal, isPartnerView) > 0 && (
+                  <div className="relative h-8 w-8 flex items-center justify-center">
+                    <MessageCircle className="h-4 w-4 text-primary" />
+                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] bg-primary text-primary-foreground">
+                      {getNewEncouragements(goal, isPartnerView)}
+                    </span>
+                  </div>
+                )}
+                {/* Fork Button - Only show for goals that can be forked (not owned by user) */}
+                {!isPartnerView && canForkGoal(goal) && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -697,8 +783,8 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                     <GitFork className="h-4 w-4" />
                   </Button>
                 )}
-                {/* Only show menu for owned goals */}
-                {isGoalOwner(goal) && (
+                {/* Only show edit/delete menu for owned goals, not partner goals */}
+                {!isPartnerView && isGoalOwner(goal) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -706,7 +792,7 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewDetails(goal.id)}>
+                      <DropdownMenuItem onClick={() => handleViewDetails(goal.id, goal)}>
                         <Eye className="mr-2 h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
@@ -781,20 +867,25 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
 
             {/* Stats - Different for partner goals */}
             {isPartnerView ? (
+              /* For partner goals, only show goal owner info */
               <div className="flex items-center justify-center text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-muted-foreground">Completed:</span>
-                  <span className="font-medium">{goal.totalCompletions}</span>
-                </div>
+                {goal.goalOwner && (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Owner:</span>
+                    <span className="font-medium">{goal.goalOwner.name}</span>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-orange-500" />
-                  <span className="text-muted-foreground">Streak:</span>
-                  <span className="font-medium">{goal.streak} days</span>
-                </div>
+                {!isSingleActivity(goal) && (
+                  <div className="flex items-center gap-2">
+                    <Flame className="h-4 w-4 text-orange-500" />
+                    <span className="text-muted-foreground">Streak:</span>
+                    <span className="font-medium">{goal.streak} days</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-muted-foreground">Completed:</span>
@@ -805,43 +896,67 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
 
             {/* Meta info and Actions */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{goal.category}</span>
-                <div className="flex items-center gap-2">
-                  {goal.isForked && (
-                    <div className="flex items-center gap-1">
-                      <GitFork className="h-3 w-3 text-blue-600" />
-                      <span className="text-xs text-blue-600">Forked</span>
-                    </div>
-                  )}
-                  <div className={`w-2 h-2 rounded-full ${getStatusColor(goal.status)}`} />
-                  <span className="capitalize">{goal.status}</span>
-                </div>
-              </div>
-
-              {/* Action Buttons for Partner Goals */}
-              {isPartnerView && (
-                <div className="flex gap-2 pt-2 border-t">
+              {isPartnerView ? (
+                /* Partner view - Show completion status if goal is completed */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{goal.category}</span>
+                    {goal.status === "completed" ? (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                        <span className="text-green-600 font-medium">Completed</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${getStatusColor(goal.status)}`} />
+                        <span className="capitalize">{goal.status}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Action Buttons for Partner Goals */}
+                  <div className="flex gap-2 pt-2 border-t">
                   <Button
                     variant="outline"
                     size="sm"
                     className="flex-1 hover-lift"
-                    onClick={() => handleViewDetails(goal.id)}
+                    onClick={() => handleViewDetails(goal.id, goal)}
                   >
                     <Eye className="h-3 w-3 mr-1" />
                     View Details
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 hover-lift"
-                    onClick={() => {
-                      toast.success("Note sent! Keep up the great work! 💪")
-                    }}
-                  >
-                    <MessageCircle className="h-3 w-3 mr-1" />
-                    Encourage
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex-1 hover-lift">
+                        <MessageCircle className="h-3 w-3 mr-1" />
+                        Encourage
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Send Encouragement</DialogTitle>
+                      </DialogHeader>
+                      <EncouragementCard 
+                        isPartner={true}
+                        goalOwnerName={goal.goalOwner?.name || 'Owner'}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                  </div>
+                </div>
+              ) : (
+                /* Owner view - Show full meta info */
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{goal.category}</span>
+                  <div className="flex items-center gap-2">
+                    {goal.isForked && (
+                      <div className="flex items-center gap-1">
+                        <GitFork className="h-3 w-3 text-blue-600" />
+                        <span className="text-xs text-blue-600">Forked</span>
+                      </div>
+                    )}
+                    <div className={`w-2 h-2 rounded-full ${getStatusColor(goal.status)}`} />
+                    <span className="capitalize">{goal.status}</span>
+                  </div>
                 </div>
               )}
             </div>

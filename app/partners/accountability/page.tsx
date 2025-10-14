@@ -150,7 +150,7 @@ export default function AccountabilityGoalsPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Accountability Goals</h1>
             <p className="text-muted-foreground">
-              Goals where you're helping others stay accountable
+              Goals where you&apos;re helping others stay accountable
             </p>
           </div>
           <div className="flex gap-2">
@@ -392,7 +392,7 @@ function AccountabilityGoalCard({ goal }: { goal: typeof mockAccountabilityGoals
               </span>
             </div>
             <p className="text-xs text-orange-700 dark:text-orange-300 mb-3">
-              {goal.creator.name} hasn't checked in for {goal.lastCheckIn}. Send some motivation!
+              {goal.creator.name} hasn&apos;t checked in for {goal.lastCheckIn}. Send some motivation!
             </p>
             <div className="flex gap-2">
               <Button size="sm" className="flex-1">
