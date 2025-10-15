@@ -21,7 +21,20 @@ interface EncouragementMessage {
   timestamp: string
 }
 
-import { addEncouragement, getEncouragements, type EncouragementMessage as StoreEncouragementMessage } from "@/backend/lib/mock-store"
+// Mock store functions for frontend-only mode
+const addEncouragement = (goalId: string | number, content: string, authorName: string) => {
+  const key = `encouragements-${goalId}`
+  const existing = JSON.parse(localStorage.getItem(key) || '[]')
+  existing.push({ id: Date.now().toString(), content, authorName, timestamp: Date.now() })
+  localStorage.setItem(key, JSON.stringify(existing))
+}
+
+const getEncouragements = (goalId: string | number) => {
+  const key = `encouragements-${goalId}`
+  return JSON.parse(localStorage.getItem(key) || '[]')
+}
+
+type StoreEncouragementMessage = { id: string; content: string; authorName: string; timestamp: number }
 
 interface EncouragementCardProps {
   isPartner?: boolean
