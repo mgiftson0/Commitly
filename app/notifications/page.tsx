@@ -27,11 +27,11 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient, type Notification } from "@/lib/supabase"
-import { isMockAuthEnabled } from "@/lib/mock-auth"
+import { getSupabaseClient, type Notification } from "@/server/lib/supabase"
+import { isMockAuthEnabled } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
-import { getNotifications as getMockNotificationsStore } from "@/lib/mock-store"
+import { getNotifications as getMockNotificationsStore } from "@/server/lib/mock-store"
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -477,7 +477,7 @@ function NotificationCard({ notification }: { notification: NotificationItem }) 
                   size="sm"
                   onClick={() => {
                     try {
-                      const store = require("@/lib/mock-store")
+                      const store = require("@/server/lib/mock-store")
                       const goalId = (notification as any).related_goal_id
                       if (goalId) {
                         store.setInviteStatus(notification.type === 'accountability_request' ? 'partner' : 'group', goalId, 'accepted')
@@ -496,7 +496,7 @@ function NotificationCard({ notification }: { notification: NotificationItem }) 
                   size="sm"
                   onClick={() => {
                     try {
-                      const store = require("@/lib/mock-store")
+                      const store = require("@/server/lib/mock-store")
                       const goalId = (notification as any).related_goal_id
                       if (goalId) {
                         store.setInviteStatus(notification.type === 'accountability_request' ? 'partner' : 'group', goalId, 'declined')

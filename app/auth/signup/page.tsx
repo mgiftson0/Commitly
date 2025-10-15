@@ -9,8 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Target, Eye, EyeOff, Mail, Lock, Chrome } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient } from "@/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
+import { getSupabaseClient } from "@/server/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 
 export default function SignUpPage() {

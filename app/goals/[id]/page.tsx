@@ -35,8 +35,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { getSupabaseClient, type Goal, type Activity, type Streak } from "@/lib/supabase"
-import { isMockAuthEnabled } from "@/lib/mock-auth"
+import { getSupabaseClient, type Goal, type Activity, type Streak } from "@/server/lib/supabase"
+import { isMockAuthEnabled } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
@@ -67,7 +67,7 @@ export default function GoalDetailPage() {
   const loadGoalData = async () => {
     if (isMockAuthEnabled()) {
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         const sg = store.getGoals()
         const g = sg.find((x: any) => String(x.id) === String(goalId))
         if (g) {
@@ -192,7 +192,7 @@ export default function GoalDetailPage() {
     if (isMockAuthEnabled()) {
       if (goal) {
         setGoal({ ...goal, completed_at: new Date().toISOString() })
-        try { const { addNotification } = require("@/lib/mock-store"); addNotification({ title: 'Goal Completed', message: `You completed: ${goal.title}.`, type: 'goal_completed', related_goal_id: goal.id }); } catch {}
+        try { const { addNotification } = require("@/server/lib/mock-store"); addNotification({ title: 'Goal Completed', message: `You completed: ${goal.title}.`, type: 'goal_completed', related_goal_id: goal.id }); } catch {}
         toast.success("🎉 Goal completed! Great job!")
       }
       return
@@ -423,378 +423,266 @@ export default function GoalDetailPage() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Goal Details</h1>
-            <p className="text-muted-foreground">
-              Track your progress and stay motivated
-            </p>
-          </div>
+        <div className="flex items-center justify-between">
+          <Link href="/goals">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
           <div className="flex gap-2">
-            <Link href="/goals">
-              <Button variant="outline" className="hover-lift">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Goals
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Goal Header Card */}
-        <Card className="hover-lift">
-          <CardHeader>
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-              {/* Goal Info */}
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                  <Badge variant="outline" className="capitalize">
-                    {goal.goal_type.replace('-', ' ')}
-                  </Badge>
-                  <Badge variant="outline" className="capitalize">
-                    {goal.visibility}
-                  </Badge>
-                  {isGroupGoal && (
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                      <Users className="h-3 w-3 mr-1" />
-                      Group
-                    </Badge>
-                  )}
-                  {isForkedGoal && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      <GitFork className="h-3 w-3 mr-1" />
-                      Forked
-                    </Badge>
-                  )}
-                  {goal.is_suspended && <Badge variant="destructive">Suspended</Badge>}
-                  {goal.completed_at && <Badge className="bg-green-600">Completed</Badge>}
-                </div>
-
-                <CardTitle className="text-3xl mb-3 flex items-center gap-2">
-                  {goal.title}
-                  {isGroupGoal && (
-                    <Crown className="h-6 w-6 text-purple-600" />
-                  )}
-                </CardTitle>
-                {goal.description && (
-                  <CardDescription className="text-base mb-4">
-                    {goal.description}
-                  </CardDescription>
-                )}
-
-                {/* Partner Avatars */}
-                {apList.length > 0 && !isGroupGoal && (
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Accountability Partners:</span>
-                      <div className="flex -space-x-2">
-                        {apList.slice(0, 3).map((partner) => (
-                          <Avatar key={partner.id} className="h-8 w-8 border-2 border-background">
-                            <AvatarImage src={partner.avatar} />
-                            <AvatarFallback className="text-xs">
-                              {partner.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                        {apList.length > 3 && (
-                          <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground">+{apList.length - 3}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Group Members */}
-                {isGroupGoal && groupMembersList.length > 0 && (
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Group Members:</span>
-                      <div className="flex -space-x-2">
-                        {groupMembersList.slice(0, 4).map((member) => (
-                          <Avatar key={member.id} className="h-8 w-8 border-2 border-background">
-                            <AvatarImage src={member.avatar} />
-                            <AvatarFallback className="text-xs">
-                              {member.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                        {groupMembersList.length > 4 && (
-                          <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground">+{groupMembersList.length - 4}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-2">
-                {isAccountabilityPartner ? (
-                  /* Accountability Partner View - Only show view button, no edit */
-                  <Badge variant="outline" className="px-3 py-2 text-sm">
-                    <Users className="h-4 w-4 mr-2" />
-                    Accountability Partner - View Only
-                  </Badge>
-                ) : isGroupMember && !isYourGoal ? (
-                  /* Group Member View - Can edit */
-                  <>
-                    <Link href={`/goals/${goal.id}/edit`}>
-                      <Button variant="outline" size="sm" className="hover-lift">
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit as Member
-                      </Button>
-                    </Link>
-                    <Badge variant="outline" className="px-3 py-2 text-sm">
-                      <Crown className="h-4 w-4 mr-2" />
-                      Group Member
-                    </Badge>
-                  </>
-                ) : (
-                  /* Owner View - Show all management actions */
-                  <>
-                    {/* Fork Button - Only show for goals that can be forked */}
-                    {canForkGoalProp && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="hover-lift"
-                        onClick={forkGoal}
-                      >
-                        <GitFork className="h-4 w-4 mr-2" />
-                        Fork Goal
-                      </Button>
-                    )}
+            {!isAccountabilityPartner && (
+              <>
                 <Link href={`/goals/${goal.id}/edit`}>
-                  <Button variant="outline" size="sm" className="hover-lift" disabled={!canEditWithin5h} title={!canEditWithin5h ? "Editing period ended (5 hours)" : undefined}>
+                  <Button variant="outline" size="sm" disabled={!canEditWithin5h}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit
                   </Button>
                 </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleSuspend}
-                      className="hover-lift"
-                    >
-                      {goal.is_suspended ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
-                      {goal.is_suspended ? "Resume" : "Pause"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={deleteGoal}
-                      className="hover-lift text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
-                  </>
+                <Button variant="outline" size="sm" onClick={toggleSuspend}>
+                  {goal.is_suspended ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
+                  {goal.is_suspended ? "Resume" : "Pause"}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Two Column Layout: Update Interface + Details */}
+        <div className="grid gap-4 lg:grid-cols-3">
+          {/* Left: Update/Track Interface */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Goal Title Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {goal.goal_type.replace('-', ' ')}
+                  </Badge>
+                  {isGroupGoal && (
+                    <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
+                      <Users className="h-3 w-3 mr-1" /> Group
+                    </Badge>
+                  )}
+                  {goal.is_suspended && <Badge variant="destructive" className="text-xs">Paused</Badge>}
+                  {goal.completed_at && <Badge className="bg-green-600 text-xs">Completed</Badge>}
+                </div>
+                <CardTitle className="text-2xl">{goal.title}</CardTitle>
+                {goal.description && (
+                  <CardDescription className="text-sm mt-2">{goal.description}</CardDescription>
                 )}
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+              </CardHeader>
+            </Card>
 
-        {/* Dates */}
-        <Card className="hover-lift">
-          <CardHeader>
-            <CardTitle className="text-lg">Dates</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            <div className="text-sm flex items-center justify-between">
-              <span className="text-muted-foreground">Created on</span>
-              <span className="font-medium">{goal.created_at ? new Date(goal.created_at).toLocaleString() : '—'}</span>
-            </div>
-            <div className="text-sm flex items-center justify-between">
-              <span className="text-muted-foreground">Updated on</span>
-              <span className="font-medium">{goal.updated_at ? new Date(goal.updated_at).toLocaleString() : '—'}</span>
-            </div>
-            <div className="text-sm flex items-center justify-between">
-              <span className="text-muted-foreground">Due date</span>
-              <span className="font-medium">{storeMeta?.dueDate ? new Date(storeMeta.dueDate).toLocaleDateString() : 'Not set'}</span>
-            </div>
-            <div className="text-sm flex items-center justify-between">
-              <span className="text-muted-foreground">Completed on</span>
-              <span className="font-medium">{goal.completed_at ? new Date(goal.completed_at).toLocaleString() : '—'}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            {/* Activities Section */}
-            {isMultiActivity && (
-              <Card className="hover-lift">
+            {/* Dynamic Update Interface Based on Goal Type */}
+            {isMultiActivity ? (
+              /* Multi-Activity Goal: Show Activity Checklist */
+              <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Target className="h-5 w-5" />
-                        Activities
-                      </CardTitle>
-                      <CardDescription>
-                        {completedActivities} of {totalActivities} completed
-                      </CardDescription>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Target className="h-5 w-5" />
+                      Track Activities
+                    </CardTitle>
+                    <div className="text-sm text-muted-foreground">
+                      {completedActivities} / {totalActivities}
                     </div>
-                    <Progress value={progress} className="w-32 h-2" />
                   </div>
+                  <Progress value={progress} className="h-2 mt-2" />
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {activities.map((activity, index) => (
-                    <div key={activity.id} className="flex items-center gap-4 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                <CardContent className="space-y-2">
+                  {activities.map((activity) => (
+                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
                       <Checkbox
                         checked={activity.is_completed}
                         onCheckedChange={() => toggleActivity(activity.id, activity.is_completed)}
                         disabled={isAccountabilityPartner}
+                        className="mt-0.5"
                       />
-                      <div className="flex-1">
-                        <span className={`font-medium ${activity.is_completed ? "line-through text-muted-foreground" : ""}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${activity.is_completed ? "line-through text-muted-foreground" : ""}`}>
                           {activity.title}
-                        </span>
+                        </p>
                         {activity.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {activity.description}
-                          </p>
-                        )}
-                        {/* Show assigned members for group goals */}
-                        {isGroupGoal && activityAssignments[activity.id] && (
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="text-xs text-muted-foreground">Assigned to:</span>
-                            {activityAssignments[activity.id].includes('all') ? (
-                              <Badge variant="outline" className="text-xs">All Members</Badge>
-                            ) : (
-                              <div className="flex -space-x-1">
-                                {getAssignedMembers(activity.id).slice(0, 3).map((member) => (
-                                  <div key={member.id} className="w-5 h-5 rounded-full bg-purple-100 border border-background flex items-center justify-center">
-                                    <span className="text-xs font-medium text-purple-700">{member.name.charAt(0)}</span>
-                                  </div>
-                                ))}
-                                {getAssignedMembers(activity.id).length > 3 && (
-                                  <div className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center">
-                                    <span className="text-xs text-muted-foreground">+{getAssignedMembers(activity.id).length - 3}</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{activity.description}</p>
                         )}
                       </div>
                       {activity.is_completed && (
-                        <Badge className="bg-green-600">Done</Badge>
+                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                       )}
                     </div>
                   ))}
                 </CardContent>
               </Card>
-            )}
-
-            {/* Complete Goal Button - Only for owners and group members */}
-            {!isAccountabilityPartner && !goal.completed_at && (
-              <Card className="hover-lift">
-                <CardContent className="p-6">
-                  <Button onClick={completeGoal} className="w-full h-12 text-lg hover-lift">
-                    <CheckCircle2 className="h-5 w-5 mr-2" />
-                    Mark Goal as Complete
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Partner View - Show goal completion status */}
-            {isAccountabilityPartner && isGoalCompleted && (
-              <Card className="hover-lift border-green-200 bg-green-50/50">
-                <CardContent className="p-6">
-                  <div className="text-center space-y-2">
-                    <div className="text-4xl">🎉</div>
-                    <div>
-                      <p className="font-semibold text-green-700">Goal Completed!</p>
-                      <p className="text-sm text-green-600">
-                        The goal owner has successfully completed this goal.
-                      </p>
-                    </div>
+            ) : goal.goal_type === "recurring" ? (
+              /* Recurring Goal: Show Daily Tracker */
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Flame className="h-5 w-5 text-orange-500" />
+                    Daily Progress
+                  </CardTitle>
+                  <CardDescription>Track your consistency</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* This Week Grid */}
+                  <div className="grid grid-cols-7 gap-2">
+                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => (
+                      <div key={day} className="text-center">
+                        <div className="text-xs text-muted-foreground mb-1">{day}</div>
+                        <div className={`h-12 rounded-lg border-2 flex items-center justify-center ${
+                          index < 5 ? "bg-green-50 border-green-500" : 
+                          index === 5 ? "bg-orange-50 border-orange-500" :
+                          "border-muted"
+                        }`}>
+                          {index < 5 && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                          {index === 5 && <Clock className="h-5 w-5 text-orange-600" />}
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                  {!goal.completed_at && !isAccountabilityPartner && (
+                    <Button onClick={completeGoal} className="w-full" size="lg">
+                      <CheckCircle2 className="h-5 w-5 mr-2" />
+                      Complete Today
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
-            )}
-
-            {/* Encouragement Section - Use the new component */}
-            <EncouragementCard 
-              isPartner={isAccountabilityPartner}
-              goalOwnerName={goalOwnerName}
-              onSendEncouragement={async (message) => {
-                // In mock mode, just show toast (handled by component)
-                if (isMockAuthEnabled()) {
-                  return
-                }
-                // Real implementation would save to database
-                await addNote()
-              }}
-              newMessageCount={isAccountabilityPartner ? 0 : 2}
-            />
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <Card className="hover-lift">
-              <CardHeader>
-                <CardTitle className="text-lg">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start hover-lift">
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Message Partners
-                </Button>
-                <Button variant="outline" className="w-full justify-start hover-lift">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  View Calendar
-                </Button>
-                <Button variant="outline" className="w-full justify-start hover-lift">
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  View Analytics
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Progress History */}
-            <Card className="hover-lift">
-              <CardHeader>
-                <CardTitle className="text-lg">This Week</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => (
-                    <div key={day} className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{day}</span>
-                      <div className="flex items-center gap-2">
-                        {index < 5 && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                        {index === 5 && <Clock className="h-4 w-4 text-orange-600" />}
-                        {index === 6 && <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />}
+            ) : (
+              /* Single Activity Goal: Show Simple Complete Button */
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Complete Your Goal</CardTitle>
+                  <CardDescription>
+                    {storeMeta?.dueDate ? `Due: ${new Date(storeMeta.dueDate).toLocaleDateString()}` : "Track your progress"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {goal.completed_at ? (
+                    <div className="text-center py-8 space-y-3">
+                      <div className="text-5xl">🎉</div>
+                      <div>
+                        <p className="font-semibold text-green-700">Goal Completed!</p>
+                        <p className="text-sm text-muted-foreground">Completed on {new Date(goal.completed_at).toLocaleDateString()}</p>
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    <>
+                      <div className="text-center py-6">
+                        <div className="text-4xl mb-3">🎯</div>
+                        <p className="text-sm text-muted-foreground">Ready to mark this goal as complete?</p>
+                      </div>
+                      {!isAccountabilityPartner && (
+                        <Button onClick={completeGoal} className="w-full" size="lg">
+                          <CheckCircle2 className="h-5 w-5 mr-2" />
+                          Mark as Complete
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Encouragement Section */}
+            {!isAccountabilityPartner && (
+              <EncouragementCard 
+                isPartner={false}
+                goalOwnerName={goalOwnerName}
+                newMessageCount={2}
+              />
+            )}
+          </div>
+
+          {/* Right: Goal Details Sidebar */}
+          <div className="space-y-4">
+            {/* Goal Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Goal Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Type</span>
+                  <span className="capitalize">{goal.goal_type.replace('-', ' ')}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Visibility</span>
+                  <span className="capitalize">{goal.visibility}</span>
+                </div>
+                {storeMeta?.dueDate && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Due Date</span>
+                    <span>{new Date(storeMeta.dueDate).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {storeMeta?.recurrencePattern && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Recurrence</span>
+                    <span className="capitalize">{storeMeta.recurrencePattern}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Created</span>
+                  <span>{new Date(goal.created_at).toLocaleDateString()}</span>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Encouragement */}
-            <Card className="hover-lift">
-              <CardContent className="p-4">
-                <div className="text-center space-y-3">
-                  <div className="text-4xl">💪</div>
-                  <div>
-                    <p className="font-medium">Keep it up!</p>
-                    <p className="text-sm text-muted-foreground">
-                      You&apos;re doing great. Stay consistent!
-                    </p>
+            {/* Partners/Members */}
+            {(apList.length > 0 || groupMembersList.length > 0) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    {isGroupGoal ? "Group Members" : "Accountability Partners"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {(isGroupGoal ? groupMembersList : apList).slice(0, 5).map((person) => (
+                      <div key={person.id} className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={person.avatar} />
+                          <AvatarFallback className="text-xs">{person.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{person.name}</span>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {!isAccountabilityPartner && (
+                  <Button variant="outline" size="sm" className="w-full justify-start" onClick={deleteGoal}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Goal
+                  </Button>
+                )}
+                {canForkGoalProp && (
+                  <Button variant="outline" size="sm" className="w-full justify-start" onClick={forkGoal}>
+                    <GitFork className="h-4 w-4 mr-2" />
+                    Fork Goal
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Motivation */}
+            <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
+              <CardContent className="p-4 text-center space-y-2">
+                <div className="text-3xl">💪</div>
+                <p className="text-sm font-medium">Keep Going!</p>
+                <p className="text-xs text-muted-foreground">You&apos;re making progress</p>
               </CardContent>
             </Card>
           </div>

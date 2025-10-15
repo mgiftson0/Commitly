@@ -20,7 +20,7 @@ interface EncouragementMessage {
   timestamp: string
 }
 
-import { addEncouragement, getEncouragements, type EncouragementMessage as StoreEncouragementMessage } from "@/lib/mock-store"
+import { addEncouragement, getEncouragements, type EncouragementMessage as StoreEncouragementMessage } from "@/server/lib/mock-store"
 
 interface EncouragementCardProps {
   isPartner?: boolean

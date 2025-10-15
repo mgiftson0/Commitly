@@ -31,8 +31,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient, type Goal, type Streak } from "@/lib/supabase"
-import { isMockAuthEnabled, getMockUser } from "@/lib/mock-auth"
+import { getSupabaseClient, type Goal, type Streak } from "@/server/lib/supabase"
+import { isMockAuthEnabled, getMockUser } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -48,7 +48,7 @@ export default function DashboardPage() {
     checkUser()
     if (isMockAuthEnabled()) {
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         const sg = store.getGoals()
         const mapped = sg.map((g: any) => ({
           id: String(g.id),
@@ -74,7 +74,7 @@ export default function DashboardPage() {
     if (!isMockAuthEnabled()) return
     const onStorage = () => {
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         const sg = store.getGoals()
         const mapped = sg.map((g: any) => ({
           id: String(g.id),

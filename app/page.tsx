@@ -7,7 +7,7 @@ import { Target, Users, TrendingUp, Award, Star, Mail, Twitter, Github, Linkedin
 import Link from "next/link"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
-import { isSupabaseConfigured } from "@/lib/supabase"
+import { isSupabaseConfigured } from "@/server/lib/supabase"
 
 export default function LandingPage() {
   const { theme, setTheme } = useTheme()

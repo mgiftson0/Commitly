@@ -35,8 +35,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient } from "@/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
+import { getSupabaseClient } from "@/server/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -120,7 +120,7 @@ export default function CreateGoalPage() {
       setLoading(true)
       await mockDelay(1000)
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         const type = goalType === 'single-activity' ? 'single' : (goalType === 'multi-activity' ? 'multi' : 'recurring')
         const owner = { id: 'mock-user-id', name: 'You' }
         const group = goalNature === 'group'

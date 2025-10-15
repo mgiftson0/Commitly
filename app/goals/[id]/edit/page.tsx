@@ -36,8 +36,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { getSupabaseClient, type Goal, type Activity } from "@/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
+import { getSupabaseClient, type Goal, type Activity } from "@/server/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -71,7 +71,7 @@ export default function EditGoalPage() {
   const loadGoalData = async () => {
     if (isMockAuthEnabled()) {
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         const sg = store.getGoals()
         const g = sg.find((x: any) => String(x.id) === String(goalId))
         if (g) {
@@ -181,7 +181,7 @@ export default function EditGoalPage() {
       setSaving(true)
       await mockDelay(1000)
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         const type = goalType === 'single-activity' ? 'single' : (goalType === 'multi-activity' ? 'multi' : 'recurring')
         const changes: any = {
           title,

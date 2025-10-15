@@ -415,7 +415,7 @@ export default function GoalsPage() {
   // Load goals from local store
   React.useEffect(() => {
     try {
-      const store = require("@/lib/mock-store")
+      const store = require("@/server/lib/mock-store")
       setStoreGoals(store.getGoals())
     } catch {}
   }, [])
@@ -424,7 +424,7 @@ export default function GoalsPage() {
   React.useEffect(() => {
     const onStorage = () => {
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         setStoreGoals(store.getGoals())
       } catch {}
     }
@@ -457,7 +457,7 @@ export default function GoalsPage() {
     .filter(goal => goal.accountabilityPartners.some(partner => partner.id === 'mock-user-id') && !isGoalOwner(goal))
     .filter(goal => {
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         const status = store.getInviteStatus('partner', goal.id)
         // Only show accepted partner goals; if no status (seed data), allow
         return status ? status === 'accepted' : true
@@ -721,7 +721,7 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
 
   useEffect(() => {
     try {
-      const store = require("@/lib/mock-store")
+      const store = require("@/server/lib/mock-store")
       const nextPartner = { ...partnerInvites }
       const nextGroup = { ...groupInvites }
       goals.forEach(g => {

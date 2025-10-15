@@ -11,8 +11,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Target, ArrowLeft, Users, Crown, Edit, CheckCircle2, Pause, Play, Trash2, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { getSupabaseClient, type Goal, type Activity } from "@/lib/supabase"
-import { isMockAuthEnabled } from "@/lib/mock-auth"
+import { getSupabaseClient, type Goal, type Activity } from "@/server/lib/supabase"
+import { isMockAuthEnabled } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -41,7 +41,7 @@ export default function GroupGoalDetailPage() {
   const loadGoalData = async () => {
     if (isMockAuthEnabled()) {
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         const sg = store.getGoals()
         const stored = sg.find((g: any) => String(g.id) === String(goalId))
         if (stored) {
@@ -216,8 +216,8 @@ export default function GroupGoalDetailPage() {
                 <p className="text-xs text-muted-foreground">Accept to participate and add your own activities.</p>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => { setInviteStatus('accepted'); try { const { setInviteStatus: setInvite, addNotification } = require("@/lib/mock-store"); setInvite('group', goal.id, 'accepted'); addNotification({ title: 'Group Invite Accepted', message: `You joined the group goal: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} }}>Accept</Button>
-                <Button size="sm" variant="outline" onClick={() => { setInviteStatus('declined'); try { const { setInviteStatus: setInvite, addNotification } = require("@/lib/mock-store"); setInvite('group', goal.id, 'declined'); addNotification({ title: 'Group Invite Declined', message: `You declined to join: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} }}>Decline</Button>
+                <Button size="sm" onClick={() => { setInviteStatus('accepted'); try { const { setInviteStatus: setInvite, addNotification } = require("@/server/lib/mock-store"); setInvite('group', goal.id, 'accepted'); addNotification({ title: 'Group Invite Accepted', message: `You joined the group goal: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} }}>Accept</Button>
+                <Button size="sm" variant="outline" onClick={() => { setInviteStatus('declined'); try { const { setInviteStatus: setInvite, addNotification } = require("@/server/lib/mock-store"); setInvite('group', goal.id, 'declined'); addNotification({ title: 'Group Invite Declined', message: `You declined to join: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} }}>Decline</Button>
               </div>
             </CardContent>
           </Card>

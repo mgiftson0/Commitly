@@ -30,8 +30,8 @@ import {
   Users
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient } from "@/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
+import { getSupabaseClient } from "@/server/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 

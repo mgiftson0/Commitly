@@ -39,8 +39,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient, type User, type Goal } from "@/lib/supabase"
-import { isMockAuthEnabled, getMockUser } from "@/lib/mock-auth"
+import { getSupabaseClient, type User, type Goal } from "@/server/lib/supabase"
+import { isMockAuthEnabled, getMockUser } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -65,7 +65,7 @@ export default function ProfilePage() {
     if (!isMockAuthEnabled()) return
     const onStorage = () => {
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         const sg = store.getGoals()
         const mapped = sg.map((g: any) => ({
           id: String(g.id),
@@ -101,7 +101,7 @@ export default function ProfilePage() {
     if (isMockAuthEnabled()) {
       setUser(getMockUser() as unknown as User)
       try {
-        const store = require("@/lib/mock-store")
+        const store = require("@/server/lib/mock-store")
         const sg = store.getGoals()
         const mapped = sg.map((g: any) => ({
           id: String(g.id),
@@ -261,233 +261,184 @@ export default function ProfilePage() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
-            <p className="text-muted-foreground">
-              Manage your profile and showcase your achievements
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/settings">
-              <Button variant="outline" className="hover-lift">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-            </Link>
-            <Button className="hover-lift">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Profile
-            </Button>
-          </div>
-        </div>
-
-        {/* Profile Header */}
-        <Card className="hover-lift">
-          <CardContent className="p-8">
-            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-              {/* Avatar Section */}
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative">
-                  <Avatar className="h-32 w-32 border-4 border-primary/20">
-                    <AvatarImage src="/placeholder-avatar.jpg" />
-                    <AvatarFallback className="text-3xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                      JD
-                    </AvatarFallback>
-                  </Avatar>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="absolute -bottom-2 -right-2 h-10 w-10 rounded-full hover-lift"
-                  >
-                    <Camera className="h-4 w-4" />
+      <div className="space-y-4 sm:space-y-6">
+        {/* Profile Header Card */}
+        <Card className="overflow-hidden">
+          {/* Cover Image */}
+          <div className="h-24 sm:h-32 md:h-40 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20" />
+          
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            {/* Avatar & Action Buttons */}
+            <div className="flex justify-between items-start mb-3 sm:mb-4">
+              <div className="relative -mt-12 sm:-mt-16">
+                <Avatar className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 border-4 border-background">
+                  <AvatarImage src="/placeholder-avatar.jpg" />
+                  <AvatarFallback className="text-xl sm:text-2xl md:text-3xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+                    JD
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="flex gap-2">
+                <Link href="/settings">
+                  <Button variant="outline" size="sm" className="text-xs">
+                    <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Settings</span>
                   </Button>
+                </Link>
+                <Button size="sm" className="text-xs">
+                  <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Edit Profile</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Profile Info */}
+            <div className="space-y-2 sm:space-y-3">
+              <div>
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold">{user?.display_name || "John Doe"}</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground">@{user?.username || "johndoe"}</p>
+              </div>
+
+              <p className="text-xs sm:text-sm leading-relaxed">
+                {user?.bio || "Goal-oriented individual passionate about personal growth and helping others achieve their dreams."}
+              </p>
+
+              {/* Location & Links */}
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span>San Francisco, CA</span>
                 </div>
-                <div className="text-center">
-                  <div className="flex items-center gap-1 mb-1">
-                    <span className="text-sm text-muted-foreground">Level</span>
-                    <Badge variant="secondary">25</Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    2,450 / 3,000 XP to next level
-                  </div>
-                  <Progress value={75} className="w-32 h-1.5 mt-2" />
+                <div className="flex items-center gap-1.5">
+                  <LinkIcon className="h-3.5 w-3.5" />
+                  <span>johndoe.com</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>Joined January 2024</span>
                 </div>
               </div>
 
-              {/* Profile Info */}
-              <div className="flex-1 text-center md:text-left">
-                <div className="mb-4">
-                  <h2 className="text-3xl font-bold mb-2">{user?.display_name || "John Doe"}</h2>
-                  <p className="text-muted-foreground mb-2">@{user?.username || "johndoe"}</p>
-                  <p className="text-sm leading-relaxed max-w-2xl">
-                    {user?.bio || "Goal-oriented individual passionate about personal growth and helping others achieve their dreams. Love connecting with like-minded people to share motivation and accountability."}
-                  </p>
+              {/* Twitter-style Stats Row */}
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-2">
+                <button className="hover:underline">
+                  <span className="font-bold text-sm sm:text-base">{followers}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Followers</span>
+                </button>
+                <button className="hover:underline">
+                  <span className="font-bold text-sm sm:text-base">{following}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Following</span>
+                </button>
+                <div>
+                  <span className="font-bold text-sm sm:text-base">{goals.length}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Goals</span>
                 </div>
-
-                {/* Location & Social */}
-                <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span>San Francisco, CA</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <LinkIcon className="h-4 w-4" />
-                    <span>johndoe.com</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Github className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Twitter className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Linkedin className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{followers}</div>
-                    <div className="text-sm text-muted-foreground">Followers</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{following}</div>
-                    <div className="text-sm text-muted-foreground">Following</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{goals.length}</div>
-                    <div className="text-sm text-muted-foreground">Goals</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{achievements.length}</div>
-                    <div className="text-sm text-muted-foreground">Badges</div>
-                  </div>
+                <div>
+                  <span className="font-bold text-sm sm:text-base">{achievements.length}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Badges</span>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-blue-500/10">
-                  <Target className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Active Goals</p>
-                  <p className="text-3xl font-bold">{activeGoals.length}</p>
-                </div>
+        {/* Compact Stats Row - No Cards */}
+        <div className="border rounded-lg p-3 sm:p-4 bg-card">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-blue-500/10">
+                <Target className="h-4 w-4 text-blue-600" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-green-500/10">
-                  <Trophy className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Completed</p>
-                  <p className="text-3xl font-bold">{completedGoals.length}</p>
-                </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">{activeGoals.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Active</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-orange-500/10">
-                  <Flame className="h-6 w-6 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Current Streak</p>
-                  <p className="text-3xl font-bold">12</p>
-                </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-green-500/10">
+                <Trophy className="h-4 w-4 text-green-600" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-purple-500/10">
-                  <Award className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Success Rate</p>
-                  <p className="text-3xl font-bold">94%</p>
-                </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">{completedGoals.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Completed</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-orange-500/10">
+                <Flame className="h-4 w-4 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">12</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Streak</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-purple-500/10">
+                <Award className="h-4 w-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">94%</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Success</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2">
             {/* Goals Overview */}
             <Card className="hover-lift">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5" />
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <Target className="h-4 w-4 sm:h-5 sm:w-5" />
                     Goals Overview
                   </CardTitle>
                   <Link href="/goals">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" className="text-xs sm:text-sm">
                       View All
                     </Button>
                   </Link>
                 </div>
               </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="recent" className="space-y-4">
-                  <TabsList>
-                    <TabsTrigger value="recent">Recent ({goals.length})</TabsTrigger>
-                    <TabsTrigger value="active">Active ({activeGoals.length})</TabsTrigger>
-                    <TabsTrigger value="completed">Completed ({completedGoals.length})</TabsTrigger>
+              <CardContent className="p-4 sm:p-6">
+                <Tabs defaultValue="recent" className="space-y-3 sm:space-y-4">
+                  <TabsList className="grid w-full grid-cols-3 h-auto">
+                    <TabsTrigger value="recent" className="text-[10px] sm:text-xs md:text-sm px-1 sm:px-3 py-1.5 sm:py-2">Recent ({goals.length})</TabsTrigger>
+                    <TabsTrigger value="active" className="text-[10px] sm:text-xs md:text-sm px-1 sm:px-3 py-1.5 sm:py-2">Active ({activeGoals.length})</TabsTrigger>
+                    <TabsTrigger value="completed" className="text-[10px] sm:text-xs md:text-sm px-1 sm:px-3 py-1.5 sm:py-2">Completed ({completedGoals.length})</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="recent" className="space-y-3">
+                  <TabsContent value="recent" className="space-y-2 sm:space-y-3">
                     {goals.slice(0, 5).map((goal) => (
                       <Link key={goal.id} href={`/goals/${goal.id}`}>
-                        <div className="flex items-center gap-4 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                          <div className="p-2 rounded-lg bg-primary/10">
-                            <Target className="h-4 w-4 text-primary" />
+                        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                          <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                            <Target className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                           </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm">{goal.title}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-xs sm:text-sm truncate">{goal.title}</h4>
+                            <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs">
                                 {goal.goal_type}
                               </Badge>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs">
                                 {goal.visibility}
                               </Badge>
                               {isMockAuthEnabled() && (() => {
                                 try {
-                                  const store = require("@/lib/mock-store")
+                                  const store = require("@/server/lib/mock-store")
                                   const sg = store.getGoals()
                                   const s = sg.find((g: any) => String(g.id) === String(goal.id))
                                   if (!s) return null
                                   return (
                                     <>
                                       {s.dueDate && (
-                                        <Badge variant="outline" className="text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
+                                        <Badge variant="outline" className="text-[10px] sm:text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
                                       )}
                                       {s.recurrencePattern && (
-                                        <Badge variant="outline" className="text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
+                                        <Badge variant="outline" className="text-[10px] sm:text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
                                       )}
                                     </>
                                   )
@@ -496,44 +447,44 @@ export default function ProfilePage() {
                             </div>
                           </div>
                           {goal.completed_at ? (
-                            <Badge className="bg-green-600">Completed</Badge>
+                            <Badge className="bg-green-600 text-[10px] sm:text-xs flex-shrink-0">Completed</Badge>
                           ) : (
-                            <Badge variant="outline">Active</Badge>
+                            <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0">Active</Badge>
                           )}
                         </div>
                       </Link>
                     ))}
                   </TabsContent>
 
-                  <TabsContent value="active" className="space-y-3">
+                  <TabsContent value="active" className="space-y-2 sm:space-y-3">
                     {activeGoals.slice(0, 5).map((goal) => (
                       <Link key={goal.id} href={`/goals/${goal.id}`}>
-                        <div className="flex items-center gap-4 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                          <div className="p-2 rounded-lg bg-primary/10">
-                            <Target className="h-4 w-4 text-primary" />
+                        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                          <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                            <Target className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                           </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm">{goal.title}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-xs sm:text-sm truncate">{goal.title}</h4>
+                            <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs">
                                 {goal.goal_type}
                               </Badge>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs">
                                 {goal.visibility}
                               </Badge>
                               {isMockAuthEnabled() && (() => {
                                 try {
-                                  const store = require("@/lib/mock-store")
+                                  const store = require("@/server/lib/mock-store")
                                   const sg = store.getGoals()
                                   const s = sg.find((g: any) => String(g.id) === String(goal.id))
                                   if (!s) return null
                                   return (
                                     <>
                                       {s.dueDate && (
-                                        <Badge variant="outline" className="text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
+                                        <Badge variant="outline" className="text-[10px] sm:text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
                                       )}
                                       {s.recurrencePattern && (
-                                        <Badge variant="outline" className="text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
+                                        <Badge variant="outline" className="text-[10px] sm:text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
                                       )}
                                     </>
                                   )
@@ -541,41 +492,41 @@ export default function ProfilePage() {
                               })()}
                             </div>
                           </div>
-                          <Badge variant="outline">Active</Badge>
+                          <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0">Active</Badge>
                         </div>
                       </Link>
                     ))}
                   </TabsContent>
 
-                  <TabsContent value="completed" className="space-y-3">
+                  <TabsContent value="completed" className="space-y-2 sm:space-y-3">
                     {completedGoals.slice(0, 5).map((goal) => (
                       <Link key={goal.id} href={`/goals/${goal.id}`}>
-                        <div className="flex items-center gap-4 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                          <div className="p-2 rounded-lg bg-green-500/10">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                          <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10 flex-shrink-0">
+                            <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                           </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm">{goal.title}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-xs sm:text-sm truncate">{goal.title}</h4>
+                            <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs">
                                 {goal.goal_type}
                               </Badge>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs">
                                 {goal.visibility}
                               </Badge>
                               {isMockAuthEnabled() && (() => {
                                 try {
-                                  const store = require("@/lib/mock-store")
+                                  const store = require("@/server/lib/mock-store")
                                   const sg = store.getGoals()
                                   const s = sg.find((g: any) => String(g.id) === String(goal.id))
                                   if (!s) return null
                                   return (
                                     <>
                                       {s.dueDate && (
-                                        <Badge variant="outline" className="text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
+                                        <Badge variant="outline" className="text-[10px] sm:text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
                                       )}
                                       {s.recurrencePattern && (
-                                        <Badge variant="outline" className="text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
+                                        <Badge variant="outline" className="text-[10px] sm:text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
                                       )}
                                     </>
                                   )
@@ -583,7 +534,7 @@ export default function ProfilePage() {
                               })()}
                             </div>
                           </div>
-                          <Badge className="bg-green-600">Completed</Badge>
+                          <Badge className="bg-green-600 text-[10px] sm:text-xs flex-shrink-0">Completed</Badge>
                         </div>
                       </Link>
                     ))}
@@ -594,34 +545,34 @@ export default function ProfilePage() {
 
             {/* Partner Goals (Mock) */}
             {isMockAuthEnabled() && partnerStoreGoals.length > 0 && (
-              <Card className="hover-lift mt-6">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
+              <Card className="hover-lift mt-4 sm:mt-6">
+                <CardHeader className="p-4 sm:p-6">
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                       Partner Goals
                     </CardTitle>
-                    <Badge variant="outline">{partnerStoreGoals.length}</Badge>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs">{partnerStoreGoals.length}</Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6">
                   {partnerStoreGoals.slice(0, 5).map((g: any) => (
                     <Link key={g.id} href={`/goals/${g.id}/partner`}>
-                      <div className="flex items-center gap-4 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                        <div className="p-2 rounded-lg bg-muted">
-                          <Target className="h-4 w-4 text-primary" />
+                      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                        <div className="p-1.5 sm:p-2 rounded-lg bg-muted flex-shrink-0">
+                          <Target className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm">{g.title}</h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs">{g.type}</Badge>
-                            <Badge variant="outline" className="text-xs">{g.visibility}</Badge>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-xs sm:text-sm truncate">{g.title}</h4>
+                          <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
+                            <Badge variant="outline" className="text-[10px] sm:text-xs">{g.type}</Badge>
+                            <Badge variant="outline" className="text-[10px] sm:text-xs">{g.visibility}</Badge>
                             {g.recurrencePattern && (
-                              <Badge variant="outline" className="text-xs">{g.recurrencePattern === 'custom' ? 'Custom' : (g.recurrencePattern.charAt(0).toUpperCase() + g.recurrencePattern.slice(1))}</Badge>
+                              <Badge variant="outline" className="text-[10px] sm:text-xs">{g.recurrencePattern === 'custom' ? 'Custom' : (g.recurrencePattern.charAt(0).toUpperCase() + g.recurrencePattern.slice(1))}</Badge>
                             )}
                           </div>
                         </div>
-                        <Badge variant="outline">Partner</Badge>
+                        <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0">Partner</Badge>
                       </div>
                     </Link>
                   ))}
@@ -631,34 +582,34 @@ export default function ProfilePage() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Achievements */}
             <Card className="hover-lift">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Award className="h-5 w-5 text-yellow-500" />
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Award className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                   Recent Achievements
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6">
                 {achievements.slice(0, 3).map((achievement) => (
-                  <div key={achievement.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                    <div className="text-2xl">{achievement.icon}</div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">{achievement.title}</h4>
-                      <p className="text-xs text-muted-foreground">
+                  <div key={achievement.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-muted/50">
+                    <div className="text-xl sm:text-2xl flex-shrink-0">{achievement.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-xs sm:text-sm truncate">{achievement.title}</h4>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2">
                         {achievement.description}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                         {new Date(achievement.earnedAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <Badge variant={achievement.rarity === 'epic' ? 'default' : 'secondary'} className="text-xs">
+                    <Badge variant={achievement.rarity === 'epic' ? 'default' : 'secondary'} className="text-[10px] sm:text-xs flex-shrink-0">
                       {achievement.rarity}
                     </Badge>
                   </div>
                 ))}
-                <Button variant="outline" className="w-full text-sm">
+                <Button variant="outline" className="w-full text-xs sm:text-sm">
                   View All Achievements
                 </Button>
               </CardContent>
@@ -666,28 +617,28 @@ export default function ProfilePage() {
 
             {/* Category Progress */}
             <Card className="hover-lift">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <TrendingUp className="h-5 w-5 text-primary" />
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Category Progress
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
                 {categoryStats.map((category) => {
                   const Icon = category.icon
                   const percentage = (category.completed / category.total) * 100
                   return (
-                    <div key={category.name} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Icon className={`h-4 w-4 ${category.color.replace('bg-', 'text-')}`} />
-                          <span className="text-sm font-medium">{category.name}</span>
+                    <div key={category.name} className="space-y-1.5 sm:space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Icon className={`h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 ${category.color.replace('bg-', 'text-')}`} />
+                          <span className="text-xs sm:text-sm font-medium truncate">{category.name}</span>
                         </div>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-xs sm:text-sm text-muted-foreground flex-shrink-0">
                           {category.completed}/{category.total}
                         </span>
                       </div>
-                      <Progress value={percentage} className="h-2" />
+                      <Progress value={percentage} className="h-1.5 sm:h-2" />
                     </div>
                   )
                 })}
@@ -696,20 +647,20 @@ export default function ProfilePage() {
 
             {/* Recent Activity */}
             <Card className="hover-lift">
-              <CardHeader>
-                <CardTitle className="text-lg">Recent Activity</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Recent Activity</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6">
                 {recentActivity.map((activity) => {
                   const Icon = activity.icon
                   return (
-                    <div key={activity.id} className="flex items-start gap-3">
-                      <div className={`p-2 rounded-full bg-muted`}>
-                        <Icon className={`h-4 w-4 ${activity.color}`} />
+                    <div key={activity.id} className="flex items-start gap-2 sm:gap-3">
+                      <div className={`p-1.5 sm:p-2 rounded-full bg-muted flex-shrink-0`}>
+                        <Icon className={`h-3 w-3 sm:h-4 sm:w-4 ${activity.color}`} />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-medium line-clamp-2">{activity.title}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
                           {activity.time}
                         </p>
                       </div>

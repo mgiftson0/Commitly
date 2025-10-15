@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Target, Mail, ArrowLeft, CheckCircle } from "lucide-react"
 import Link from "next/link"
-import { getSupabaseClient } from "@/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
+import { getSupabaseClient } from "@/server/lib/supabase"
+import { isMockAuthEnabled, mockDelay } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 
 export default function ResetPasswordPage() {

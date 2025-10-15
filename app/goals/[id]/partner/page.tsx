@@ -10,8 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Target, ArrowLeft, CheckCircle2, Users, Edit } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { getSupabaseClient, type Goal, type Activity, type Streak } from "@/lib/supabase"
-import { isMockAuthEnabled } from "@/lib/mock-auth"
+import { getSupabaseClient, type Goal, type Activity, type Streak } from "@/server/lib/supabase"
+import { isMockAuthEnabled } from "@/server/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
@@ -144,8 +144,8 @@ export default function PartnerGoalDetailPage() {
                 <p className="text-xs text-muted-foreground">Accept to view details and send encouragement.</p>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => { setInviteStatus('accepted'); try { const { setInviteStatus: setInvite, addNotification } = require("@/lib/mock-store"); setInvite('partner', goal.id, 'accepted'); addNotification({ title: 'Partner Request Accepted', message: `You accepted a partner request for ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Invitation accepted') }}>Accept</Button>
-                <Button size="sm" variant="outline" onClick={() => { setInviteStatus('declined'); try { const { setInviteStatus: setInvite, addNotification } = require("@/lib/mock-store"); setInvite('partner', goal.id, 'declined'); addNotification({ title: 'Partner Request Declined', message: `You declined a partner request for ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Invitation declined') }}>Decline</Button>
+                <Button size="sm" onClick={() => { setInviteStatus('accepted'); try { const { setInviteStatus: setInvite, addNotification } = require("@/server/lib/mock-store"); setInvite('partner', goal.id, 'accepted'); addNotification({ title: 'Partner Request Accepted', message: `You accepted a partner request for ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Invitation accepted') }}>Accept</Button>
+                <Button size="sm" variant="outline" onClick={() => { setInviteStatus('declined'); try { const { setInviteStatus: setInvite, addNotification } = require("@/server/lib/mock-store"); setInvite('partner', goal.id, 'declined'); addNotification({ title: 'Partner Request Declined', message: `You declined a partner request for ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Invitation declined') }}>Decline</Button>
               </div>
             </CardContent>
           </Card>
