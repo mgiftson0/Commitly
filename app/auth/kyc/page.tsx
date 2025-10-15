@@ -171,63 +171,63 @@ export default function KYCPage() {
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]" />
 
-      <div className="relative min-h-screen flex items-center justify-center p-4">
+      <div className="relative min-h-screen flex items-center justify-center p-3 sm:p-4">
         {/* Header */}
-        <div className="absolute top-0 left-0 right-0 p-6">
+        <div className="absolute top-0 left-0 right-0 p-3 sm:p-6">
           <div className="flex items-center justify-between max-w-md mx-auto">
             <div className="flex items-center gap-2">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/60 rounded-lg blur opacity-75" />
-                <div className="relative bg-white dark:bg-slate-900 rounded-lg p-2 border shadow-lg">
-                  <Target className="h-6 w-6 text-primary" />
+                <div className="relative bg-white dark:bg-slate-900 rounded-lg p-1.5 sm:p-2 border shadow-lg">
+                  <Target className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 </div>
               </div>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">Commitly</span>
+              <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Commitly</span>
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground">
               Step 1 of 1
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="w-full max-w-2xl">
+        <div className="w-full max-w-xl sm:max-w-2xl">
           {/* Welcome Header */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-6">
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="flex justify-center mb-5 sm:mb-6">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/60 rounded-full blur opacity-75 animate-pulse" />
-                <div className="relative bg-white dark:bg-slate-900 rounded-full p-4 border shadow-2xl">
-                  <Target className="h-16 w-16 text-primary" />
+                <div className="relative bg-white dark:bg-slate-900 rounded-full p-3 sm:p-4 border shadow-2xl">
+                  <Target className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary" />
                 </div>
               </div>
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3">
               Welcome to Commitly!
             </h1>
-            <p className="text-lg text-muted-foreground max-w-md mx-auto">
+            <p className="text-sm sm:text-base text-muted-foreground max-w-sm sm:max-w-md mx-auto">
               Let&apos;s set up your profile to personalize your goal-setting experience
             </p>
           </div>
 
           {/* Form Card */}
           <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 shadow-2xl border-0 shadow-blue-100/50 dark:shadow-slate-900/50">
-            <CardHeader className="text-center pb-6">
-              <CardTitle className="text-2xl text-gray-900 dark:text-white">
+            <CardHeader className="text-center pb-4 sm:pb-6">
+              <CardTitle className="text-xl sm:text-2xl text-gray-900 dark:text-white">
                 Complete Your Profile
               </CardTitle>
-              <CardDescription className="text-base">
+              <CardDescription className="text-sm sm:text-base">
                 Help us create the best experience for you
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 {/* Profile Picture */}
-                <div className="flex flex-col items-center gap-4">
+                <div className="flex flex-col items-center gap-3 sm:gap-4">
                   <div className="relative">
-                    <Avatar className="h-24 w-24 border-4 border-primary/20">
+                    <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-2 sm:border-4 border-primary/20">
                       <AvatarImage src={profilePicture} />
-                      <AvatarFallback className="text-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+                      <AvatarFallback className="text-lg sm:text-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
                         {displayName.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
@@ -235,21 +235,21 @@ export default function KYCPage() {
                       type="button"
                       size="icon"
                       variant="outline"
-                      className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full hover-lift shadow-lg"
+                      className="absolute -bottom-2 -right-2 h-7 w-7 sm:h-8 sm:w-8 rounded-full hover-lift shadow-lg"
                     >
-                      <Camera className="h-4 w-4" />
+                      <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Profile Picture</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">Profile Picture</p>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground">
                       Optional - you can add this later
                     </p>
                   </div>
                 </div>
 
                 {/* Basic Information */}
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="username" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Username <span className="text-destructive">*</span>
@@ -327,11 +327,11 @@ export default function KYCPage() {
                     placeholder="Tell us about yourself, your interests, and what motivates you..."
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    rows={4}
+                    rows={3}
                     className="focus-ring"
                     maxLength={500}
                   />
-                  <p className="text-xs text-muted-foreground text-right">
+                  <p className="text-[11px] sm:text-xs text-muted-foreground text-right">
                     {bio.length}/500 characters
                   </p>
                 </div>
@@ -356,14 +356,14 @@ export default function KYCPage() {
                   <p className="text-xs text-muted-foreground">
                     Select topics that interest you (helps us suggest relevant goals and partners)
                   </p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {interestOptions.map((interest) => (
                       <Button
                         key={interest}
                         type="button"
                         variant={interests.includes(interest) ? "default" : "outline"}
                         size="sm"
-                        className="justify-start text-xs h-8 hover-lift"
+                        className="justify-start text-[11px] sm:text-xs h-7 sm:h-8 hover-lift"
                         onClick={() => toggleInterest(interest)}
                       >
                         {interest}
@@ -378,14 +378,14 @@ export default function KYCPage() {
                   <p className="text-xs text-muted-foreground">
                     What types of goals are you most interested in?
                   </p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {categoryOptions.map((category) => (
                       <Button
                         key={category}
                         type="button"
                         variant={goalCategories.includes(category) ? "default" : "outline"}
                         size="sm"
-                        className="justify-start text-xs h-8 hover-lift"
+                        className="justify-start text-[11px] sm:text-xs h-7 sm:h-8 hover-lift"
                         onClick={() => toggleCategory(category)}
                       >
                         {category}
@@ -395,21 +395,21 @@ export default function KYCPage() {
                 </div>
 
                 {/* Submit Button */}
-                <div className="pt-4">
+                <div className="pt-3 sm:pt-4">
                   <Button
                     type="submit"
-                    className="w-full h-12 text-lg font-semibold hover-lift shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold hover-lift shadow-lg hover:shadow-xl transition-all duration-200"
                     disabled={loading || !username || !displayName || !phoneNumber}
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         Creating Profile...
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5" />
-                        Complete Setup & Start Goal Setting!
+                        <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="truncate">Complete Setup & Start Goal Setting!</span>
                       </div>
                     )}
                   </Button>
@@ -419,22 +419,22 @@ export default function KYCPage() {
           </Card>
 
           {/* Progress Indicator */}
-          <div className="mt-6">
+          <div className="mt-5 sm:mt-6">
             <Card className="backdrop-blur-xl bg-white/60 dark:bg-slate-900/60 border-0">
-              <CardContent className="p-4">
-                <div className="text-center space-y-3">
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Setup Progress</div>
-                  <div className="flex justify-center gap-4 text-sm">
+              <CardContent className="p-3 sm:p-4">
+                <div className="text-center space-y-2 sm:space-y-3">
+                  <div className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Setup Progress</div>
+                  <div className="flex justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
                     <div className={`flex items-center gap-1 ${username ? 'text-green-600' : 'text-muted-foreground'}`}>
-                      {username ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
+                      {username ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border-2 border-current" />}
                       Username
                     </div>
                     <div className={`flex items-center gap-1 ${displayName ? 'text-green-600' : 'text-muted-foreground'}`}>
-                      {displayName ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
+                      {displayName ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border-2 border-current" />}
                       Display Name
                     </div>
                     <div className={`flex items-center gap-1 ${phoneNumber ? 'text-green-600' : 'text-muted-foreground'}`}>
-                      {phoneNumber ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
+                      {phoneNumber ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border-2 border-current" />}
                       Phone
                     </div>
                   </div>
@@ -446,7 +446,7 @@ export default function KYCPage() {
                       (interests.length > 0 ? 15 : 0) +
                       (bio ? 10 : 0)
                     }
-                    className="h-2"
+                    className="h-1.5 sm:h-2"
                   />
                 </div>
               </CardContent>
@@ -454,8 +454,8 @@ export default function KYCPage() {
           </div>
 
           {/* Footer */}
-          <div className="text-center mt-8">
-            <p className="text-sm text-muted-foreground">
+          <div className="text-center mt-6 sm:mt-8">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               By completing your profile, you&apos;ll get better goal recommendations and can connect with accountability partners
             </p>
           </div>

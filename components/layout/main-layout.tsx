@@ -22,7 +22,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="container mx-auto px-4 py-6 animate-fade-in">
+          <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 animate-fade-in text-[13.5px] sm:text-[14.5px] md:text-base leading-tight sm:leading-relaxed">
             {children}
           </div>
         </main>

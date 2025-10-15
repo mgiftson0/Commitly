@@ -21,8 +21,13 @@ import {
   ChevronRight,
   Bell,
   Search,
-  Filter
+  Filter,
+  LogOut,
+  Moon,
+  Sun,
+  Monitor
 } from "lucide-react"
+import { useTheme } from "next-themes"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -35,6 +40,7 @@ export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [activeGoalsFilter, setActiveGoalsFilter] = useState("all")
   const pathname = usePathname()
+  const { theme, setTheme } = useTheme()
 
   const navigation = [
     {
@@ -151,12 +157,12 @@ export function Sidebar({ className }: SidebarProps) {
 
   return (
     <div className={cn(
-      "flex h-full flex-col border-r bg-card transition-all duration-300",
-      collapsed ? "w-16" : "w-64 md:w-80",
+      "flex h-full flex-col border-r bg-card transition-all duration-300 text-[13px] sm:text-[14px]",
+      collapsed ? "w-14" : "w-56 md:w-72",
       className
     )}>
       {/* Header */}
-      <div className="flex h-16 items-center justify-between px-4 border-b">
+      <div className="flex h-14 md:h-16 items-center justify-between px-3 sm:px-4 border-b">
         {!collapsed && (
           <div className="flex items-center gap-2">
             <Target className="h-6 w-6 text-primary" />
@@ -175,13 +181,13 @@ export function Sidebar({ className }: SidebarProps) {
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {/* Navigation */}
-        <nav className="p-4 space-y-2">
+        <nav className="p-3 sm:p-4 space-y-1.5">
           {navigation.map((item) => {
             const Icon = item.icon
             return (
               <Link key={item.name} href={item.href}>
                 <div className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-accent hover:text-accent-foreground",
+                  "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] sm:text-sm font-medium transition-all duration-200 hover:bg-accent hover:text-accent-foreground",
                   item.current && "bg-primary text-primary-foreground shadow-sm",
                   collapsed && "justify-center px-0"
                 )}>
@@ -206,7 +212,7 @@ export function Sidebar({ className }: SidebarProps) {
 
         {/* Quick Actions */}
         {!collapsed && (
-          <div className="p-4">
+          <div className="p-3 sm:p-4">
             <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Quick Actions
             </h3>
@@ -235,7 +241,7 @@ export function Sidebar({ className }: SidebarProps) {
 
         {/* Active Goals */}
         {!collapsed && (
-          <div className="p-4">
+          <div className="p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                 Active Goals
@@ -286,8 +292,8 @@ export function Sidebar({ className }: SidebarProps) {
         {!collapsed && (
           <>
             <Separator className="mx-4" />
-            <div className="p-4">
-              <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            <div className="p-3 sm:p-4">
+              <h3 className="mb-2 sm:mb-3 text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                 Today&apos;s Summary
               </h3>
               <div className="grid grid-cols-2 gap-3">
@@ -306,14 +312,45 @@ export function Sidebar({ className }: SidebarProps) {
       </div>
 
       {/* Footer */}
-      {!collapsed && (
-        <div className="p-4 border-t">
-          <div className="text-xs text-muted-foreground text-center">
-            <p>🔥 Current Streak: 12 days</p>
-            <p className="mt-1">Keep it up!</p>
+      <div className="p-3 sm:p-4 border-t mt-auto">
+        {!collapsed ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Theme</span>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTheme('light')} title="Light">
+                  <Sun className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTheme('dark')} title="Dark">
+                  <Moon className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTheme('system')} title="System">
+                  <Monitor className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <Link href="/">
+              <Button variant="outline" className="w-full">
+                <LogOut className="h-4 w-4 mr-2" /> Logout
+              </Button>
+            </Link>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTheme('light')} title="Light">
+              <Sun className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTheme('dark')} title="Dark">
+              <Moon className="h-4 w-4" />
+            </Button>
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="Logout">
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

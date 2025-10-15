@@ -16,13 +16,14 @@ import {
   Target,
   Menu,
   Bell,
-  Search,
+  Search as SearchIcon,
   Settings,
   User,
   LogOut,
   Moon,
   Sun,
-  Monitor
+  Monitor,
+  Users
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
@@ -35,6 +36,7 @@ interface HeaderProps {
 export function Header({ onMenuClick }: HeaderProps) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const router = useRouter()
 
   // Handle hydration
@@ -82,9 +84,9 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
+      <div className="container flex h-14 md:h-16 items-center justify-between px-3 sm:px-4">
         {/* Left side - Logo and mobile menu */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           {/* Mobile menu trigger */}
           <Sheet>
             <SheetTrigger asChild>
@@ -92,39 +94,53 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-80">
-              <div className="flex flex-col gap-4 py-4">
-                <div className="flex items-center gap-2 px-2">
-                  <Target className="h-6 w-6 text-primary" />
-                  <span className="text-lg font-bold">Commitly</span>
+            <SheetContent side="left" className="w-64 p-0">
+              <div className="flex h-full flex-col">
+                <div className="flex items-center gap-2 px-3 py-3 border-b">
+                  <Target className="h-5 w-5 text-primary" />
+                  <span className="text-base font-bold">Commitly</span>
                 </div>
-                <nav className="flex flex-col gap-2">
+                <nav className="flex-1 overflow-y-auto p-2 space-y-1">
                   <Link href="/dashboard">
-                    <Button variant="ghost" className="w-full justify-start">
-                      Dashboard
+                    <Button variant="ghost" className="w-full justify-start h-9 text-sm">
+                      <Target className="h-4 w-4 mr-2" /> Dashboard
                     </Button>
                   </Link>
                   <Link href="/goals">
-                    <Button variant="ghost" className="w-full justify-start">
-                      Goals
+                    <Button variant="ghost" className="w-full justify-start h-9 text-sm">
+                      <Target className="h-4 w-4 mr-2" /> Goals
                     </Button>
                   </Link>
                   <Link href="/partners">
-                    <Button variant="ghost" className="w-full justify-start">
-                      Partners
+                    <Button variant="ghost" className="w-full justify-start h-9 text-sm">
+                      <Users className="h-4 w-4 mr-2" /> Partners
                     </Button>
                   </Link>
                   <Link href="/profile">
-                    <Button variant="ghost" className="w-full justify-start">
-                      Profile
+                    <Button variant="ghost" className="w-full justify-start h-9 text-sm">
+                      <User className="h-4 w-4 mr-2" /> Profile
                     </Button>
                   </Link>
                   <Link href="/settings">
-                    <Button variant="ghost" className="w-full justify-start">
-                      Settings
+                    <Button variant="ghost" className="w-full justify-start h-9 text-sm">
+                      <Settings className="h-4 w-4 mr-2" /> Settings
                     </Button>
                   </Link>
                 </nav>
+                <div className="border-t p-2">
+                  {/* Theme toggle at bottom */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>Theme</span>
+                    </div>
+                    <div>
+                      <ThemeToggle />
+                    </div>
+                  </div>
+                  <Button variant="outline" className="w-full mt-2" onClick={() => router.push('/') }>
+                    <LogOut className="h-4 w-4 mr-2" /> Logout
+                  </Button>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
@@ -133,20 +149,20 @@ export function Header({ onMenuClick }: HeaderProps) {
           <Link href="/dashboard" className="flex items-center gap-2 hover-lift">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/60 rounded-lg blur opacity-75" />
-              <div className="relative bg-background rounded-lg p-1.5 border">
-                <Target className="h-6 w-6 text-primary" />
+              <div className="relative bg-background rounded-lg p-1 border">
+                <Target className="h-5 w-5 text-primary" />
               </div>
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
               Commitly
             </span>
           </Link>
         </div>
 
         {/* Center - Search (hidden on mobile) */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
+        <div className="hidden md:flex flex-1 max-w-md mx-4 sm:mx-8">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="search"
               placeholder="Search goals, partners..."
@@ -156,11 +172,26 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
 
         {/* Right side - Actions */}
-        <div className="flex items-center gap-2">
-          {/* Search button (mobile) */}
-          <Button variant="ghost" size="icon" className="md:hidden">
-            <Search className="h-5 w-5" />
-          </Button>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Mobile Search */}
+          <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <SearchIcon className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="top" className="p-4">
+              <div className="relative">
+                <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  autoFocus
+                  type="search"
+                  placeholder="Search goals, partners..."
+                  className="w-full rounded-lg border bg-muted/50 pl-10 pr-4 py-2 text-sm focus-ring"
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
 
           {/* Notifications */}
           <Link href="/notifications">
@@ -169,8 +200,10 @@ export function Header({ onMenuClick }: HeaderProps) {
             </Button>
           </Link>
 
-          {/* Theme toggle */}
-          <ThemeToggle />
+          {/* Theme toggle (desktop) */}
+          <div className="hidden md:block">
+            <ThemeToggle />
+          </div>
 
           {/* User menu */}
           <DropdownMenu>

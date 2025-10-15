@@ -166,8 +166,8 @@ export default function PartnersPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Partners</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Partners</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Connect with accountability partners to achieve your goals together
             </p>
           </div>
@@ -188,8 +188,8 @@ export default function PartnersPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="hover-lift">
+        <div className="flex gap-3 sm:gap-4 overflow-x-auto">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-500/10">
@@ -202,7 +202,7 @@ export default function PartnersPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="hover-lift">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-blue-500/10">
@@ -215,7 +215,7 @@ export default function PartnersPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="hover-lift">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-purple-500/10">
@@ -228,7 +228,7 @@ export default function PartnersPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="hover-lift">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-orange-500/10">

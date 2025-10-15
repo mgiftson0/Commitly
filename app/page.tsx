@@ -95,11 +95,11 @@ export default function LandingPage() {
       )}
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <h1 className="text-5xl md:text-6xl font-bold mb-6">
+      <section className="container mx-auto px-4 py-12 sm:py-20 text-center">
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6">
           Turn Your Goals Into <span className="text-primary">Reality</span>
         </h1>
-        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+        <p className="text-base sm:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto">
           Set, track, and complete your goals with accountability partners. Build streaks, celebrate milestones, and achieve more together.
         </p>
         <div className="flex gap-4 justify-center">
@@ -124,15 +124,15 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Everything You Need to Succeed</h2>
-          <p className="text-muted-foreground">Powerful features to help you stay committed</p>
+      <section className="container mx-auto px-4 py-12 sm:py-20">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4">Everything You Need to Succeed</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Powerful features to help you stay committed</p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader>
-              <Target className="h-12 w-12 text-primary mb-4" />
+              <Target className="h-10 w-10 sm:h-12 sm:w-12 text-primary mb-3 sm:mb-4" />
               <CardTitle>Multiple Goal Types</CardTitle>
             </CardHeader>
             <CardContent>
@@ -143,7 +143,7 @@ export default function LandingPage() {
           </Card>
           <Card>
             <CardHeader>
-              <Users className="h-12 w-12 text-green-500 mb-4" />
+              <Users className="h-10 w-10 sm:h-12 sm:w-12 text-green-500 mb-3 sm:mb-4" />
               <CardTitle>Accountability Partners</CardTitle>
             </CardHeader>
             <CardContent>
@@ -154,7 +154,7 @@ export default function LandingPage() {
           </Card>
           <Card>
             <CardHeader>
-              <TrendingUp className="h-12 w-12 text-purple-500 mb-4" />
+              <TrendingUp className="h-10 w-10 sm:h-12 sm:w-12 text-purple-500 mb-3 sm:mb-4" />
               <CardTitle>Streak Tracking</CardTitle>
             </CardHeader>
             <CardContent>
@@ -165,7 +165,7 @@ export default function LandingPage() {
           </Card>
           <Card>
             <CardHeader>
-              <Award className="h-12 w-12 text-orange-500 mb-4" />
+              <Award className="h-10 w-10 sm:h-12 sm:w-12 text-orange-500 mb-3 sm:mb-4" />
               <CardTitle>Milestones & Rewards</CardTitle>
             </CardHeader>
             <CardContent>
@@ -178,10 +178,10 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works Section */}
-      <section className="container mx-auto px-4 py-20 bg-muted/50 rounded-lg">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">How It Works</h2>
-          <p className="text-muted-foreground">Get started in three simple steps</p>
+      <section className="container mx-auto px-4 py-12 sm:py-20 bg-muted/50 rounded-lg">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4">How It Works</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Get started in three simple steps</p>
         </div>
         <div className="grid md:grid-cols-3 gap-8">
           <div className="text-center">
@@ -215,8 +215,8 @@ export default function LandingPage() {
       </section>
 
       {/* Statistics Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <section className="container mx-auto px-4 py-12 sm:py-20">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
           <div>
             <div className="text-4xl md:text-5xl font-bold text-primary mb-2">10K+</div>
             <div className="text-muted-foreground">Active Users</div>
@@ -237,10 +237,10 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="container mx-auto px-4 py-20 bg-muted/30">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">What Our Users Say</h2>
-          <p className="text-muted-foreground">Join thousands of successful goal achievers</p>
+      <section className="container mx-auto px-4 py-12 sm:py-20 bg-muted/30">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4">What Our Users Say</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Join thousands of successful goal achievers</p>
         </div>
         <div className="grid md:grid-cols-3 gap-8">
           <Card>
@@ -289,10 +289,10 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Frequently Asked Questions</h2>
-          <p className="text-muted-foreground">Everything you need to know about Commitly</p>
+      <section className="container mx-auto px-4 py-12 sm:py-20">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4">Frequently Asked Questions</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Everything you need to know about Commitly</p>
         </div>
         <div className="max-w-3xl mx-auto">
           <Accordion type="single" collapsible className="space-y-4">
@@ -345,7 +345,7 @@ export default function LandingPage() {
       </section>
 
       {/* Newsletter Section */}
-      <section className="container mx-auto px-4 py-20 bg-primary text-primary-foreground">
+      <section className="container mx-auto px-4 py-12 sm:py-20 bg-primary text-primary-foreground">
         <div className="text-center max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold mb-4">Stay Motivated</h2>
           <p className="mb-8 opacity-90">
@@ -366,9 +366,9 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <h2 className="text-3xl font-bold mb-4">Ready to Start Your Journey?</h2>
-        <p className="text-muted-foreground mb-8">
+      <section className="container mx-auto px-4 py-12 sm:py-20 text-center">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4">Ready to Start Your Journey?</h2>
+        <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
           {supabaseReady
             ? "Join thousands of users who are achieving their goals with Commitly"
             : "Complete the setup to start tracking your goals with Commitly"

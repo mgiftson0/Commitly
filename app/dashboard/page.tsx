@@ -277,9 +277,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Today's Summary Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="hover-lift">
+        {/* Today\'s Summary Cards */}
+        <div className="flex gap-3 sm:gap-4 overflow-x-auto">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0">
             <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                 <div className="p-2 sm:p-3 rounded-full bg-green-500/10 w-fit">
@@ -293,7 +293,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0">
             <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                 <div className="p-2 sm:p-3 rounded-full bg-orange-500/10 w-fit">
@@ -307,7 +307,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0">
             <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                 <div className="p-2 sm:p-3 rounded-full bg-blue-500/10 w-fit">
@@ -321,7 +321,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0">
             <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                 <div className="p-2 sm:p-3 rounded-full bg-purple-500/10 w-fit">
