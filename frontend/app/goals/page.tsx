@@ -409,11 +409,51 @@ export default function GoalsPage() {
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterCategory, setFilterCategory] = useState("all")
   const [sortBy, setSortBy] = useState("recent")
-  const [storeGoals, setStoreGoals] = useState<any[]>([])
+  const [realGoals, setRealGoals] = useState<any[]>([])
   const router = useRouter()
 
-  // Initialize with empty array - frontend uses its own mock data
-  const allGoals = React.useMemo(() => mockGoals, [])
+  // Load real goals from localStorage
+  useEffect(() => {
+    try {
+      const storedGoals = localStorage.getItem('goals')
+      if (storedGoals) {
+        const goals = JSON.parse(storedGoals)
+        setRealGoals(goals)
+      }
+    } catch (error) {
+      console.error('Error loading goals:', error)
+    }
+  }, [])
+
+  // Convert real goals to display format and limit to 3 for owner and partner
+  const allGoals = React.useMemo(() => {
+    const convertedGoals = realGoals.map(goal => ({
+      id: parseInt(goal.id),
+      title: goal.title,
+      description: goal.description || '',
+      type: goal.type,
+      status: goal.status || 'active',
+      progress: goal.progress || 0,
+      streak: goal.scheduleType === 'date' ? 0 : (goal.streak || 0),
+      totalCompletions: goal.totalCompletions || 0,
+      visibility: goal.visibility || 'private',
+      createdAt: goal.createdAt,
+      dueDate: goal.dueDate,
+      category: goal.category || 'Personal',
+      priority: goal.priority || 'medium',
+      isForked: false,
+      forkedFrom: null,
+      accountabilityPartners: goal.accountabilityPartners || [],
+      isGroupGoal: goal.isGroupGoal || false,
+      groupMembers: goal.groupMembers || [],
+      recurrencePattern: goal.recurrencePattern,
+      recurrenceDays: goal.recurrenceDays,
+      scheduleType: goal.scheduleType
+    }))
+    
+    // Limit to 3 goals total
+    return convertedGoals.slice(0, 3)
+  }, [realGoals])
 
   // Filter goals based on current view and user role
   const filteredGoals = allGoals.filter(goal => {
@@ -426,11 +466,11 @@ export default function GoalsPage() {
     return matchesSearch && matchesType && matchesStatus && matchesCategory
   })
 
-  // Separate goals into user's goals and partner goals
-  const userGoals = filteredGoals.filter(goal => isGoalOwner(goal))
+  // Separate goals into user's goals and partner goals (limit to 3 each)
+  const userGoals = filteredGoals.filter(goal => isGoalOwner(goal)).slice(0, 3)
   const partnerGoals = filteredGoals
     .filter(goal => goal.accountabilityPartners.some(partner => partner.id === 'mock-user-id') && !isGoalOwner(goal))
-    // Show all partner goals - frontend doesn't depend on invite status
+    .slice(0, 3)
 
   const categories = Array.from(new Set(allGoals.map(g => g.category)))
 
@@ -909,7 +949,7 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 text-sm">
-                {!isSingleActivity(goal) && (
+                {!isSingleActivity(goal) && goal.scheduleType !== 'date' && (
                   <div className="flex items-center gap-2">
                     <Flame className="h-4 w-4 text-orange-500" />
                     <span className="text-muted-foreground">Streak:</span>

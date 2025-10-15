@@ -35,8 +35,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient } from "@/backend/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/backend/lib/mock-auth"
+// Frontend-only mode - no backend dependencies
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -44,12 +43,11 @@ export default function CreateGoalPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [goalNature, setGoalNature] = useState<"personal" | "group">("personal")
-  const [goalType, setGoalType] = useState<"single-activity" | "multi-activity" | "recurring">("single-activity")
+  const [goalType, setGoalType] = useState<"single-activity" | "multi-activity">("single-activity")
   const [visibility, setVisibility] = useState<"public" | "private" | "restricted">("private")
   const [activities, setActivities] = useState<string[]>([""])
   const [recurrencePattern, setRecurrencePattern] = useState("daily")
   const [recurrenceDays, setRecurrenceDays] = useState<string[]>([])
-  const [defaultTimeAllocation, setDefaultTimeAllocation] = useState("")
   const [loading, setLoading] = useState(false)
   const [selectedPartners, setSelectedPartners] = useState<string[]>([])
   const [groupMembers, setGroupMembers] = useState<string[]>([]) // includes owner by default when group
@@ -72,7 +70,7 @@ export default function CreateGoalPage() {
   ]
   const [category, setCategory] = useState("")
   const router = useRouter()
-  const supabase = getSupabaseClient()
+  // Frontend-only mode
 
   const weekDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
@@ -115,144 +113,59 @@ export default function CreateGoalPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (isMockAuthEnabled()) {
-      setLoading(true)
-      await mockDelay(1000)
-      try {
-        const store = require("@/backend/lib/mock-store")
-        const type = goalType === 'single-activity' ? 'single' : (goalType === 'multi-activity' ? 'multi' : 'recurring')
-        const owner = { id: 'mock-user-id', name: 'You' }
-        const group = goalNature === 'group'
-        const groupMembersFull = group ? [owner, ...groupMembers.map((id) => {
-          const p = availablePartners.find(pp => pp.id === id)
-          return { id, name: p?.name || 'Member' }
-        })] : []
-        const newGoal = store.addGoal({
-          title: title || 'Untitled Goal',
-          description,
-          type,
-          visibility,
-          status: 'active',
-          progress: 0,
-          streak: 0,
-          totalCompletions: 0,
-          category: category || 'Personal',
-          priority: 'medium',
-          // Persist recurrence and time allocation in mock mode
-          recurrencePattern: ((goalType === 'single-activity' && scheduleType === 'recurring') || goalType === 'recurring' || goalType === 'multi-activity') ? (recurrencePattern as any) : undefined,
-          recurrenceDays: (((goalType === 'single-activity' && scheduleType === 'recurring') || goalType === 'recurring' || goalType === 'multi-activity') && recurrencePattern === 'custom') ? recurrenceDays : undefined,
-          defaultTimeAllocation: (goalType === 'single-activity') ? null : (defaultTimeAllocation ? parseInt(defaultTimeAllocation) : null),
-          dueDate: (goalType === 'single-activity' && scheduleType === 'date') ? (singleDate || null) : null,
-          // Persist activities and assignments
-          activities: goalType === 'multi-activity'
-            ? activities
-                .map((a, idx) => ({ a: a.trim(), idx }))
-                .filter(({ a }) => a.length > 0)
-                .map(({ a, idx }) => {
-                  const current = activityAssignments[idx] || []
-                  const assignedTo = goalNature === 'group'
-                    ? (current.includes('all') ? groupMembers : current)
-                    : []
-                  return { title: a, orderIndex: idx, assignedTo }
-                })
-            : (goalNature === 'personal' && goalType === 'single-activity' && singleActivity.trim())
-              ? [{ title: singleActivity.trim(), orderIndex: 0, assignedTo: [] }]
-              : undefined,
-          isGroupGoal: group,
-          groupMembers: groupMembersFull,
-          accountabilityPartners: goalNature === 'personal' ? selectedPartners.slice(0, 2).map(id => { const p = availablePartners.find(pp => pp.id === id); return { id, name: p?.name || 'Partner' } }) : [],
-          goalOwner: owner,
-        })
-        // Create notifications for invites
-        if (goalNature === 'personal' && selectedPartners.length > 0) {
-          selectedPartners.forEach((id) => {
-            const p = availablePartners.find(pp => pp.id === id)
-            store.addNotification({ title: 'Partner Request', message: `Request sent to ${p?.name || 'Partner'} for ${title || 'your goal'}.`, type: 'accountability_request', related_goal_id: newGoal.id })
-          })
-        }
-        if (group && groupMembers.length > 0) {
-          // Do not send an invite to the owner
-          groupMembers
-            .filter((id) => id !== currentUser.id)
-            .forEach((id) => {
-              const p = availablePartners.find(pp => pp.id === id)
-              store.addNotification({ title: 'Group Invite', message: `Invite sent to ${p?.name || 'Member'} for ${title || 'your goal'}.`, type: 'group_invite', related_goal_id: newGoal.id })
-            })
-        }
-        store.addNotification({ title: 'Goal Created', message: `You created a new goal: ${title || 'New Goal'}.`, type: 'goal_created', related_goal_id: newGoal.id })
-      } catch {}
-      toast.success("Goal created successfully! (Mock Mode)")
-      router.push("/goals")
-      setLoading(false)
-      return
-    }
-    
-    if (!supabase) {
-      toast.error("Authentication service is not available")
-      return
-    }
     setLoading(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
-
-      // Create goal
-      const { data: goal, error: goalError } = await supabase
-        .from("goals")
-        .insert({
-          user_id: user.id,
-          title,
-          description,
-          goal_type: goalType,
-          visibility,
-          recurrence_pattern: goalType === "recurring" ? recurrencePattern : null,
-          recurrence_days: goalType === "recurring" && recurrencePattern === "custom" ? recurrenceDays : null,
-          default_time_allocation: defaultTimeAllocation ? parseInt(defaultTimeAllocation) : null,
-        })
-        .select()
-        .single()
-
-      if (goalError) throw goalError
-
-      // Create activities for multi-activity goals
-      if (goalType === "multi-activity" && activities.length > 0) {
-        const activitiesData = activities
-          .filter(a => a.trim())
-          .map((activity, index) => ({
-            goal_id: goal.id,
-            title: activity,
-            order_index: index,
-          }))
-
-        const { error: activitiesError } = await supabase
-          .from("activities")
-          .insert(activitiesData)
-
-        if (activitiesError) throw activitiesError
+      // Generate unique ID
+      const goalId = Date.now().toString()
+      const now = new Date().toISOString()
+      
+      // Prepare goal data
+      const newGoal = {
+        id: goalId,
+        userId: 'current-user',
+        title: title || 'Untitled Goal',
+        description,
+        type: goalType,
+        visibility,
+        status: 'active',
+        progress: 0,
+        streak: 0,
+        totalCompletions: 0,
+        category: category || 'Personal',
+        priority: 'medium',
+        createdAt: now,
+        updatedAt: now,
+        completedAt: null,
+        scheduleType,
+        recurrencePattern: scheduleType === 'recurring' ? recurrencePattern : null,
+        recurrenceDays: (scheduleType === 'recurring' && recurrencePattern === 'custom') ? recurrenceDays : null,
+        dueDate: scheduleType === 'date' ? (singleDate || null) : null,
+        activities: goalType === 'multi-activity'
+          ? activities.filter(a => a.trim()).map(a => a.trim())
+          : goalType === 'single-activity' && singleActivity.trim()
+            ? [singleActivity.trim()]
+            : [],
+        isGroupGoal: goalNature === 'group',
+        groupMembers: goalNature === 'group' ? groupMembers.map(id => {
+          const member = allGroupCandidates.find(p => p.id === id)
+          return { id, name: member?.name || 'Member' }
+        }) : [],
+        accountabilityPartners: goalNature === 'personal' ? selectedPartners.map(id => {
+          const partner = availablePartners.find(p => p.id === id)
+          return { id, name: partner?.name || 'Partner', avatar: '/placeholder-avatar.jpg' }
+        }) : []
       }
-
-      // Create initial streak record
-      await supabase.from("streaks").insert({
-        goal_id: goal.id,
-        user_id: user.id,
-      })
-
-      // Create notification
-      await supabase.from("notifications").insert({
-        user_id: user.id,
-        title: "Goal Created",
-        message: `You created a new goal: ${title}`,
-        notification_type: "goal_created",
-        related_goal_id: goal.id,
-      })
-
-      toast.success("Goal created successfully!")
-      router.push(`/goals/${goal.id}`)
-    } catch (error: unknown) {
-      const err = error as { message?: string }
-      toast.error(err.message || "Failed to create goal")
+      
+      // Save to localStorage
+      const existingGoals = JSON.parse(localStorage.getItem('goals') || '[]')
+      existingGoals.push(newGoal)
+      localStorage.setItem('goals', JSON.stringify(existingGoals))
+      
+      toast.success('Goal created successfully!')
+      router.push('/goals')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create goal')
     } finally {
       setLoading(false)
     }
@@ -348,7 +261,7 @@ export default function CreateGoalPage() {
                   {/* Description */}
                   <div className="space-y-2">
                     <Label htmlFor="description" className="text-sm font-medium">
-                      Description
+                      Description <span className="text-destructive">*</span>
                     </Label>
                     <Textarea
                       id="description"
@@ -362,7 +275,7 @@ export default function CreateGoalPage() {
 
                   {/* Goal Nature - Personal or Group */}
                   <div className="space-y-4">
-                    <Label className="text-sm font-medium">Goal Nature</Label>
+                    <Label className="text-sm font-medium">Goal Nature <span className="text-destructive">*</span></Label>
                     <RadioGroup value={goalNature} onValueChange={(value: string) => setGoalNature(value as 'personal' | 'group')}>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${
@@ -482,7 +395,7 @@ export default function CreateGoalPage() {
 
                   {/* Category Selection */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">Category</Label>
+                    <Label className="text-sm font-medium">Category <span className="text-destructive">*</span></Label>
                     <Select value={category} onValueChange={setCategory}>
                       <SelectTrigger className="focus-ring">
                         <SelectValue placeholder="Select a category for your goal" />
@@ -509,8 +422,8 @@ export default function CreateGoalPage() {
 
                   {/* Goal Type Selection */}
                   <div className="space-y-4">
-                    <Label className="text-sm font-medium">Goal Type</Label>
-                    <RadioGroup value={goalType} onValueChange={(value: string) => setGoalType(value as 'single-activity' | 'multi-activity' | 'recurring')}>
+                    <Label className="text-sm font-medium">Goal Type <span className="text-destructive">*</span></Label>
+                    <RadioGroup value={goalType} onValueChange={(value: string) => setGoalType(value as 'single-activity' | 'multi-activity')}>
                       <div className="grid gap-3">
                         <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${
                           goalType === 'single-activity' ? 'border-primary bg-primary/5' : 'border-border'
@@ -521,7 +434,7 @@ export default function CreateGoalPage() {
                               Single Activity
                             </Label>
                             <p className="text-sm text-muted-foreground">
-                              One specific task to complete (e.g., &ldquo;Run 5K&rdquo;)
+                              One specific task to complete
                             </p>
                           </div>
                           <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
@@ -536,25 +449,10 @@ export default function CreateGoalPage() {
                               Multi-Activity Checklist
                             </Label>
                             <p className="text-sm text-muted-foreground">
-                              Daily checklist with multiple tasks (e.g., &ldquo;Morning Routine&rdquo;)
+                              Multiple tasks to complete
                             </p>
                           </div>
                           <Target className="h-5 w-5 text-muted-foreground" />
-                        </div>
-
-                        <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${
-                          goalType === 'recurring' ? 'border-primary bg-primary/5' : 'border-border'
-                        }`}>
-                          <RadioGroupItem value="recurring" id="recurring" />
-                          <div className="flex-1">
-                            <Label htmlFor="recurring" className="font-medium cursor-pointer">
-                              Recurring Schedule
-                            </Label>
-                            <p className="text-sm text-muted-foreground">
-                              Repeats on a schedule (e.g., &ldquo;Workout 3x per week&rdquo;)
-                            </p>
-                          </div>
-                          <Flame className="h-5 w-5 text-muted-foreground" />
                         </div>
                       </div>
                     </RadioGroup>
@@ -575,169 +473,112 @@ export default function CreateGoalPage() {
                     </div>
                   )}
 
-                  {/* Schedule (date or recurring) for any single-activity */}
-                  {goalType === 'single-activity' && (
-                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
-                      <Label className="text-sm font-medium">Schedule</Label>
-                      <RadioGroup value={scheduleType} onValueChange={(v: 'date' | 'recurring') => setScheduleType(v)}>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${scheduleType === 'date' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                            <RadioGroupItem value="date" id="schedule-date" />
-                            <div className="flex-1">
-                              <Label htmlFor="schedule-date" className="font-medium cursor-pointer">Specific Date</Label>
-                              <p className="text-sm text-muted-foreground">Pick the day to complete this</p>
-                            </div>
-                            <Calendar className="h-5 w-5 text-muted-foreground" />
+                  {/* Schedule for all goal types */}
+                  <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                    <Label className="text-sm font-medium">Schedule <span className="text-destructive">*</span></Label>
+                    <RadioGroup value={scheduleType} onValueChange={(v: 'date' | 'recurring') => setScheduleType(v)}>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${scheduleType === 'date' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                          <RadioGroupItem value="date" id="schedule-date" />
+                          <div className="flex-1">
+                            <Label htmlFor="schedule-date" className="font-medium cursor-pointer">Specific Date</Label>
+                            <p className="text-sm text-muted-foreground">Pick the day to complete this</p>
                           </div>
-                          <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${scheduleType === 'recurring' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                            <RadioGroupItem value="recurring" id="schedule-recurring" />
-                            <div className="flex-1">
-                              <Label htmlFor="schedule-recurring" className="font-medium cursor-pointer">Recurring</Label>
-                              <p className="text-sm text-muted-foreground">Repeat on a schedule</p>
-                            </div>
-                            <Flame className="h-5 w-5 text-muted-foreground" />
+                          <Calendar className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${scheduleType === 'recurring' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                          <RadioGroupItem value="recurring" id="schedule-recurring" />
+                          <div className="flex-1">
+                            <Label htmlFor="schedule-recurring" className="font-medium cursor-pointer">Recurring</Label>
+                            <p className="text-sm text-muted-foreground">Repeat on a schedule</p>
                           </div>
+                          <Flame className="h-5 w-5 text-muted-foreground" />
                         </div>
-                      </RadioGroup>
+                      </div>
+                    </RadioGroup>
 
-                      {scheduleType === 'date' ? (
-                        <div className="space-y-2">
-                          <Label htmlFor="singleDate" className="text-sm font-medium">Select Date</Label>
-                          <Input id="singleDate" type="date" value={singleDate} onChange={(e) => setSingleDate(e.target.value)} className="focus-ring" />
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <Label className="text-sm font-medium">Recurrence Pattern</Label>
-                          <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
-                            <SelectTrigger className="focus-ring">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="daily">Daily</SelectItem>
-                              <SelectItem value="weekly">Weekly</SelectItem>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                              <SelectItem value="custom">Custom Days</SelectItem>
-                            </SelectContent>
-                          </Select>
+                    {scheduleType === 'date' ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="singleDate" className="text-sm font-medium">Select Date <span className="text-destructive">*</span></Label>
+                        <Input 
+                          id="singleDate" 
+                          type="date" 
+                          value={singleDate} 
+                          onChange={(e) => setSingleDate(e.target.value)} 
+                          className="focus-ring" 
+                          min={new Date().toISOString().split('T')[0]}
+                          required
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <Label className="text-sm font-medium">Recurrence Pattern <span className="text-destructive">*</span></Label>
+                        <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
+                          <SelectTrigger className="focus-ring">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="custom">Custom Days</SelectItem>
+                          </SelectContent>
+                        </Select>
 
-                          {recurrencePattern === "custom" && (
-                            <div className="space-y-3">
-                              <Label className="text-sm">Select Days</Label>
-                              <div className="grid grid-cols-2 gap-2">
-                                {weekDays.map((day) => (
-                                  <div key={day} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`sa-${day}`}
-                                      checked={recurrenceDays.includes(day)}
-                                      onCheckedChange={() => toggleRecurrenceDay(day)}
-                                    />
-                                    <Label htmlFor={`sa-${day}`} className="font-normal cursor-pointer capitalize text-sm">
-                                      {day}
-                                    </Label>
-                                  </div>
-                                ))}
-                              </div>
+                        {recurrencePattern === "custom" && (
+                          <div className="space-y-3">
+                            <Label className="text-sm">Select Days <span className="text-destructive">*</span></Label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {weekDays.map((day) => (
+                                <div key={day} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`sa-${day}`}
+                                    checked={recurrenceDays.includes(day)}
+                                    onCheckedChange={() => toggleRecurrenceDay(day)}
+                                  />
+                                  <Label htmlFor={`sa-${day}`} className="font-normal cursor-pointer capitalize text-sm">
+                                    {day}
+                                  </Label>
+                                </div>
+                              ))}
                             </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Activities (for multi-activity goals) */}
                   {goalType === "multi-activity" && (
                     <div className="space-y-4 p-4 rounded-lg bg-muted/30">
                       <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">Daily Activities</Label>
+                        <Label className="text-sm font-medium">Activities <span className="text-destructive">*</span></Label>
                         <Button type="button" variant="outline" size="sm" onClick={addActivity}>
                           <Plus className="h-4 w-4 mr-1" />
                           Add Activity
                         </Button>
                       </div>
+                      <p className="text-xs text-muted-foreground">Add at least 2 activities</p>
                       <div className="space-y-3">
                         {activities.map((activity, index) => (
-                          <div key={index} className="space-y-2">
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder={`Activity ${index + 1}`}
-                                value={activity}
-                                onChange={(e) => updateActivity(index, e.target.value)}
-                                className="focus-ring"
-                              />
-                              {activities.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => removeActivity(index)}
-                                  className="shrink-0"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-
-                            {/* Member Assignment for Multi-Activity (only for group goals) */}
-                            {goalNature === 'group' && groupMembers.length > 0 && (
-                              <div className="ml-2 p-2 rounded-md bg-background/50 border">
-                                <Label className="text-xs font-medium text-muted-foreground mb-2 block">
-                                  Assign to Members:
-                                </Label>
-                                <div className="flex flex-wrap gap-1">
-                                  <Button
-                                    type="button"
-                                    variant={activityAssignments[index]?.includes("all") ? "default" : "outline"}
-                                    size="sm"
-                                    className="text-xs h-6"
-                                    onClick={() => {
-                                      const current = activityAssignments[index] || []
-                                      if (current.includes("all")) {
-                                        setActivityAssignments({
-                                          ...activityAssignments,
-                                          [index]: current.filter(id => id !== "all")
-                                        })
-                                      } else {
-                                      setActivityAssignments({
-                                        ...activityAssignments,
-                                        [index]: ["all", ...groupMembers]
-                                      })
-                                      }
-                                    }}
-                                  >
-                                    All Members
-                                  </Button>
-                                  {groupMembers.map((memberId) => {
-                                    const member = allGroupCandidates.find(p => p.id === memberId)
-                                    const isAssigned = activityAssignments[index]?.includes(memberId)
-
-                                    return (
-                                      <Button
-                                        key={memberId}
-                                        type="button"
-                                        variant={isAssigned ? "default" : "outline"}
-                                        size="sm"
-                                        className="text-xs h-6"
-                                        onClick={() => {
-                                          const current = activityAssignments[index] || []
-                                          if (current.includes(memberId)) {
-                                            setActivityAssignments({
-                                              ...activityAssignments,
-                                              [index]: current.filter(id => id !== memberId)
-                                            })
-                                          } else {
-                                            setActivityAssignments({
-                                              ...activityAssignments,
-                                              [index]: [...current.filter(id => id !== "all"), memberId]
-                                            })
-                                          }
-                                        }}
-                                      >
-                                        {member?.name.split(" ")[0]}
-                                      </Button>
-                                    )
-                                  })}
-                                </div>
-                              </div>
+                          <div key={index} className="flex gap-2">
+                            <Input
+                              placeholder={`Activity ${index + 1}`}
+                              value={activity}
+                              onChange={(e) => updateActivity(index, e.target.value)}
+                              className="focus-ring"
+                              required
+                            />
+                            {activities.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => removeActivity(index)}
+                                className="shrink-0"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
                             )}
                           </div>
                         ))}
@@ -745,43 +586,7 @@ export default function CreateGoalPage() {
                     </div>
                   )}
 
-                  {/* Recurring Schedule (once for multi-activity or recurring type) */}
-                  {(goalType === "multi-activity" || goalType === "recurring") && (
-                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
-                      <Label className="text-sm font-medium">Recurring Schedule</Label>
-                      <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
-                        <SelectTrigger className="focus-ring">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="custom">Custom Days</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {recurrencePattern === "custom" && (
-                        <div className="space-y-3">
-                          <Label className="text-sm">Select Days</Label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {weekDays.map((day) => (
-                              <div key={day} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`multi-${day}`}
-                                  checked={recurrenceDays.includes(day)}
-                                  onCheckedChange={() => toggleRecurrenceDay(day)}
-                                />
-                                <Label htmlFor={`multi-${day}`}
-                                  className="font-normal cursor-pointer capitalize text-sm">
-                                  {day}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+
 
 
 
@@ -791,7 +596,7 @@ export default function CreateGoalPage() {
                       <div>
                         <Label className="text-sm font-medium">Accountability Partners</Label>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Optional: Select friends who will help keep you accountable
+                          Optional: Select partners to help keep you accountable
                         </p>
                       </div>
 
@@ -865,7 +670,7 @@ export default function CreateGoalPage() {
 
                   {/* Visibility */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">Visibility</Label>
+                    <Label className="text-sm font-medium">Visibility <span className="text-destructive">*</span></Label>
                     <Select value={visibility} onValueChange={(value: string) => setVisibility(value as 'private' | 'restricted' | 'public')}>
                       <SelectTrigger className="focus-ring">
                         <SelectValue />
@@ -909,7 +714,7 @@ export default function CreateGoalPage() {
                         Cancel
                       </Button>
                     </Link>
-                    <Button type="submit" className="flex-1 hover-lift" disabled={loading || !title.trim()}>
+                    <Button type="submit" className="flex-1 hover-lift" disabled={loading || !title.trim() || !description.trim() || !category || !goalNature || (goalType === 'single-activity' && !singleActivity.trim()) || (goalType === 'multi-activity' && activities.filter(a => a.trim()).length < 2) || (scheduleType === 'date' && !singleDate) || (scheduleType === 'recurring' && recurrencePattern === 'custom' && recurrenceDays.length === 0)}>
                       {loading ? (
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

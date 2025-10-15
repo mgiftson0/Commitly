@@ -7,6 +7,9 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -31,327 +34,261 @@ import {
   Heart,
   Star,
   GitFork,
-  Crown
+  Crown,
+  Save
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { getSupabaseClient, type Goal, type Activity, type Streak } from "@/backend/lib/supabase"
-import { isMockAuthEnabled } from "@/backend/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
 
+type Goal = {
+  id: string
+  user_id: string
+  title: string
+  description: string
+  goal_type: 'single' | 'multi' | 'recurring'
+  visibility: 'public' | 'private' | 'restricted'
+  start_date: string
+  is_suspended: boolean
+  created_at: string
+  updated_at: string
+  completed_at: string | null
+}
+
+type Activity = {
+  id: string
+  goal_id: string
+  title: string
+  description?: string
+  is_completed: boolean
+  order_index: number
+  created_at: string
+  updated_at: string
+  completed_at?: string
+}
+
 export default function GoalDetailPage() {
   const [goal, setGoal] = useState<Goal | null>(null)
   const [activities, setActivities] = useState<Activity[]>([])
-  const [streak, setStreak] = useState<Streak | null>(null)
   const [note, setNote] = useState("")
   const [loading, setLoading] = useState(true)
   const [storeMeta, setStoreMeta] = useState<{ dueDate?: string | null; recurrencePattern?: string; recurrenceDays?: string[] } | null>(null)
-  const [activityAssignments, setActivityAssignments] = useState<{[key: string]: string[]}>({
-    '1': ['1', '2'],
-    '2': ['all'],
-    '3': ['3']
-  })
   const [storeRole, setStoreRole] = useState<{ isGroupGoal?: boolean; groupMembers?: { id: string; name: string; avatar?: string }[]; accountabilityPartners?: { id: string; name: string; avatar?: string }[] } | null>(null)
+  
+  // Edit form states
+  const [editTitle, setEditTitle] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editVisibility, setEditVisibility] = useState<"public" | "private" | "restricted">("private")
+  const [editActivities, setEditActivities] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
+  
   const router = useRouter()
   const params = useParams()
-  const supabase = getSupabaseClient()
   const goalId = params.id as string
 
   useEffect(() => {
     loadGoalData()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goalId])
 
+  // Initialize edit form when goal loads
+  useEffect(() => {
+    if (goal) {
+      setEditTitle(goal.title)
+      setEditDescription(goal.description)
+      setEditVisibility(goal.visibility)
+      setEditActivities(activities.map(a => a.title))
+    }
+  }, [goal, activities])
+
   const loadGoalData = async () => {
-    if (isMockAuthEnabled()) {
-      try {
-        const store = require("@/backend/lib/mock-store")
-        const sg = store.getGoals()
-        const g = sg.find((x: any) => String(x.id) === String(goalId))
-        if (g && g.type !== null && g.type !== undefined) {
-          const mapped: Goal = {
-            id: String(g.id),
-            user_id: g.goalOwner?.id || 'mock-user-id',
-            title: g.title,
-            description: g.description,
-            goal_type: (g.type as any) || 'single',
-            visibility: g.visibility as any,
-            start_date: g.createdAt,
-            is_suspended: g.status === 'paused',
-            created_at: g.createdAt,
-            updated_at: g.createdAt,
-            completed_at: g.completed_at || null,
-          }
-          setGoal(mapped)
-          setStoreMeta({ dueDate: g.dueDate || null, recurrencePattern: g.recurrencePattern, recurrenceDays: g.recurrenceDays })
-          const acts: Activity[] = (g.activities || []).map((a: any) => ({
-            id: String(a.orderIndex),
-            goal_id: String(g.id),
-            title: a.title,
-            description: undefined,
-            is_completed: false,
-            order_index: a.orderIndex,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }))
-          setActivities(acts)
-          setStoreRole({
-            isGroupGoal: !!g.isGroupGoal,
-            groupMembers: (g.groupMembers || []).map((m: any) => ({ id: m.id, name: m.name, avatar: '/placeholder-avatar.jpg' })),
-            accountabilityPartners: (g.accountabilityPartners || []).map((p: any) => ({ id: p.id, name: p.name, avatar: '/placeholder-avatar.jpg' }))
-          })
-          setLoading(false)
-          return
-        } else {
-          // Goal not found or invalid
-          console.warn("Goal not found or invalid:", goalId)
-          setGoal(null)
-          setLoading(false)
-          return
-        }
-      } catch (error) {
-        console.error("Error loading goal data:", error)
+    try {
+      const storedGoals = localStorage.getItem('goals')
+      if (!storedGoals) {
         setGoal(null)
         setLoading(false)
         return
       }
-    }
-    
-    if (!supabase) return
-    try {
-      const { data: { user } } = await Promise.resolve(supabase.auth.getUser())
-      if (!user) {
-        router.push("/auth/login")
+      
+      const goals = JSON.parse(storedGoals)
+      const foundGoal = goals.find((g: any) => g.id === goalId)
+      
+      if (!foundGoal) {
+        setGoal(null)
+        setLoading(false)
         return
       }
-
-      // Load goal
-      const { data: goalData, error: goalError } = await supabase
-        .from("goals")
-        .select("*")
-        .eq("id", goalId)
-        .single()
-
-      if (goalError) throw goalError
-      setGoal(goalData)
-
-      // Load activities if multi-activity goal
-      if (goalData.goal_type === "multi" || goalData.goal_type === "multi-activity") {
-        const { data: activitiesData, error: activitiesError } = await supabase
-          .from("activities")
-          .select("*")
-          .eq("goal_id", goalId)
-          .order("order_index")
-
-        if (activitiesError) throw activitiesError
-        setActivities(activitiesData || [])
+      
+      const mappedGoal: Goal = {
+        id: foundGoal.id,
+        user_id: foundGoal.userId || 'current-user',
+        title: foundGoal.title,
+        description: foundGoal.description || '',
+        goal_type: foundGoal.type === 'multi-activity' ? 'multi' : 'single',
+        visibility: foundGoal.visibility || 'private',
+        start_date: foundGoal.createdAt,
+        is_suspended: foundGoal.status === 'paused',
+        created_at: foundGoal.createdAt,
+        updated_at: foundGoal.updatedAt || foundGoal.createdAt,
+        completed_at: foundGoal.completedAt || null,
       }
-
-      // Load streak
-      const { data: streakData, error: streakError } = await supabase
-        .from("streaks")
-        .select("*")
-        .eq("goal_id", goalId)
-        .eq("user_id", user.id)
-        .single()
-
-      if (streakError && streakError.code !== "PGRST116") throw streakError
-      setStreak(streakData)
-    } catch (error: unknown) {
-      toast.error("Failed to load goal")
-      console.error(error)
-    } finally {
-      setLoading(false)
+      
+      const mappedActivities: Activity[] = (foundGoal.activities || []).map((activity: any, index: number) => ({
+        id: String(index + 1),
+        goal_id: goalId,
+        title: activity.title || activity,
+        description: activity.description,
+        is_completed: activity.completed || false,
+        order_index: index,
+        created_at: foundGoal.createdAt,
+        updated_at: foundGoal.updatedAt || foundGoal.createdAt,
+        completed_at: activity.completedAt
+      }))
+      
+      setGoal(mappedGoal)
+      setActivities(mappedActivities)
+      setStoreMeta({ 
+        dueDate: foundGoal.dueDate, 
+        recurrencePattern: foundGoal.recurrencePattern, 
+        recurrenceDays: foundGoal.recurrenceDays,
+        scheduleType: foundGoal.scheduleType
+      })
+      setStoreRole({
+        isGroupGoal: foundGoal.isGroupGoal || false,
+        groupMembers: foundGoal.groupMembers || [],
+        accountabilityPartners: foundGoal.accountabilityPartners || []
+      })
+    } catch (error) {
+      console.error('Error loading goal:', error)
+      setGoal(null)
     }
+    setLoading(false)
   }
 
   const toggleActivity = async (activityId: string, isCompleted: boolean) => {
-    if (isMockAuthEnabled()) {
-      setActivities(activities.map(a => 
-        a.id === activityId 
-          ? { ...a, is_completed: !isCompleted, completed_at: !isCompleted ? new Date().toISOString() : undefined }
-          : a
-      ))
-      toast.success(isCompleted ? "Activity unchecked" : "Activity completed!")
-      return
-    }
-    if (!supabase) return
+    const updatedActivities = activities.map(a => 
+      a.id === activityId 
+        ? { ...a, is_completed: !isCompleted, completed_at: !isCompleted ? new Date().toISOString() : undefined }
+        : a
+    )
+    setActivities(updatedActivities)
+    
     try {
-      const { error } = await supabase
-        .from("activities")
-        .update({
-          is_completed: !isCompleted,
-          completed_at: !isCompleted ? new Date().toISOString() : null,
-        })
-        .eq("id", activityId)
-
-      if (error) throw error
-
-      // Reload activities
-      await loadGoalData()
-      toast.success(isCompleted ? "Activity unchecked" : "Activity completed!")
-    } catch (_error: unknown) {
-      toast.error("Failed to update activity")
+      const storedGoals = localStorage.getItem('goals')
+      if (storedGoals) {
+        const goals = JSON.parse(storedGoals)
+        const goalIndex = goals.findIndex((g: any) => g.id === goalId)
+        if (goalIndex !== -1) {
+          goals[goalIndex].activities = updatedActivities.map(a => ({
+            title: a.title,
+            description: a.description,
+            completed: a.is_completed,
+            completedAt: a.completed_at
+          }))
+          localStorage.setItem('goals', JSON.stringify(goals))
+        }
+      }
+    } catch (error) {
+      console.error('Error updating activity:', error)
     }
+    
+    toast.success(isCompleted ? "Activity unchecked" : "Activity completed!")
   }
 
   const completeGoal = async () => {
-    if (isMockAuthEnabled()) {
-      if (goal) {
-        setGoal({ ...goal, completed_at: new Date().toISOString() })
-        try { const { addNotification } = require("@/backend/lib/mock-store"); addNotification({ title: 'Goal Completed', message: `You completed: ${goal.title}.`, type: 'goal_completed', related_goal_id: goal.id }); } catch {}
-        toast.success("🎉 Goal completed! Great job!")
+    if (goal) {
+      const completedGoal = { ...goal, completed_at: new Date().toISOString() }
+      setGoal(completedGoal)
+      
+      try {
+        const storedGoals = localStorage.getItem('goals')
+        if (storedGoals) {
+          const goals = JSON.parse(storedGoals)
+          const goalIndex = goals.findIndex((g: any) => g.id === goalId)
+          if (goalIndex !== -1) {
+            goals[goalIndex].completedAt = completedGoal.completed_at
+            goals[goalIndex].status = 'completed'
+            localStorage.setItem('goals', JSON.stringify(goals))
+          }
+        }
+      } catch (error) {
+        console.error('Error completing goal:', error)
       }
-      return
-    }
-    if (!supabase) return
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
-
-      // Mark goal as completed
-      const { error: goalError } = await supabase
-        .from("goals")
-        .update({ completed_at: new Date().toISOString() })
-        .eq("id", goalId)
-
-      if (goalError) throw goalError
-
-      // Create completion record
-      await supabase.from("goal_completions").insert({
-        goal_id: goalId,
-        user_id: user.id,
-        completion_date: new Date().toISOString().split('T')[0],
-      })
-
+      
       toast.success("🎉 Goal completed! Great job!")
-      await loadGoalData()
-    } catch (_error: unknown) {
-      toast.error("Failed to complete goal")
     }
   }
 
   const toggleSuspend = async () => {
-    if (isMockAuthEnabled()) {
-      if (goal) {
-        setGoal({ ...goal, is_suspended: !goal.is_suspended })
-        toast.success(goal.is_suspended ? "Goal resumed" : "Goal suspended")
+    if (goal) {
+      const updatedGoal = { ...goal, is_suspended: !goal.is_suspended }
+      setGoal(updatedGoal)
+      
+      try {
+        const storedGoals = localStorage.getItem('goals')
+        if (storedGoals) {
+          const goals = JSON.parse(storedGoals)
+          const goalIndex = goals.findIndex((g: any) => g.id === goalId)
+          if (goalIndex !== -1) {
+            goals[goalIndex].status = updatedGoal.is_suspended ? 'paused' : 'active'
+            localStorage.setItem('goals', JSON.stringify(goals))
+          }
+        }
+      } catch (error) {
+        console.error('Error updating goal status:', error)
       }
-      return
-    }
-    if (!supabase) return
-    try {
-      const { error } = await supabase
-        .from("goals")
-        .update({ is_suspended: !goal?.is_suspended })
-        .eq("id", goalId)
-
-      if (error) throw error
-
-      toast.success(goal?.is_suspended ? "Goal resumed" : "Goal suspended")
-      await loadGoalData()
-    } catch (_error: unknown) {
-      toast.error("Failed to update goal")
+      
+      toast.success(goal.is_suspended ? "Goal resumed" : "Goal suspended")
     }
   }
 
   const deleteGoal = async () => {
-    if (isMockAuthEnabled()) {
-      if (confirm("Are you sure you want to delete this goal?")) {
-        toast.success("Goal deleted")
-        router.push("/dashboard")
+    if (confirm("Are you sure you want to delete this goal?")) {
+      try {
+        const storedGoals = localStorage.getItem('goals')
+        if (storedGoals) {
+          const goals = JSON.parse(storedGoals)
+          const filteredGoals = goals.filter((g: any) => g.id !== goalId)
+          localStorage.setItem('goals', JSON.stringify(filteredGoals))
+        }
+      } catch (error) {
+        console.error('Error deleting goal:', error)
       }
-      return
-    }
-    if (!supabase) return
-    if (!confirm("Are you sure you want to delete this goal?")) return
-
-    try {
-      const { error } = await supabase
-        .from("goals")
-        .delete()
-        .eq("id", goalId)
-
-      if (error) throw error
-
       toast.success("Goal deleted")
-      router.push("/dashboard")
-    } catch (_error: unknown) {
-      toast.error("Failed to delete goal")
+      router.push("/goals")
     }
   }
 
-  const addNote = async () => {
-    if (isMockAuthEnabled()) {
-      if (note.trim()) {
-        toast.success("Note added")
-        setNote("")
-      }
-      return
-    }
-    if (!supabase) return
-    if (!note.trim()) return
-
+  const saveGoalUpdates = async () => {
+    setSaving(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
-
-      const { error } = await supabase.from("notes").insert({
-        goal_id: goalId,
-        author_id: user.id,
-        content: note,
-        note_type: "personal",
-      })
-
-      if (error) throw error
-
-      toast.success("Note added")
-      setNote("")
-    } catch (_error: unknown) {
-      toast.error("Failed to add note")
-    }
-  }
-
-  const forkGoal = async () => {
-    if (isMockAuthEnabled()) {
-      toast.success("Goal forked successfully! (Mock Mode)")
-      router.push("/goals/create")
-      return
-    }
-    if (!supabase || !goal) return
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
-
-      // Check if user is a partner of the goal creator
-      // For now, allow forking of public goals
-      if (goal.visibility === "public") {
-        // Create a new goal based on the current one
-        const { data: forkedGoal, error: forkError } = await supabase
-          .from("goals")
-          .insert({
-            user_id: user.id,
-            title: `${goal.title} (Forked)`,
-            description: goal.description,
-            goal_type: goal.goal_type,
-            visibility: "private", // Default to private for forked goals
-          })
-          .select()
-          .single()
-
-        if (forkError) throw forkError
-
-        toast.success("Goal forked! You can now customize it.")
-        router.push(`/goals/${forkedGoal.id}/edit`)
-      } else {
-        toast.error("You can only fork public goals")
+      const storedGoals = localStorage.getItem('goals')
+      if (storedGoals) {
+        const goals = JSON.parse(storedGoals)
+        const goalIndex = goals.findIndex((g: any) => g.id === goalId)
+        if (goalIndex !== -1) {
+          goals[goalIndex].title = editTitle
+          goals[goalIndex].description = editDescription
+          goals[goalIndex].visibility = editVisibility
+          if (goal?.goal_type === 'multi') {
+            goals[goalIndex].activities = editActivities.filter(a => a.trim()).map((title, index) => ({
+              title: title.trim(),
+              completed: activities[index]?.is_completed || false
+            }))
+          }
+          goals[goalIndex].updatedAt = new Date().toISOString()
+          localStorage.setItem('goals', JSON.stringify(goals))
+          
+          await loadGoalData()
+          toast.success("Goal updated successfully!")
+        }
       }
-    } catch (_error: unknown) {
-      toast.error("Failed to fork goal")
+    } catch (error) {
+      console.error('Error updating goal:', error)
+      toast.error("Failed to update goal")
     }
+    setSaving(false)
   }
 
   if (loading) {
@@ -367,8 +304,8 @@ export default function GoalDetailPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-slate-600 mb-4">Goal not found</p>
-          <Link href="/dashboard">
-            <Button>Back to Dashboard</Button>
+          <Link href="/goals">
+            <Button>Back to Goals</Button>
           </Link>
         </div>
       </div>
@@ -379,56 +316,14 @@ export default function GoalDetailPage() {
   const totalActivities = activities.length
   const progress = totalActivities > 0 ? (completedActivities / totalActivities) * 100 : 0
 
-  // Partner and group info from store (mock mode)
   const apList = storeRole?.accountabilityPartners || []
   const groupMembersList = storeRole?.groupMembers || []
-
-  // Determine goal type and ownership
-  const currentUserId = 'mock-user-id' // In real app, get from auth
+  const currentUserId = 'mock-user-id'
   const isYourGoal = goal?.user_id === currentUserId
   const isGroupGoal = !!(storeRole?.isGroupGoal)
-  const isForkedGoal = goal?.title?.includes("(Forked)") || false
   const isMultiActivity = goal && (goal.goal_type === "multi")
-
-  // Check if current user is an accountability partner for this goal (not the owner, not a group member)
   const isAccountabilityPartner = apList.some(p => p.id === currentUserId) && !isYourGoal && !isGroupGoal
-
-  // Check if user is a group member (can edit)
-  const isGroupMember = isGroupGoal && groupMembersList.some(m => m.id === currentUserId)
-
-  // Check if this goal can be forked (not yours, public, and from a partner)
-  const canForkGoalProp = !isYourGoal && goal?.visibility === "public" && !isAccountabilityPartner && !isGroupMember
-
-  // Mock current user for demo purposes
-  const currentUser = { id: currentUserId, name: 'You' }
-  
-  // Check if goal is completed
-  const isGoalCompleted = goal?.completed_at !== undefined && goal?.completed_at !== null
-
-  // 5-hour edit window from goal creation
-  const createdAtTs = goal?.created_at ? new Date(goal.created_at).getTime() : Date.now()
-  const canEditWithin5h = (Date.now() - createdAtTs) <= (5 * 60 * 60 * 1000)
-  
-  // Get goal owner name for encouragement
-  const goalOwnerName = isYourGoal ? "yourself" : (goal?.user_id ? "the goal owner" : "Goal Owner")
-
-  // Group members for assignment rendering (mock store)
-  const groupMembersForAssign = groupMembersList
-
-  // Helper function to get assigned members for an activity
-  const getAssignedMembers = (activityId: string) => {
-    const assignedIds = activityAssignments[activityId] || []
-    if (assignedIds.includes('all')) {
-      return groupMembersForAssign
-    }
-    return groupMembersForAssign.filter(member => assignedIds.includes(member.id))
-  }
-
-  // Helper function to check if current user is assigned to activity
-  const isUserAssignedToActivity = (activityId: string) => {
-    const assignedMembers = getAssignedMembers(activityId)
-    return assignedMembers.some(member => member.id === currentUser.id)
-  }
+  const goalOwnerName = isYourGoal ? "yourself" : "the goal owner"
 
   return (
     <MainLayout>
@@ -443,259 +338,281 @@ export default function GoalDetailPage() {
           </Link>
           <div className="flex gap-2">
             {!isAccountabilityPartner && (
-              <>
-                <Link href={`/goals/${goal.id}/edit`}>
-                  <Button variant="outline" size="sm" disabled={!canEditWithin5h}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                </Link>
-                <Button variant="outline" size="sm" onClick={toggleSuspend}>
-                  {goal.is_suspended ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
-                  {goal.is_suspended ? "Resume" : "Pause"}
-                </Button>
-              </>
+              <Button variant="outline" size="sm" onClick={toggleSuspend}>
+                {goal.is_suspended ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
+                {goal.is_suspended ? "Resume" : "Pause"}
+              </Button>
             )}
           </div>
         </div>
 
-        {/* Two Column Layout: Update Interface + Details */}
-        <div className="grid gap-4 lg:grid-cols-3">
-          {/* Left: Update/Track Interface */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Goal Title Card */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <Badge variant="outline" className="text-xs capitalize">
-                    {goal.goal_type.replace('-', ' ')}
-                  </Badge>
-                  {isGroupGoal && (
-                    <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
-                      <Users className="h-3 w-3 mr-1" /> Group
-                    </Badge>
-                  )}
-                  {goal.is_suspended && <Badge variant="destructive" className="text-xs">Paused</Badge>}
-                  {goal.completed_at && <Badge className="bg-green-600 text-xs">Completed</Badge>}
-                </div>
-                <CardTitle className="text-2xl">{goal.title}</CardTitle>
-                {goal.description && (
-                  <CardDescription className="text-sm mt-2">{goal.description}</CardDescription>
-                )}
-              </CardHeader>
-            </Card>
-
-            {/* Dynamic Update Interface Based on Goal Type */}
-            {isMultiActivity ? (
-              /* Multi-Activity Goal: Show Activity Checklist */
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Target className="h-5 w-5" />
-                      Track Activities
-                    </CardTitle>
-                    <div className="text-sm text-muted-foreground">
-                      {completedActivities} / {totalActivities}
-                    </div>
-                  </div>
-                  <Progress value={progress} className="h-2 mt-2" />
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {activities.map((activity) => (
-                    <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                      <Checkbox
-                        checked={activity.is_completed}
-                        onCheckedChange={() => toggleActivity(activity.id, activity.is_completed)}
-                        disabled={isAccountabilityPartner}
-                        className="mt-0.5"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${activity.is_completed ? "line-through text-muted-foreground" : ""}`}>
-                          {activity.title}
-                        </p>
-                        {activity.description && (
-                          <p className="text-xs text-muted-foreground mt-1">{activity.description}</p>
-                        )}
-                      </div>
-                      {activity.is_completed && (
-                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+        {/* Tabs Layout */}
+        <Tabs defaultValue="details" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details">View Details</TabsTrigger>
+            <TabsTrigger value="update">Update Goal</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="details" className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2 space-y-4">
+                {/* Goal Title Card */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {goal.goal_type.replace('-', ' ')}
+                      </Badge>
+                      {isGroupGoal && (
+                        <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
+                          <Users className="h-3 w-3 mr-1" /> Group
+                        </Badge>
                       )}
+                      {goal.is_suspended && <Badge variant="destructive" className="text-xs">Paused</Badge>}
+                      {goal.completed_at && <Badge className="bg-green-600 text-xs">Completed</Badge>}
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ) : goal.goal_type === "recurring" ? (
-              /* Recurring Goal: Show Daily Tracker */
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Flame className="h-5 w-5 text-orange-500" />
-                    Daily Progress
-                  </CardTitle>
-                  <CardDescription>Track your consistency</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* This Week Grid */}
-                  <div className="grid grid-cols-7 gap-2">
-                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => (
-                      <div key={day} className="text-center">
-                        <div className="text-xs text-muted-foreground mb-1">{day}</div>
-                        <div className={`h-12 rounded-lg border-2 flex items-center justify-center ${
-                          index < 5 ? "bg-green-50 border-green-500" : 
-                          index === 5 ? "bg-orange-50 border-orange-500" :
-                          "border-muted"
-                        }`}>
-                          {index < 5 && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-                          {index === 5 && <Clock className="h-5 w-5 text-orange-600" />}
+                    <CardTitle className="text-2xl">{goal.title}</CardTitle>
+                    {goal.description && (
+                      <CardDescription className="text-sm mt-2">{goal.description}</CardDescription>
+                    )}
+                  </CardHeader>
+                </Card>
+
+                {/* Dynamic Update Interface Based on Goal Type */}
+                {isMultiActivity ? (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Target className="h-5 w-5" />
+                          Track Activities
+                        </CardTitle>
+                        <div className="text-sm text-muted-foreground">
+                          {completedActivities} / {totalActivities}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                  {!goal.completed_at && !isAccountabilityPartner && (
-                    <Button onClick={completeGoal} className="w-full" size="lg">
-                      <CheckCircle2 className="h-5 w-5 mr-2" />
-                      Complete Today
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              /* Single Activity Goal: Show Simple Complete Button */
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Complete Your Goal</CardTitle>
-                  <CardDescription>
-                    {storeMeta?.dueDate ? `Due: ${new Date(storeMeta.dueDate).toLocaleDateString()}` : "Track your progress"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {goal.completed_at ? (
-                    <div className="text-center py-8 space-y-3">
-                      <div className="text-5xl">🎉</div>
-                      <div>
-                        <p className="font-semibold text-green-700">Goal Completed!</p>
-                        <p className="text-sm text-muted-foreground">Completed on {new Date(goal.completed_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-center py-6">
-                        <div className="text-4xl mb-3">🎯</div>
-                        <p className="text-sm text-muted-foreground">Ready to mark this goal as complete?</p>
-                      </div>
-                      {!isAccountabilityPartner && (
-                        <Button onClick={completeGoal} className="w-full" size="lg">
-                          <CheckCircle2 className="h-5 w-5 mr-2" />
-                          Mark as Complete
-                        </Button>
+                      <Progress value={progress} className="h-2 mt-2" />
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {activities.map((activity) => (
+                        <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                          <Checkbox
+                            checked={activity.is_completed}
+                            onCheckedChange={() => toggleActivity(activity.id, activity.is_completed)}
+                            disabled={isAccountabilityPartner}
+                            className="mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm ${activity.is_completed ? "line-through text-muted-foreground" : ""}`}>
+                              {activity.title}
+                            </p>
+                          </div>
+                          {activity.is_completed && (
+                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          )}
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Complete Your Goal</CardTitle>
+                      <CardDescription>
+                        {storeMeta?.dueDate ? `Due: ${new Date(storeMeta.dueDate).toLocaleDateString()}` : "Track your progress"}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {goal.completed_at ? (
+                        <div className="text-center py-8 space-y-3">
+                          <div className="text-5xl">🎉</div>
+                          <div>
+                            <p className="font-semibold text-green-700">Goal Completed!</p>
+                            <p className="text-sm text-muted-foreground">Completed on {new Date(goal.completed_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-center py-6">
+                            <div className="text-4xl mb-3">🎯</div>
+                            <p className="text-sm text-muted-foreground">Ready to mark this goal as complete?</p>
+                          </div>
+                          {!isAccountabilityPartner && (
+                            <Button onClick={completeGoal} className="w-full" size="lg">
+                              <CheckCircle2 className="h-5 w-5 mr-2" />
+                              Mark as Complete
+                            </Button>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Encouragement Section */}
-            {!isAccountabilityPartner && (
-              <EncouragementCard 
-                isPartner={false}
-                goalOwnerName={goalOwnerName}
-                newMessageCount={2}
-              />
-            )}
-          </div>
-
-          {/* Right: Goal Details Sidebar */}
-          <div className="space-y-4">
-            {/* Goal Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Goal Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Type</span>
-                  <span className="capitalize">{goal.goal_type.replace('-', ' ')}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Visibility</span>
-                  <span className="capitalize">{goal.visibility}</span>
-                </div>
-                {storeMeta?.dueDate && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Due Date</span>
-                    <span>{new Date(storeMeta.dueDate).toLocaleDateString()}</span>
-                  </div>
+                    </CardContent>
+                  </Card>
                 )}
-                {storeMeta?.recurrencePattern && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Recurrence</span>
-                    <span className="capitalize">{storeMeta.recurrencePattern}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Created</span>
-                  <span>{new Date(goal.created_at).toLocaleDateString()}</span>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Partners/Members */}
-            {(apList.length > 0 || groupMembersList.length > 0) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    {isGroupGoal ? "Group Members" : "Accountability Partners"}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {(isGroupGoal ? groupMembersList : apList).slice(0, 5).map((person) => (
-                      <div key={person.id} className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={person.avatar} />
-                          <AvatarFallback className="text-xs">{person.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{person.name}</span>
+                {/* Encouragement Section */}
+                {!isAccountabilityPartner && storeRole?.accountabilityPartners && storeRole.accountabilityPartners.length > 0 && (
+                  <EncouragementCard 
+                    isPartner={false}
+                    goalOwnerName={goalOwnerName}
+                    newMessageCount={2}
+                  />
+                )}
+              </div>
+
+              {/* Right: Goal Details Sidebar */}
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Goal Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Type</span>
+                      <span className="capitalize">{goal.goal_type.replace('-', ' ')}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Visibility</span>
+                      <span className="capitalize">{goal.visibility}</span>
+                    </div>
+                    {storeMeta?.dueDate && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Due Date</span>
+                        <span>{new Date(storeMeta.dueDate).toLocaleDateString()}</span>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Created</span>
+                      <span>{new Date(goal.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {!isAccountabilityPartner && (
-                  <Button variant="outline" size="sm" className="w-full justify-start" onClick={deleteGoal}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Goal
-                  </Button>
+                {/* Partners/Members */}
+                {(apList.length > 0 || groupMembersList.length > 0) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">
+                        {isGroupGoal ? "Group Members" : "Accountability Partners"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {(isGroupGoal ? groupMembersList : apList).slice(0, 5).map((person) => (
+                          <div key={person.id} className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={person.avatar} />
+                              <AvatarFallback className="text-xs">{person.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{person.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
-                {canForkGoalProp && (
-                  <Button variant="outline" size="sm" className="w-full justify-start" onClick={forkGoal}>
-                    <GitFork className="h-4 w-4 mr-2" />
-                    Fork Goal
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Motivation */}
-            <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
-              <CardContent className="p-4 text-center space-y-2">
-                <div className="text-3xl">💪</div>
-                <p className="text-sm font-medium">Keep Going!</p>
-                <p className="text-xs text-muted-foreground">You&apos;re making progress</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="update" className="space-y-4">
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Update Goal</CardTitle>
+                    <CardDescription>Make changes to your goal details</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-title">Title</Label>
+                      <Input
+                        id="edit-title"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="Goal title"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-description">Description</Label>
+                      <Textarea
+                        id="edit-description"
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        placeholder="Goal description"
+                        rows={3}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Visibility</Label>
+                      <Select value={editVisibility} onValueChange={(value: "public" | "private" | "restricted") => setEditVisibility(value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="private">Private</SelectItem>
+                          <SelectItem value="restricted">Partners Only</SelectItem>
+                          <SelectItem value="public">Public</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {goal?.goal_type === 'multi' && (
+                      <div className="space-y-2">
+                        <Label>Activities</Label>
+                        <div className="space-y-2">
+                          {editActivities.map((activity, index) => (
+                            <Input
+                              key={index}
+                              value={activity}
+                              onChange={(e) => {
+                                const newActivities = [...editActivities]
+                                newActivities[index] = e.target.value
+                                setEditActivities(newActivities)
+                              }}
+                              placeholder={`Activity ${index + 1}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-2 pt-4">
+                      <Button onClick={saveGoalUpdates} disabled={saving || !editTitle.trim()}>
+                        {saving ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Saving...
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Save className="h-4 w-4" />
+                            Save Changes
+                          </div>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Quick Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={deleteGoal}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Goal
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   )

@@ -36,8 +36,32 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { getSupabaseClient, type Goal, type Activity } from "@/backend/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/backend/lib/mock-auth"
+// Mock types for frontend-only usage
+type Goal = {
+  id: string
+  user_id: string
+  title: string
+  description: string
+  goal_type: 'single' | 'multi' | 'recurring'
+  visibility: 'public' | 'private' | 'restricted'
+  start_date: string
+  is_suspended: boolean
+  created_at: string
+  updated_at: string
+  completed_at: string | null
+}
+
+type Activity = {
+  id: string
+  goal_id: string
+  title: string
+  description?: string
+  is_completed: boolean
+  order_index: number
+  created_at: string
+  updated_at: string
+  completed_at?: string
+}
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -58,7 +82,7 @@ export default function EditGoalPage() {
   const [saving, setSaving] = useState(false)
   const router = useRouter()
   const params = useParams()
-  const supabase = getSupabaseClient()
+  // Frontend-only mode
   const goalId = params.id as string
 
   const weekDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -69,87 +93,62 @@ export default function EditGoalPage() {
   }, [goalId])
 
   const loadGoalData = async () => {
-    if (isMockAuthEnabled()) {
-      try {
-        const store = require("@/backend/lib/mock-store")
-        const sg = store.getGoals()
-        const g = sg.find((x: any) => String(x.id) === String(goalId))
-        if (g) {
-          setTitle(g.title || "")
-          setDescription(g.description || "")
-          setGoalType((g.type === 'multi' ? 'multi-activity' : (g.type === 'recurring' ? 'recurring' : 'single-activity')) as any)
-          setVisibility(g.visibility || 'private')
-          if (Array.isArray(g.activities) && g.activities.length > 0) {
-            if (g.type === 'multi') {
-              setActivities(g.activities.map((a: any) => a.title))
-            } else {
-              setSingleActivity(g.activities[0].title || "")
-            }
-          }
-          if (g.recurrencePattern) {
-            setScheduleType('recurring')
-            setRecurrencePattern(g.recurrencePattern)
-            setRecurrenceDays(g.recurrenceDays || [])
-          } else if (g.dueDate) {
-            setScheduleType('date')
-            setSingleDate(g.dueDate)
-          }
-          setDefaultTimeAllocation("")
-          setLoading(false)
-          return
-        }
-      } catch {}
-      // Fallback mock
-      setTitle("Morning Workout Routine")
-      setDescription("Daily exercise to build strength and endurance")
-      setGoalType("multi-activity")
-      setVisibility("public")
-      setActivities(["10 push-ups", "20 sit-ups", "5 minute plank"])
-      setDefaultTimeAllocation("30")
-      setLoading(false)
-      return
-    }
-
-    if (!supabase) return
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push("/auth/login")
+      const storedGoals = localStorage.getItem('goals')
+      if (!storedGoals) {
+        toast.error('Goal not found')
+        router.push('/goals')
         return
       }
-
-      // Load goal
-      const { data: goalData, error: goalError } = await supabase
-        .from("goals")
-        .select("*")
-        .eq("id", goalId)
-        .single()
-
-      if (goalError) throw goalError
-
-      setTitle(goalData.title)
-      setDescription(goalData.description || "")
-      setGoalType(goalData.goal_type as 'single-activity' | 'multi-activity' | 'recurring')
-      setVisibility(goalData.visibility)
-      setDefaultTimeAllocation(goalData.default_time_allocation?.toString() || "")
-
-      // Load activities if multi-activity goal
-      if (goalData.goal_type === "multi") {
-        const { data: activitiesData, error: activitiesError } = await supabase
-          .from("activities")
-          .select("*")
-          .eq("goal_id", goalId)
-          .order("order_index")
-
-        if (activitiesError) throw activitiesError
-        setActivities(activitiesData?.map(a => a.title) || [""])
+      
+      const goals = JSON.parse(storedGoals)
+      const foundGoal = goals.find((g: any) => g.id === goalId)
+      
+      if (!foundGoal) {
+        toast.error('Goal not found')
+        router.push('/goals')
+        return
       }
-    } catch (error: unknown) {
-      toast.error("Failed to load goal")
-      console.error(error)
-    } finally {
-      setLoading(false)
+      
+      // Check if goal can be edited (within 5 hours of creation)
+      const createdAt = new Date(foundGoal.createdAt).getTime()
+      const now = Date.now()
+      const fiveHours = 5 * 60 * 60 * 1000
+      
+      if (now - createdAt > fiveHours) {
+        toast.error('Goal can only be edited within 5 hours of creation')
+        router.push(`/goals/${goalId}`)
+        return
+      }
+      
+      setTitle(foundGoal.title || '')
+      setDescription(foundGoal.description || '')
+      setGoalType(foundGoal.type || 'single-activity')
+      setVisibility(foundGoal.visibility || 'private')
+      setDefaultTimeAllocation(foundGoal.timeAllocation?.toString() || '')
+      
+      if (foundGoal.activities && foundGoal.activities.length > 0) {
+        if (foundGoal.type === 'multi-activity') {
+          setActivities(foundGoal.activities.map((a: any) => typeof a === 'string' ? a : a.title))
+        } else if (foundGoal.type === 'single-activity') {
+          setSingleActivity(typeof foundGoal.activities[0] === 'string' ? foundGoal.activities[0] : foundGoal.activities[0].title)
+        }
+      }
+      
+      if (foundGoal.recurrencePattern) {
+        setScheduleType('recurring')
+        setRecurrencePattern(foundGoal.recurrencePattern)
+        setRecurrenceDays(foundGoal.recurrenceDays || [])
+      } else if (foundGoal.dueDate) {
+        setScheduleType('date')
+        setSingleDate(foundGoal.dueDate)
+      }
+    } catch (error) {
+      console.error('Error loading goal:', error)
+      toast.error('Failed to load goal')
+      router.push('/goals')
     }
+    setLoading(false)
   }
 
   const addActivity = () => {
@@ -176,103 +175,60 @@ export default function EditGoalPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (isMockAuthEnabled()) {
-      setSaving(true)
-      await mockDelay(1000)
-      try {
-        const store = require("@/backend/lib/mock-store")
-        const type = goalType === 'single-activity' ? 'single' : (goalType === 'multi-activity' ? 'multi' : 'recurring')
-        const changes: any = {
-          title,
-          description,
-          type,
-          visibility,
-          defaultTimeAllocation: (goalType === 'single-activity') ? null : (defaultTimeAllocation ? parseInt(defaultTimeAllocation) : null),
-        }
-        if (goalType === 'single-activity') {
-          if (singleActivity.trim()) {
-            changes.activities = [{ title: singleActivity.trim(), orderIndex: 0, assignedTo: [] }]
-          }
-          if (scheduleType === 'date') {
-            changes.dueDate = singleDate || null
-            changes.recurrencePattern = undefined
-            changes.recurrenceDays = undefined
-          } else {
-            changes.dueDate = null
-            changes.recurrencePattern = recurrencePattern
-            changes.recurrenceDays = recurrencePattern === 'custom' ? recurrenceDays : undefined
-          }
-        }
-        if (goalType === 'multi-activity') {
-          changes.activities = activities.filter(a => a.trim()).map((t, idx) => ({ title: t, orderIndex: idx }))
-          changes.recurrencePattern = recurrencePattern
-          changes.recurrenceDays = recurrencePattern === 'custom' ? recurrenceDays : undefined
-        }
-        if (goalType === 'recurring') {
-          changes.recurrencePattern = recurrencePattern
-          changes.recurrenceDays = recurrencePattern === 'custom' ? recurrenceDays : undefined
-        }
-        store.updateGoal(Number(goalId), changes)
-      } catch {}
-      toast.success("Goal updated successfully! (Mock Mode)")
-      router.push(`/goals/${goalId}`)
-      setSaving(false)
-      return
-    }
-
-    if (!supabase) {
-      toast.error("Authentication service is not available")
-      return
-    }
     setSaving(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
-
-      // Update goal
-      const { error: goalError } = await supabase
-        .from("goals")
-        .update({
-          title,
-          description,
-          goal_type: goalType,
-          visibility,
-          recurrence_pattern: goalType === "recurring" ? recurrencePattern : null,
-          recurrence_days: goalType === "recurring" && recurrencePattern === "custom" ? recurrenceDays : null,
-          default_time_allocation: defaultTimeAllocation ? parseInt(defaultTimeAllocation) : null,
-        })
-        .eq("id", goalId)
-
-      if (goalError) throw goalError
-
-      // Update activities for multi-activity goals
-      if (goalType === "multi-activity" && activities.length > 0) {
-        // First, delete existing activities
-        await supabase.from("activities").delete().eq("goal_id", goalId)
-
-        // Then insert new activities
-        const activitiesData = activities
-          .filter(a => a.trim())
-          .map((activity, index) => ({
-            goal_id: goalId,
-            title: activity,
-            order_index: index,
-          }))
-
-        const { error: activitiesError } = await supabase
-          .from("activities")
-          .insert(activitiesData)
-
-        if (activitiesError) throw activitiesError
+      const storedGoals = localStorage.getItem('goals')
+      if (!storedGoals) {
+        throw new Error('No goals found')
       }
-
-      toast.success("Goal updated successfully!")
-      router.push(`/goals/${goalId}`)
-    } catch (error: unknown) {
-      const err = error as { message?: string }
-      toast.error(err.message || "Failed to update goal")
+      
+      const goals = JSON.parse(storedGoals)
+      const goalIndex = goals.findIndex((g: any) => g.id === goalId)
+      
+      if (goalIndex === -1) {
+        throw new Error('Goal not found')
+      }
+      
+      // Update the goal
+      const updatedGoal = {
+        ...goals[goalIndex],
+        title,
+        description,
+        type: goalType,
+        visibility,
+        timeAllocation: defaultTimeAllocation ? parseInt(defaultTimeAllocation) : null,
+        updatedAt: new Date().toISOString()
+      }
+      
+      // Handle activities based on goal type
+      if (goalType === 'single-activity') {
+        updatedGoal.activities = singleActivity.trim() ? [singleActivity.trim()] : []
+        if (scheduleType === 'date') {
+          updatedGoal.dueDate = singleDate || null
+          updatedGoal.recurrencePattern = null
+          updatedGoal.recurrenceDays = null
+        } else {
+          updatedGoal.dueDate = null
+          updatedGoal.recurrencePattern = recurrencePattern
+          updatedGoal.recurrenceDays = recurrencePattern === 'custom' ? recurrenceDays : null
+        }
+      } else if (goalType === 'multi-activity') {
+        updatedGoal.activities = activities.filter(a => a.trim())
+        updatedGoal.recurrencePattern = recurrencePattern
+        updatedGoal.recurrenceDays = recurrencePattern === 'custom' ? recurrenceDays : null
+      } else if (goalType === 'recurring') {
+        updatedGoal.recurrencePattern = recurrencePattern
+        updatedGoal.recurrenceDays = recurrencePattern === 'custom' ? recurrenceDays : null
+      }
+      
+      goals[goalIndex] = updatedGoal
+      localStorage.setItem('goals', JSON.stringify(goals))
+      
+      toast.success('Goal updated successfully!')
+      router.push('/goals')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update goal')
     } finally {
       setSaving(false)
     }
@@ -303,10 +259,10 @@ export default function EditGoalPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Link href={`/goals/${goalId}`}>
+            <Link href="/goals">
               <Button variant="outline" className="hover-lift">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Goal
+                Back to Goals
               </Button>
             </Link>
           </div>
@@ -665,7 +621,7 @@ export default function EditGoalPage() {
 
                   {/* Submit Actions */}
                   <div className="flex gap-3 pt-4">
-                    <Link href={`/goals/${goalId}`} className="flex-1">
+                    <Link href="/goals" className="flex-1">
                       <Button type="button" variant="outline" className="w-full hover-lift">
                         Cancel
                       </Button>
