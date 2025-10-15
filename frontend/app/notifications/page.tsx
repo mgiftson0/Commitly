@@ -206,7 +206,17 @@ export default function NotificationsPage() {
   ]
 
   // Merge stored notifications with seed list (stored first)
-  const stored = getMockNotificationsStore()
+  // Add user property to stored notifications to match NotificationItem interface
+  const stored = getMockNotificationsStore().map(notification => ({
+    ...notification,
+    id: parseInt(notification.id) || Math.floor(Math.random() * 1000000),
+    related_goal_id: notification.related_goal_id ? String(notification.related_goal_id) : null,
+    is_read: notification.is_read ?? false,
+    user: {
+      name: "System",
+      avatar: null
+    }
+  }))
   const mockNotifications = [...stored, ...mockSeedNotifications]
 
   const unreadCount = mockNotifications.filter(n => !n.is_read).length

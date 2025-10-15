@@ -1,70 +1,281 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+// Mock Supabase client that uses localStorage for persistence
+// No external dependencies needed
 
-// Get environment variables - these will be undefined on server during static generation
-const getSupabaseUrl = () => {
-  if (typeof window !== 'undefined') {
-    return process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  }
-  return process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+export type MockSupabaseClient = {
+  from: (table: string) => MockQueryBuilder
+  auth: typeof mockAuth
 }
 
-const getSupabaseAnonKey = () => {
-  if (typeof window !== 'undefined') {
-    return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  }
-  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+export type MockQueryBuilder = {
+  select: (columns?: string) => MockQueryBuilder
+  insert: (data: any | any[]) => MockQueryBuilder
+  update: (data: any) => MockQueryBuilder
+  delete: () => MockQueryBuilder
+  eq: (column: string, value: any) => MockQueryBuilder
+  neq: (column: string, value: any) => MockQueryBuilder
+  order: (column: string, options?: { ascending?: boolean }) => MockQueryBuilder
+  limit: (count: number) => MockQueryBuilder
+  single: () => MockQueryBuilder
+  then: (resolve?: any, reject?: any) => Promise<any>
 }
 
-// Lazy initialization of Supabase client
-let supabaseInstance: SupabaseClient | null = null
+// Mock auth implementation
+const mockAuth = {
+  signUp: async ({ email, password }: { email: string; password: string }) => {
+    const user = {
+      id: `user_${Date.now()}`,
+      email,
+      user_metadata: { full_name: email.split('@')[0] }
+    }
+    const session = {
+      user,
+      access_token: `token_${Date.now()}`
+    }
 
-export const getSupabase = () => {
-  const supabaseUrl = getSupabaseUrl()
-  const supabaseAnonKey = getSupabaseAnonKey()
-  
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('Supabase URL or Anon Key not configured')
-    return null
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('commitly_mock_user', JSON.stringify(user))
+      localStorage.setItem('commitly_mock_session', JSON.stringify(session))
+    }
+
+    return { data: { user, session }, error: null }
+  },
+
+  signInWithPassword: async ({ email, password }: { email: string; password: string }) => {
+    const user = {
+      id: `user_${email.replace(/[@.]/g, '_')}`,
+      email,
+      user_metadata: { full_name: email.split('@')[0] }
+    }
+    const session = {
+      user,
+      access_token: `token_${Date.now()}`
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('commitly_mock_user', JSON.stringify(user))
+      localStorage.setItem('commitly_mock_session', JSON.stringify(session))
+    }
+
+    return { data: { user, session }, error: null }
+  },
+
+  signOut: async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('commitly_mock_user')
+      localStorage.removeItem('commitly_mock_session')
+    }
+    return { error: null }
+  },
+
+  getUser: async () => {
+    if (typeof window === 'undefined') return { data: { user: null }, error: null }
+    const user = localStorage.getItem('commitly_mock_user')
+    return { data: { user: user ? JSON.parse(user) : null }, error: null }
   }
-  
-  if (!supabaseInstance) {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey)
-  }
-  
-  return supabaseInstance
 }
 
-// Don't initialize at module load - only when explicitly called
-export const supabase = null
+// Mock query builder with chaining support
+class MockQueryBuilderImpl implements MockQueryBuilder {
+  private tableName: string
+  private queryData: any[] = []
+  private filters: Array<{ type: string; column: string; value: any }> = []
+  private selectedColumns: string | string[] = '*'
+  private orderBy?: { column: string; ascending: boolean }
+  private limitCount?: number
+  private isSingle = false
+  private insertData?: any | any[]
+  private updateData?: any
+  private selectAfterInsert = false
+  private selectAfterUpdate = false
+
+  constructor(tableName: string) {
+    this.tableName = tableName
+  }
+
+  select(columns: string = '*') {
+    this.selectedColumns = columns
+    this.selectAfterInsert = true
+    this.selectAfterUpdate = true
+    return this
+  }
+
+  eq(column: string, value: any) {
+    this.filters.push({ type: 'eq', column, value })
+    return this
+  }
+
+  neq(column: string, value: any) {
+    this.filters.push({ type: 'neq', column, value })
+    return this
+  }
+
+  order(column: string, options?: { ascending?: boolean }) {
+    this.orderBy = { column, ascending: options?.ascending ?? true }
+    return this
+  }
+
+  limit(count: number) {
+    this.limitCount = count
+    return this
+  }
+
+  single() {
+    this.limitCount = 1
+    this.isSingle = true
+    return this
+  }
+
+  insert(values: any | any[]) {
+    this.insertData = values
+    return this
+  }
+
+  update(values: any) {
+    this.updateData = values
+    return this
+  }
+
+  private getStoredData(): any[] {
+    if (typeof window === 'undefined') return []
+    try {
+      const data = localStorage.getItem(`commitly_mock_${this.tableName}`)
+      return data ? JSON.parse(data) : []
+    } catch {
+      return []
+    }
+  }
+
+  private setStoredData(data: any[]) {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.setItem(`commitly_mock_${this.tableName}`, JSON.stringify(data))
+    } catch {}
+  }
+
+  private applyFilters(data: any[]): any[] {
+    return data.filter(item =>
+      this.filters.every(filter => {
+        switch (filter.type) {
+          case 'eq': return item[filter.column] === filter.value
+          case 'neq': return item[filter.column] !== filter.value
+          default: return true
+        }
+      })
+    )
+  }
+
+  private applyOrder(data: any[]): any[] {
+    if (!this.orderBy) return data
+    return [...data].sort((a, b) => {
+      const aVal = a[this.orderBy!.column]
+      const bVal = b[this.orderBy!.column]
+      if (aVal < bVal) return this.orderBy!.ascending ? -1 : 1
+      if (aVal > bVal) return this.orderBy!.ascending ? 1 : -1
+      return 0
+    })
+  }
+
+  // Execute the query
+  then(resolve?: any, reject?: any) {
+    const execute = async () => {
+      await new Promise(resolve => setTimeout(resolve, 100)) // Simulate delay
+
+      try {
+        if (this.insertData !== undefined) {
+          const data = this.getStoredData()
+          const items = Array.isArray(this.insertData) ? this.insertData : [this.insertData]
+
+          const newItems = items.map(item => ({
+            ...item,
+            id: item.id || `${this.tableName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            created_at: item.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }))
+
+          data.push(...newItems)
+          this.setStoredData(data)
+
+          if (this.selectAfterInsert) {
+            const result = Array.isArray(this.insertData) ? newItems : newItems[0]
+            return { data: result, error: null }
+          }
+          return { data: null, error: null }
+        }
+
+        if (this.updateData !== undefined) {
+          const data = this.getStoredData()
+          const updatedData = data.map(item => {
+            const matches = this.filters.every(filter =>
+              filter.type === 'eq' ? item[filter.column] === filter.value : true
+            )
+            if (matches) {
+              return { ...item, ...this.updateData, updated_at: new Date().toISOString() }
+            }
+            return item
+          })
+
+          this.setStoredData(updatedData)
+
+          if (this.selectAfterUpdate) {
+            return { data: this.updateData, error: null }
+          }
+          return { data: null, error: null }
+        }
+
+        // Regular query execution
+        let data = this.getStoredData()
+        data = this.applyFilters(data)
+        data = this.applyOrder(data)
+
+        if (this.limitCount) {
+          data = data.slice(0, this.limitCount)
+          if (this.limitCount === 1 && this.isSingle) {
+            // Return single object for .single() calls
+            const result = { data: data[0] || null, error: null }
+            return result
+          }
+        }
+
+        const result = { data, error: null }
+        return result
+      } catch (error) {
+        return { data: null, error }
+      }
+    }
+
+    const promise = execute()
+    if (resolve && reject) {
+      promise.then(resolve, reject)
+    }
+    return promise
+  }
+
+  // Support for async/await
+  async await() {
+    return this.then()
+  }
+}
+
+// Main mock Supabase client
+let mockSupabaseInstance: MockSupabaseClient | null = null
+
+export const getSupabase = (): MockSupabaseClient => {
+  if (!mockSupabaseInstance) {
+    mockSupabaseInstance = {
+      from: (table: string) => new MockQueryBuilderImpl(table),
+      auth: mockAuth
+    }
+  }
+  return mockSupabaseInstance
+}
 
 export function getSupabaseClient() {
-  // Only run on client side
-  if (typeof window === 'undefined') {
-    return null
-  }
-  
-  const supabaseUrl = getSupabaseUrl()
-  const supabaseAnonKey = getSupabaseAnonKey()
-  
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('Supabase URL or Anon Key not configured')
-    return null
-  }
-  
-  try {
-    return createClientComponentClient()
-  } catch (error) {
-    console.error('Error creating Supabase client:', error)
-    return null
-  }
+  return getSupabase()
 }
 
-// Helper to check if Supabase is configured
+// Helper to check if Supabase is configured (always true for mock)
 export function isSupabaseConfigured() {
-  const supabaseUrl = getSupabaseUrl()
-  const supabaseAnonKey = getSupabaseAnonKey()
-  return !!(supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http'))
+  return true
 }
 
 // Database Types

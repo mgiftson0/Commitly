@@ -1,4 +1,4 @@
-ï»¿"use client"
+"use client"
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -567,7 +567,7 @@ export default function DashboardPage() {
                 &ldquo;Success is the sum of small efforts, repeated day in and day out.&rdquo;
               </blockquote>
               <p className="text-sm text-muted-foreground">
-                ï¿½ Robert Collier
+                — Robert Collier
               </p>
             </CardContent>
           </Card>

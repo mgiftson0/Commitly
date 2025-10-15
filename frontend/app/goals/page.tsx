@@ -412,33 +412,8 @@ export default function GoalsPage() {
   const [storeGoals, setStoreGoals] = useState<any[]>([])
   const router = useRouter()
 
-  // Load goals from local store
-  React.useEffect(() => {
-    try {
-      const store = require("@/backend/lib/mock-store")
-      setStoreGoals(store.getGoals())
-    } catch {}
-  }, [])
-
-  // Live update when localStorage changes (e.g., from other tabs)
-  React.useEffect(() => {
-    const onStorage = () => {
-      try {
-        const store = require("@/backend/lib/mock-store")
-        setStoreGoals(store.getGoals())
-      } catch {}
-    }
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', onStorage)
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', onStorage)
-      }
-    }
-  }, [])
-
-  const allGoals = React.useMemo(() => [...storeGoals, ...mockGoals], [storeGoals])
+  // Initialize with empty array - frontend uses its own mock data
+  const allGoals = React.useMemo(() => mockGoals, [])
 
   // Filter goals based on current view and user role
   const filteredGoals = allGoals.filter(goal => {
@@ -455,16 +430,7 @@ export default function GoalsPage() {
   const userGoals = filteredGoals.filter(goal => isGoalOwner(goal))
   const partnerGoals = filteredGoals
     .filter(goal => goal.accountabilityPartners.some(partner => partner.id === 'mock-user-id') && !isGoalOwner(goal))
-    .filter(goal => {
-      try {
-        const store = require("@/backend/lib/mock-store")
-        const status = store.getInviteStatus('partner', goal.id)
-        // Only show accepted partner goals; if no status (seed data), allow
-        return status ? status === 'accepted' : true
-      } catch {
-        return true
-      }
-    })
+    // Show all partner goals - frontend doesn't depend on invite status
 
   const categories = Array.from(new Set(allGoals.map(g => g.category)))
 
@@ -720,21 +686,8 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
   })
 
   useEffect(() => {
-    try {
-      const store = require("@/backend/lib/mock-store")
-      const nextPartner = { ...partnerInvites }
-      const nextGroup = { ...groupInvites }
-      goals.forEach(g => {
-        const p = store.getInviteStatus('partner', g.id)
-        if (p) nextPartner[g.id] = p
-        if (g.isGroupGoal) {
-          const s = store.getInviteStatus('group', g.id)
-          if (s) nextGroup[g.id] = s
-        }
-      })
-      setPartnerInvites(nextPartner)
-      setGroupInvites(nextGroup)
-    } catch {}
+    // Frontend doesn't depend on backend invite status
+    // Use default invite states for partner goals
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -802,7 +755,7 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                 {(goal as any).recurrencePattern && (
                   <Badge variant="outline" className="text-xs">
                     <Calendar className="h-3 w-3 mr-1" />
-                    {formatRecurrence(goal) as any}
+                    {formatRecurrence(goal)}
                   </Badge>
                 )}
                 {/* Only show forked badge if user owns the goal */}
@@ -949,9 +902,9 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  {goal.visibility === 'private' && <Lock className="h-3 w-3 text-muted-foreground" title="Private" />}
-                  {goal.visibility === 'restricted' && <Users className="h-3 w-3 text-muted-foreground" title="Partners Only" />}
-                  {goal.visibility === 'public' && <Globe className="h-3 w-3 text-muted-foreground" title="Public" />}
+                  {goal.visibility === 'private' && <Lock className="h-3 w-3 text-muted-foreground" />}
+                  {goal.visibility === 'restricted' && <Users className="h-3 w-3 text-muted-foreground" />}
+                  {goal.visibility === 'public' && <Globe className="h-3 w-3 text-muted-foreground" />}
                 </div>
               </div>
             ) : (

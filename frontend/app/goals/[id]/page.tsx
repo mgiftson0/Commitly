@@ -70,13 +70,13 @@ export default function GoalDetailPage() {
         const store = require("@/backend/lib/mock-store")
         const sg = store.getGoals()
         const g = sg.find((x: any) => String(x.id) === String(goalId))
-        if (g) {
+        if (g && g.type !== null && g.type !== undefined) {
           const mapped: Goal = {
             id: String(g.id),
             user_id: g.goalOwner?.id || 'mock-user-id',
             title: g.title,
             description: g.description,
-            goal_type: (g.type as any),
+            goal_type: (g.type as any) || 'single',
             visibility: g.visibility as any,
             start_date: g.createdAt,
             is_suspended: g.status === 'paused',
@@ -104,15 +104,24 @@ export default function GoalDetailPage() {
           })
           setLoading(false)
           return
+        } else {
+          // Goal not found or invalid
+          console.warn("Goal not found or invalid:", goalId)
+          setGoal(null)
+          setLoading(false)
+          return
         }
-      } catch {}
-      setLoading(false)
-      return
+      } catch (error) {
+        console.error("Error loading goal data:", error)
+        setGoal(null)
+        setLoading(false)
+        return
+      }
     }
     
     if (!supabase) return
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await Promise.resolve(supabase.auth.getUser())
       if (!user) {
         router.push("/auth/login")
         return

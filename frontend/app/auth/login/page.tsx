@@ -9,7 +9,8 @@ import { Target, Eye, EyeOff, Mail, Lock, Chrome } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getSupabaseClient } from "@/backend/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/backend/lib/mock-auth"
+import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
+import { initializeSampleData } from "@/lib/mock-data"
 import { toast } from "sonner"
 
 export default function LoginPage() {
@@ -22,21 +23,9 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Check if mock auth is enabled
-    if (isMockAuthEnabled()) {
-      setLoading(true)
-      await mockDelay(1000)
-      toast.success("Welcome back! (Mock Auth Mode)")
-      router.push("/dashboard")
-      setLoading(false)
-      return
-    }
-    
-    if (!supabase) {
-      toast.error("Authentication service is not available. Please check configuration.")
-      return
-    }
+
+    // Initialize sample data since we're using mocks only now
+    initializeSampleData()
 
     setLoading(true)
 
@@ -61,30 +50,28 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = async () => {
-    if (isMockAuthEnabled()) {
-      await mockDelay(800)
-      toast.success("Google login successful! (Mock Auth Mode)")
-      router.push("/dashboard")
-      return
-    }
+    // Initialize sample data
+    initializeSampleData()
     
-    if (!supabase) {
-      toast.error("Authentication service is not available. Please check configuration.")
-      return
-    }
-
+    setLoading(true)
+    await mockDelay(800)
+    
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`
-        }
+      // Use our mock auth for Google login too
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: 'google@example.com',
+        password: 'mock-password'
       })
-
+      
       if (error) throw error
+      
+      toast.success("Google login successful!")
+      router.push("/dashboard")
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to login with Google"
       toast.error(message)
+    } finally {
+      setLoading(false)
     }
   }
 
