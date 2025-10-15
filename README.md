@@ -48,7 +48,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 Run the setup script to create all database tables, policies, and functions:
 
 ```bash
-node setup.js
+node backend/scripts/setup.js
 ```
 
 The script will:
@@ -96,27 +96,44 @@ Visit `http://localhost:3000` to see your app!
 
 ```
 commitly/
-├── app/
-│   ├── auth/
-│   │   ├── login/          # Login page
-│   │   ├── signup/         # Registration page
-│   │   └── reset-password/ # Password reset
-│   ├── dashboard/          # Main dashboard
-│   ├── goals/
-│   │   ├── create/         # Create new goal
-│   │   └── [id]/           # Goal detail page
-│   ├── profile/            # User profile
-│   ├── notifications/      # Notifications center
-│   └── search/             # Search users
-├── components/
-│   ├── ui/                 # shadcn/ui components
-│   └── theme-provider.tsx  # Dark mode provider
-├── lib/
-│   ├── supabase.ts         # Supabase client & types
-│   └── utils.ts            # Utility functions
-├── setup.js                # Database setup script
-└── .env.local              # Environment variables
+├── frontend/              # Frontend code
+│   ├── app/              # Next.js app router
+│   │   ├── auth/         # Authentication pages
+│   │   ├── dashboard/    # Main dashboard
+│   │   ├── goals/        # Goal pages (create, view, edit)
+│   │   ├── profile/      # User profile
+│   │   ├── notifications/# Notifications center
+│   │   └── search/       # Search users
+│   ├── components/       # React components
+│   │   ├── ui/          # shadcn/ui components
+│   │   ├── layout/      # Layout components
+│   │   └── goals/       # Goal-specific components
+│   ├── hooks/           # Custom React hooks
+│   └── lib/             # Frontend utilities
+│       └── utils.ts     # Utility functions
+├── backend/              # Backend code
+│   ├── api/             # API route handlers
+│   ├── lib/             # Backend utilities & config
+│   │   ├── supabase.ts  # Supabase client & types
+│   │   ├── mock-auth.ts # Mock authentication
+│   │   └── mock-store.ts# Mock data store
+│   └── scripts/         # Database setup scripts
+│       ├── setup.js     # Interactive setup
+│       ├── setup-auto.js# Automated setup
+│       └── test-supabase.js # Connection test
+├── public/              # Static assets
+└── .env.local           # Environment variables
 ```
+
+### Clean Separation
+
+- **Frontend (`frontend/`)**: All UI code, components, pages
+  - Import with `@/` prefix (maps to `frontend/`)
+  - Example: `import { Button } from '@/components/ui/button'`
+
+- **Backend (`backend/`)**: Server logic, database config, API handlers
+  - Import with `@/backend/` prefix (maps to `backend/`)
+  - Example: `import { getSupabaseClient } from '@/backend/lib/supabase'`
 
 ## Usage Guide
 
