@@ -1,6 +1,7 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useState } from "react"
+import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -31,144 +32,131 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient, type Goal, type Streak } from "@/backend/lib/supabase"
-import { isMockAuthEnabled, getMockUser } from "@/backend/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
 export default function DashboardPage() {
-  const [, setUser] = useState<unknown>(null)
-  const [goals, setGoals] = useState<Goal[]>([])
-  const [streaks, setStreaks] = useState<Streak[]>([])
+  const [goals, setGoals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = getSupabaseClient()
+
+  // Get upcoming deadlines from real goals
+  const upcomingDeadlines = React.useMemo(() => {
+    try {
+      const storedGoals = localStorage.getItem('goals')
+      if (!storedGoals) return []
+      
+      const goals = JSON.parse(storedGoals)
+      return goals
+        .filter((g: any) => g.dueDate && !g.completedAt && g.status === 'active')
+        .map((g: any) => ({
+          id: g.id,
+          title: g.title,
+          dueDate: g.dueDate,
+          progress: g.progress || 0,
+          priority: g.priority || 'medium'
+        }))
+        .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+        .slice(0, 3)
+    } catch {
+      return []
+    }
+  }, [])
+
+  // Calculate category progress from real goals
+  const categoryProgress = React.useMemo(() => {
+    try {
+      const storedGoals = localStorage.getItem('goals')
+      if (!storedGoals) return []
+      
+      const goals = JSON.parse(storedGoals)
+      const categories = ['Health & Fitness', 'Learning', 'Career', 'Personal']
+      const categoryMap = {
+        'health-fitness': 'Health & Fitness',
+        'learning': 'Learning', 
+        'career': 'Career',
+        'personal': 'Personal'
+      }
+      
+      return categories.map(category => {
+        const categoryGoals = goals.filter((g: any) => {
+          const mappedCategory = categoryMap[g.category as keyof typeof categoryMap] || g.category
+          return mappedCategory === category
+        })
+        const completed = categoryGoals.filter((g: any) => g.completedAt).length
+        const total = categoryGoals.length
+        const progress = total > 0 ? Math.round((completed / total) * 100) : 0
+        
+        const iconMap = {
+          'Health & Fitness': Heart,
+          'Learning': BookOpen,
+          'Career': Briefcase,
+          'Personal': Star
+        }
+        const colorMap = {
+          'Health & Fitness': 'bg-green-500',
+          'Learning': 'bg-blue-500', 
+          'Career': 'bg-purple-500',
+          'Personal': 'bg-orange-500'
+        }
+        
+        return {
+          name: category,
+          completed,
+          total,
+          progress,
+          color: colorMap[category as keyof typeof colorMap],
+          icon: iconMap[category as keyof typeof iconMap]
+        }
+      }).filter(c => c.total > 0)
+    } catch {
+      return []
+    }
+  }, [])
 
   useEffect(() => {
-    checkUser()
-    if (isMockAuthEnabled()) {
-      try {
-        const store = require("@/backend/lib/mock-store")
-        const sg = store.getGoals()
-        const mapped = sg.map((g: any) => ({
+    loadGoals()
+  }, [])
+
+  const loadGoals = () => {
+    try {
+      const storedGoals = localStorage.getItem('goals')
+      if (storedGoals) {
+        const goals = JSON.parse(storedGoals)
+        const mapped = goals.map((g: any) => ({
           id: String(g.id),
           user_id: 'mock-user-id',
           title: g.title,
           description: g.description,
-          goal_type: g.type,
+          goal_type: g.type === 'multi-activity' ? 'multi' : g.type === 'single-activity' ? 'single' : g.type,
           visibility: g.visibility,
           start_date: g.createdAt,
           is_suspended: g.status === 'paused',
           created_at: g.createdAt,
-          updated_at: g.createdAt,
-          completed_at: g.status === 'completed' ? new Date().toISOString() : null,
+          updated_at: g.updatedAt || g.createdAt,
+          completed_at: g.completedAt || null,
         }))
         setGoals(mapped as any)
-      } catch {}
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+      }
+    } catch {}
+    setLoading(false)
+  }
 
   // Live update when localStorage changes
   useEffect(() => {
-    if (!isMockAuthEnabled()) return
-    const onStorage = () => {
-      try {
-        const store = require("@/backend/lib/mock-store")
-        const sg = store.getGoals()
-        const mapped = sg.map((g: any) => ({
-          id: String(g.id),
-          user_id: 'mock-user-id',
-          title: g.title,
-          description: g.description,
-          goal_type: g.type,
-          visibility: g.visibility,
-          start_date: g.createdAt,
-          is_suspended: g.status === 'paused',
-          created_at: g.createdAt,
-          updated_at: g.createdAt,
-          completed_at: g.status === 'completed' ? new Date().toISOString() : null,
-        }))
-        setGoals(mapped as any)
-      } catch {}
-    }
     if (typeof window !== 'undefined') {
-      window.addEventListener('storage', onStorage)
+      window.addEventListener('storage', loadGoals)
+      window.addEventListener('goalUpdated', loadGoals)
+      window.addEventListener('goalDeleted', loadGoals)
     }
     return () => {
       if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', onStorage)
+        window.removeEventListener('storage', loadGoals)
+        window.removeEventListener('goalUpdated', loadGoals)
+        window.removeEventListener('goalDeleted', loadGoals)
       }
     }
   }, [])
-
-  const checkUser = async () => {
-    // Check if mock auth is enabled
-    if (isMockAuthEnabled()) {
-      setUser(getMockUser())
-      setLoading(false)
-      // Don't try to load real data in mock mode
-      return
-    }
-    
-    if (!supabase) {
-      router.push("/auth/login")
-      return
-    }
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        router.push("/auth/login")
-        return
-      }
-
-      setUser(user)
-      await loadDashboardData(user.id)
-    } catch (error) {
-      console.error("Error:", error)
-      router.push("/auth/login")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadDashboardData = async (userId: string) => {
-    if (!supabase) return
-    try {
-      // Load goals
-      const { data: goalsData, error: goalsError } = await supabase
-        .from("goals")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-
-      if (goalsError) throw goalsError
-      setGoals(goalsData || [])
-
-      // Load streaks
-      const { data: streaksData, error: streaksError } = await supabase
-        .from("streaks")
-        .select("*")
-        .eq("user_id", userId)
-
-      if (streaksError) throw streaksError
-      setStreaks(streaksData || [])
-    } catch (_error: unknown) {
-      toast.error("Failed to load dashboard data")
-    }
-  }
-
-  const handleLogout = async () => {
-    if (isMockAuthEnabled()) {
-      router.push("/")
-      return
-    }
-    
-    if (!supabase) return
-    await supabase.auth.signOut()
-    router.push("/")
-  }
 
   if (loading) {
     return (
@@ -183,15 +171,13 @@ export default function DashboardPage() {
 
   const activeGoals = goals.filter(g => !g.completed_at && !g.is_suspended)
   const completedGoals = goals.filter(g => g.completed_at)
-  const totalStreak = streaks.reduce((sum, s) => sum + s.current_streak, 0)
-  const totalCompletions = streaks.reduce((sum, s) => sum + s.total_completions, 0)
 
-  // Mock data for rich dashboard content
+  // Calculate real stats from goals data
   const todayStats = {
-    completed: 7,
-    pending: 3,
-    streak: 12,
-    longestStreak: 28
+    completed: completedGoals.length,
+    pending: activeGoals.length,
+    streak: 12, // Could be calculated from goal completion history
+    longestStreak: 28 // Could be calculated from goal completion history
   }
 
   const recentActivity = [
@@ -224,30 +210,6 @@ export default function DashboardPage() {
     }
   ]
 
-  const upcomingDeadlines = [
-    {
-      id: 1,
-      title: "Complete React Course",
-      dueDate: "2024-02-15",
-      progress: 75,
-      priority: "high"
-    },
-    {
-      id: 2,
-      title: "Finish Book Reading",
-      dueDate: "2024-02-20",
-      progress: 45,
-      priority: "medium"
-    }
-  ]
-
-  const categoryProgress = [
-    { name: "Health & Fitness", progress: 80, color: "bg-green-500", icon: Heart },
-    { name: "Career", progress: 65, color: "bg-blue-500", icon: Briefcase },
-    { name: "Learning", progress: 55, color: "bg-purple-500", icon: BookOpen },
-    { name: "Personal", progress: 40, color: "bg-orange-500", icon: Star }
-  ]
-
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -255,10 +217,19 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Welcome back, <span className="text-gradient-primary">John!</span>
+              Welcome back, <span className="text-gradient-primary">{(() => {
+                try {
+                  const kycData = localStorage.getItem('kycData')
+                  if (kycData) {
+                    const profile = JSON.parse(kycData)
+                    return profile.firstName || 'John'
+                  }
+                } catch {}
+                return 'John'
+              })()}!</span>
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              You&apos;re on a {todayStats.streak}-day streak! Keep up the great work! ??
+              You&apos;re on a {todayStats.streak}-day streak! Keep up the great work! 🔥
             </p>
           </div>
           <div className="flex gap-2">
@@ -277,7 +248,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Today\'s Summary Cards */}
+        {/* Today's Summary Cards */}
         <div className="flex gap-3 sm:gap-4 overflow-x-auto">
           <Card className="hover-lift min-w-[160px] flex-shrink-0">
             <CardContent className="p-4 sm:p-6">
@@ -466,23 +437,27 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {upcomingDeadlines.map((goal) => (
-                  <div key={goal.id} className="flex items-center gap-4 p-3 rounded-lg border">
-                    <div className="p-2 rounded-lg bg-accent/10">
-                      <Target className="h-4 w-4 text-accent" />
+                {upcomingDeadlines.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">No upcoming deadlines</p>
+                ) : (
+                  upcomingDeadlines.map((goal) => (
+                    <div key={goal.id} className="flex items-center gap-4 p-3 rounded-lg border">
+                      <div className="p-2 rounded-lg bg-accent/10">
+                        <Target className="h-4 w-4 text-accent" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm">{goal.title}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Due: {new Date(goal.dueDate).toLocaleDateString()}
+                        </p>
+                        <Progress value={goal.progress} className="w-full h-1.5 mt-2" />
+                      </div>
+                      <Badge variant={goal.priority === 'high' ? 'default' : 'secondary'}>
+                        {goal.priority}
+                      </Badge>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">{goal.title}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Due: {new Date(goal.dueDate).toLocaleDateString()}
-                      </p>
-                      <Progress value={goal.progress} className="w-full h-1.5 mt-2" />
-                    </div>
-                    <Badge variant={goal.priority === 'high' ? 'default' : 'secondary'}>
-                      {goal.priority}
-                    </Badge>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -500,23 +475,29 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {categoryProgress.map((category) => {
-                  const Icon = category.icon
-                  return (
-                    <div key={category.name} className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${category.color.replace('bg-', 'bg-').replace('-500', '-100')}`}>
-                        <Icon className={`h-4 w-4 ${category.color.replace('bg-', 'text-')}`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium">{category.name}</span>
-                          <span className="text-sm text-muted-foreground">{category.progress}%</span>
+                {categoryProgress.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">No goals created yet</p>
+                ) : (
+                  categoryProgress.map((category) => {
+                    const Icon = category.icon
+                    return (
+                      <div key={category.name} className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${category.color.replace('bg-', 'bg-').replace('-500', '-100')}`}>
+                          <Icon className={`h-4 w-4 ${category.color.replace('bg-', 'text-')}`} />
                         </div>
-                        <Progress value={category.progress} className="h-2" />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium">{category.name}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {category.completed || 0}/{category.total || 0}
+                            </span>
+                          </div>
+                          <Progress value={category.progress} className="h-2" />
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                )}
               </div>
             </CardContent>
           </Card>
@@ -567,7 +548,7 @@ export default function DashboardPage() {
                 &ldquo;Success is the sum of small efforts, repeated day in and day out.&rdquo;
               </blockquote>
               <p className="text-sm text-muted-foreground">
-                � Robert Collier
+                — Robert Collier
               </p>
             </CardContent>
           </Card>

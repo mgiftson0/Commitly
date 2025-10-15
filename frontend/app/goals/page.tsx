@@ -414,27 +414,114 @@ export default function GoalsPage() {
 
   // Load real goals from localStorage
   useEffect(() => {
-    try {
-      const storedGoals = localStorage.getItem('goals')
-      if (storedGoals) {
-        const goals = JSON.parse(storedGoals)
-        setRealGoals(goals)
+    const loadGoals = () => {
+      try {
+        const storedGoals = localStorage.getItem('goals')
+        const storedPartnerGoals = localStorage.getItem('partnerGoals')
+        
+        let allGoals = []
+        
+        if (storedGoals) {
+          const goals = JSON.parse(storedGoals)
+          allGoals = [...goals]
+        }
+        
+        // Initialize partner goals if they don't exist
+        if (!storedPartnerGoals) {
+          const partnerGoals = [
+            {
+              id: 'partner-1',
+              userId: 'sarah-martinez',
+              ownerName: 'Sarah Martinez',
+              title: 'Morning Yoga Practice',
+              description: 'Daily 20-minute yoga session to improve flexibility and mindfulness',
+              type: 'single-activity',
+              visibility: 'restricted',
+              status: 'active',
+              progress: 65,
+              streak: 8,
+              category: 'Health & Fitness',
+              createdAt: '2024-01-20T08:00:00Z',
+              dueDate: '2024-03-20',
+              scheduleType: 'recurring',
+              recurrencePattern: 'daily',
+              activities: ['Complete 20-minute yoga session'],
+              accountabilityPartners: [{ id: 'mock-user-id', name: 'You', avatar: '/placeholder-avatar.jpg' }],
+              isPartnerGoal: true
+            },
+            {
+              id: 'partner-2', 
+              userId: 'mike-chen',
+              ownerName: 'Mike Chen',
+              title: 'Learn Python Programming',
+              description: 'Complete Python course and build 3 projects',
+              type: 'multi-activity',
+              visibility: 'restricted',
+              status: 'active',
+              progress: 40,
+              streak: 0,
+              category: 'Learning',
+              createdAt: '2024-02-01T10:00:00Z',
+              dueDate: '2024-04-01',
+              scheduleType: 'date',
+              activities: [
+                { title: 'Complete Python basics course', completed: true },
+                { title: 'Build calculator app', completed: true },
+                { title: 'Build todo list app', completed: false },
+                { title: 'Build weather app', completed: false },
+                { title: 'Complete final project', completed: false }
+              ],
+              accountabilityPartners: [{ id: 'mock-user-id', name: 'You', avatar: '/placeholder-avatar.jpg' }],
+              isPartnerGoal: true
+            }
+          ]
+          localStorage.setItem('partnerGoals', JSON.stringify(partnerGoals))
+          allGoals = [...allGoals, ...partnerGoals]
+        } else {
+          const partnerGoals = JSON.parse(storedPartnerGoals)
+          // Mark partner goals with special flag
+          const markedPartnerGoals = partnerGoals.map((goal: any) => ({
+            ...goal,
+            isPartnerGoal: true
+          }))
+          allGoals = [...allGoals, ...markedPartnerGoals]
+        }
+        
+        console.log('Loaded goals from localStorage:', allGoals)
+        setRealGoals(allGoals)
+      } catch (error) {
+        console.error('Error loading goals:', error)
+        setRealGoals([])
       }
-    } catch (error) {
-      console.error('Error loading goals:', error)
+    }
+    
+    loadGoals()
+    
+    // Listen for storage changes and custom events
+    const handleStorageChange = () => loadGoals()
+    const handleGoalChange = () => loadGoals()
+    
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('goalDeleted', handleGoalChange)
+    window.addEventListener('goalUpdated', handleGoalChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('goalDeleted', handleGoalChange)
+      window.removeEventListener('goalUpdated', handleGoalChange)
     }
   }, [])
 
-  // Convert real goals to display format and limit to 3 for owner and partner
+  // Convert real goals to display format - show all goals, not limited to 3
   const allGoals = React.useMemo(() => {
     const convertedGoals = realGoals.map(goal => ({
-      id: parseInt(goal.id),
+      id: goal.isPartnerGoal ? goal.id : parseInt(goal.id),
       title: goal.title,
       description: goal.description || '',
       type: goal.type,
       status: goal.status || 'active',
       progress: goal.progress || 0,
-      streak: goal.scheduleType === 'date' ? 0 : (goal.streak || 0),
+      streak: goal.scheduleType === 'date' ? 0 : (goal.streak !== undefined ? goal.streak : 5),
       totalCompletions: goal.totalCompletions || 0,
       visibility: goal.visibility || 'private',
       createdAt: goal.createdAt,
@@ -448,11 +535,13 @@ export default function GoalsPage() {
       groupMembers: goal.groupMembers || [],
       recurrencePattern: goal.recurrencePattern,
       recurrenceDays: goal.recurrenceDays,
-      scheduleType: goal.scheduleType
+      scheduleType: goal.scheduleType,
+      isPartnerGoal: goal.isPartnerGoal || false,
+      ownerName: goal.ownerName,
+      goalOwner: goal.ownerName ? { id: goal.userId, name: goal.ownerName, avatar: '/placeholder-avatar.jpg' } : undefined
     }))
     
-    // Limit to 3 goals total
-    return convertedGoals.slice(0, 3)
+    return convertedGoals
   }, [realGoals])
 
   // Filter goals based on current view and user role
@@ -466,11 +555,10 @@ export default function GoalsPage() {
     return matchesSearch && matchesType && matchesStatus && matchesCategory
   })
 
-  // Separate goals into user's goals and partner goals (limit to 3 each)
-  const userGoals = filteredGoals.filter(goal => isGoalOwner(goal)).slice(0, 3)
+  // Separate goals into user's goals and partner goals
+  const userGoals = filteredGoals.filter(goal => isGoalOwner(goal) && !(goal as any).isPartnerGoal)
   const partnerGoals = filteredGoals
-    .filter(goal => goal.accountabilityPartners.some(partner => partner.id === 'mock-user-id') && !isGoalOwner(goal))
-    .slice(0, 3)
+    .filter(goal => (goal.accountabilityPartners.some(partner => partner.id === 'mock-user-id') && !isGoalOwner(goal)) || (goal as any).isPartnerGoal)
 
   const categories = Array.from(new Set(allGoals.map(g => g.category)))
 
@@ -663,7 +751,10 @@ export default function GoalsPage() {
                   <h2 className="text-lg font-semibold">My Goals</h2>
                   <Badge variant="outline">{userGoals.length}</Badge>
                 </div>
-                <GoalsGrid goals={userGoals} router={router} isPartnerView={false} />
+                <GoalsGrid goals={userGoals} router={router} isPartnerView={false} onGoalDeleted={() => {
+                  const updatedGoals = JSON.parse(localStorage.getItem('goals') || '[]')
+                  setRealGoals(updatedGoals)
+                }} />
               </div>
             )}
 
@@ -675,7 +766,10 @@ export default function GoalsPage() {
                   <h2 className="text-lg font-semibold">Accountability Partner Goals</h2>
                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{partnerGoals.length}</Badge>
                 </div>
-                <GoalsGrid goals={partnerGoals} router={router} isPartnerView={true} />
+                <GoalsGrid goals={partnerGoals} router={router} isPartnerView={true} onGoalDeleted={() => {
+                  const updatedGoals = JSON.parse(localStorage.getItem('goals') || '[]')
+                  setRealGoals(updatedGoals)
+                }} />
               </div>
             )}
 
@@ -693,19 +787,31 @@ export default function GoalsPage() {
           </TabsContent>
 
           <TabsContent value="my-goals" className="space-y-4">
-            <GoalsGrid goals={userGoals} router={router} isPartnerView={false} />
+            <GoalsGrid goals={userGoals} router={router} isPartnerView={false} onGoalDeleted={() => {
+              const updatedGoals = JSON.parse(localStorage.getItem('goals') || '[]')
+              setRealGoals(updatedGoals)
+            }} />
           </TabsContent>
 
           <TabsContent value="partner-goals" className="space-y-4">
-            <GoalsGrid goals={partnerGoals} router={router} isPartnerView={true} />
+            <GoalsGrid goals={partnerGoals} router={router} isPartnerView={true} onGoalDeleted={() => {
+              const updatedGoals = JSON.parse(localStorage.getItem('goals') || '[]')
+              setRealGoals(updatedGoals)
+            }} />
           </TabsContent>
 
           <TabsContent value="active" className="space-y-4">
-            <GoalsGrid goals={sortedGoals.filter(g => g.status === "active")} router={router} />
+            <GoalsGrid goals={sortedGoals.filter(g => g.status === "active")} router={router} onGoalDeleted={() => {
+              const updatedGoals = JSON.parse(localStorage.getItem('goals') || '[]')
+              setRealGoals(updatedGoals)
+            }} />
           </TabsContent>
 
           <TabsContent value="completed" className="space-y-4">
-            <GoalsGrid goals={sortedGoals.filter(g => g.status === "completed")} router={router} />
+            <GoalsGrid goals={sortedGoals.filter(g => g.status === "completed")} router={router} onGoalDeleted={() => {
+              const updatedGoals = JSON.parse(localStorage.getItem('goals') || '[]')
+              setRealGoals(updatedGoals)
+            }} />
           </TabsContent>
         </Tabs>
       </div>
@@ -713,7 +819,7 @@ export default function GoalsPage() {
   )
 }
 
-function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof mockGoals; router: ReturnType<typeof useRouter>; isPartnerView?: boolean }) {
+function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { goals: typeof mockGoals; router: ReturnType<typeof useRouter>; isPartnerView?: boolean; onGoalDeleted?: () => void }) {
   const [partnerInvites, setPartnerInvites] = useState<Record<number, 'pending' | 'accepted' | 'declined'>>(() => {
     const map: Record<number, 'pending' | 'accepted' | 'declined'> = {}
     goals.forEach(g => { map[g.id] = (isPartnerView && g.id % 5 === 0) ? 'pending' : 'accepted' })
@@ -738,25 +844,35 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
   }
   const handleDelete = (goalId: number, goalTitle: string) => {
     if (confirm(`Are you sure you want to delete "${goalTitle}"?`)) {
-      toast.success(`Goal "${goalTitle}" deleted successfully`)
-      // In real implementation, call API to delete
+      try {
+        const storedGoals = localStorage.getItem('goals')
+        if (storedGoals) {
+          const goals = JSON.parse(storedGoals)
+          const filteredGoals = goals.filter((g: any) => g.id !== goalId.toString())
+          localStorage.setItem('goals', JSON.stringify(filteredGoals))
+          
+          toast.success(`Goal "${goalTitle}" deleted successfully`)
+          
+          // Dispatch custom event to notify other components
+          window.dispatchEvent(new CustomEvent('goalDeleted', { detail: { goalId } }))
+          
+          // Trigger parent component to reload goals
+          if (onGoalDeleted) {
+            onGoalDeleted()
+          }
+        }
+      } catch (error) {
+        toast.error("Failed to delete goal")
+      }
     }
   }
 
   const handleViewDetails = (goalId: number, goal: typeof mockGoals[0]) => {
-    if (isPartnerView) {
-      router.push(`/goals/${goalId}/partner`)
-      return
-    }
-    if (goal.isGroupGoal) {
-      router.push(`/goals/${goalId}/group`)
-      return
-    }
     router.push(`/goals/${goalId}`)
   }
 
   const handleEdit = (goalId: number) => {
-    router.push(`/goals/${goalId}/edit`)
+    router.push(`/goals/${goalId}`)
   }
 
   if (goals.length === 0) {
@@ -948,19 +1064,31 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                {!isSingleActivity(goal) && goal.scheduleType !== 'date' && (
-                  <div className="flex items-center gap-2">
-                    <Flame className="h-4 w-4 text-orange-500" />
-                    <span className="text-muted-foreground">Streak:</span>
-                    <span className="font-medium">{goal.streak} days</span>
-                  </div>
-                )}
+              <div className="space-y-2 text-sm">
+                {(() => {
+                  const goalAge = Date.now() - new Date(goal.createdAt).getTime()
+                  const isMoreThanOneMinute = goalAge > 60 * 1000
+                  return !isSingleActivity(goal) && goal.scheduleType !== 'date' && isMoreThanOneMinute && goal.streak !== undefined && (
+                    <div className="flex items-center gap-2">
+                      <Flame className="h-4 w-4 text-orange-500" />
+                      <span className="text-muted-foreground">Streak:</span>
+                      <span className="font-medium">{goal.streak} days</span>
+                    </div>
+                  )
+                })()}
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-muted-foreground">Completed:</span>
                   <span className="font-medium">{goal.totalCompletions}</span>
                 </div>
+              </div>
+            )}
+
+            {/* Due Date */}
+            {goal.dueDate && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                <span>Due: {new Date(goal.dueDate).toLocaleDateString()}</span>
               </div>
             )}
 
@@ -972,15 +1100,7 @@ function GoalsGrid({ goals, router, isPartnerView = false }: { goals: typeof moc
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span className="flex items-center gap-2">
                     <span>{goal.category}</span>
-                    {/* Invite status indicator */}
-                    {partnerInvites[goal.id] && (
-                      <Badge
-                        variant={partnerInvites[goal.id] === 'accepted' ? 'default' : (partnerInvites[goal.id] === 'pending' ? 'secondary' : 'outline')}
-                        className="text-[10px]"
-                      >
-                        {partnerInvites[goal.id] === 'accepted' ? 'Accepted' : partnerInvites[goal.id] === 'pending' ? 'Request Sent' : 'Declined'}
-                      </Badge>
-                    )}
+
                   </span>
                   {goal.status === "completed" ? (
                     <div className="flex items-center gap-2">

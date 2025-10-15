@@ -1,13 +1,25 @@
 "use client"
 
+import { useEffect } from "react"
 import { Header } from "./header"
 import { Sidebar } from "./sidebar"
+import { notifications } from "@/lib/notifications"
+import { dueDateChecker } from "@/lib/due-date-checker"
 
 interface MainLayoutProps {
   children: React.ReactNode
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
+  useEffect(() => {
+    notifications.init()
+    dueDateChecker.start()
+    
+    return () => {
+      dueDateChecker.stop()
+    }
+  }, [])
+
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar - Hidden on mobile, shown on md+ */}

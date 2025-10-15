@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MessageCircle, Heart, Send } from "lucide-react"
 import { toast } from "sonner"
+import { notifications } from "@/lib/notifications"
 
 interface EncouragementMessage {
   id: string
@@ -29,6 +30,7 @@ interface EncouragementCardProps {
   onSendEncouragement?: (message: string) => void
   messages?: EncouragementMessage[]
   newMessageCount?: number
+  compact?: boolean
 }
 
 export function EncouragementCard({
@@ -37,7 +39,8 @@ export function EncouragementCard({
   goalId,
   onSendEncouragement,
   messages = [],
-  newMessageCount = 0
+  newMessageCount = 0,
+  compact = false
 }: EncouragementCardProps) {
   const [note, setNote] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -69,6 +72,9 @@ export function EncouragementCard({
         setStoreMessages(raw.map(m => ({ id: m.id, author: { name: m.authorName, avatar: "/placeholder-avatar.jpg" }, content: m.content, timestamp: new Date(m.timestamp).toLocaleString() })))
       }
       toast.success(`Encouragement sent to ${goalOwnerName}! ??`)
+      if (isPartner && goalOwnerName) {
+        await notifications.encouragementReceived('You', goalOwnerName)
+      }
       setNote("")
     } catch (error) {
       toast.error("Failed to send encouragement")
@@ -98,6 +104,28 @@ export function EncouragementCard({
       timestamp: "1 day ago"
     }
   ])
+
+  if (compact && isPartner) {
+    return (
+      <div className="space-y-3">
+        <Textarea
+          placeholder={`Send an encouraging message to ${goalOwnerName}...`}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={3}
+          className="focus-ring resize-none"
+        />
+        <Button 
+          onClick={handleSendEncouragement}
+          disabled={!note.trim() || isSubmitting} 
+          className="hover-lift w-full"
+        >
+          <Send className="h-4 w-4 mr-2" />
+          {isSubmitting ? "Sending..." : "Send Encouragement"}
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <Card className="hover-lift">

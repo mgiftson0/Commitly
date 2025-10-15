@@ -38,6 +38,7 @@ import { useRouter } from "next/navigation"
 // Frontend-only mode - no backend dependencies
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
+import { notifications } from "@/lib/notifications"
 
 export default function CreateGoalPage() {
   const [title, setTitle] = useState("")
@@ -140,7 +141,7 @@ export default function CreateGoalPage() {
         scheduleType,
         recurrencePattern: scheduleType === 'recurring' ? recurrencePattern : null,
         recurrenceDays: (scheduleType === 'recurring' && recurrencePattern === 'custom') ? recurrenceDays : null,
-        dueDate: scheduleType === 'date' ? (singleDate || null) : null,
+        dueDate: singleDate || null,
         activities: goalType === 'multi-activity'
           ? activities.filter(a => a.trim()).map(a => a.trim())
           : goalType === 'single-activity' && singleActivity.trim()
@@ -149,7 +150,11 @@ export default function CreateGoalPage() {
         isGroupGoal: goalNature === 'group',
         groupMembers: goalNature === 'group' ? groupMembers.map(id => {
           const member = allGroupCandidates.find(p => p.id === id)
-          return { id, name: member?.name || 'Member' }
+          return { 
+            id, 
+            name: member?.name || 'Member',
+            status: id === currentUser.id ? 'accepted' : 'pending' // Owner auto-accepted, others pending
+          }
         }) : [],
         accountabilityPartners: goalNature === 'personal' ? selectedPartners.map(id => {
           const partner = availablePartners.find(p => p.id === id)
@@ -162,7 +167,11 @@ export default function CreateGoalPage() {
       existingGoals.push(newGoal)
       localStorage.setItem('goals', JSON.stringify(existingGoals))
       
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('goalUpdated', { detail: { goalId: newGoal.id } }))
+      
       toast.success('Goal created successfully!')
+      await notifications.goalCreated(title)
       router.push('/goals')
     } catch (error: any) {
       toast.error(error.message || 'Failed to create goal')
@@ -544,6 +553,21 @@ export default function CreateGoalPage() {
                             </div>
                           </div>
                         )}
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="recurringDue" className="text-sm font-medium">Due Date <span className="text-destructive">*</span></Label>
+                          <Input 
+                            id="recurringDue" 
+                            type="date" 
+                            value={singleDate} 
+                            onChange={(e) => setSingleDate(e.target.value)} 
+                            className="focus-ring" 
+                            min={new Date().toISOString().split('T')[0]}
+                            max={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">Maximum 2 months from today</p>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -42,6 +42,7 @@ import { useRouter, useParams } from "next/navigation"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
+import { notifications } from "@/lib/notifications"
 
 type Goal = {
   id: string
@@ -67,6 +68,7 @@ type Activity = {
   created_at: string
   updated_at: string
   completed_at?: string
+  assigned_members?: string[]
 }
 
 export default function GoalDetailPage() {
@@ -75,7 +77,8 @@ export default function GoalDetailPage() {
   const [note, setNote] = useState("")
   const [loading, setLoading] = useState(true)
   const [storeMeta, setStoreMeta] = useState<{ dueDate?: string | null; recurrencePattern?: string; recurrenceDays?: string[] } | null>(null)
-  const [storeRole, setStoreRole] = useState<{ isGroupGoal?: boolean; groupMembers?: { id: string; name: string; avatar?: string }[]; accountabilityPartners?: { id: string; name: string; avatar?: string }[] } | null>(null)
+  const [storeRole, setStoreRole] = useState<{ isGroupGoal?: boolean; groupMembers?: { id: string; name: string; avatar?: string; status?: 'pending' | 'accepted' | 'declined' }[]; accountabilityPartners?: { id: string; name: string; avatar?: string }[]; ownerName?: string } | null>(null)
+  const [activityAssignments, setActivityAssignments] = useState<{[key: string]: string[]}>({})
   
   // Edit form states
   const [editTitle, setEditTitle] = useState("")
@@ -92,7 +95,6 @@ export default function GoalDetailPage() {
     loadGoalData()
   }, [goalId])
 
-  // Initialize edit form when goal loads
   useEffect(() => {
     if (goal) {
       setEditTitle(goal.title)
@@ -105,6 +107,106 @@ export default function GoalDetailPage() {
   const loadGoalData = async () => {
     try {
       const storedGoals = localStorage.getItem('goals')
+      const storedPartnerGoals = localStorage.getItem('partnerGoals')
+      
+      // Initialize partner goals if they don't exist
+      if (!storedPartnerGoals) {
+        const partnerGoals = [
+          {
+            id: 'partner-1',
+            userId: 'sarah-martinez',
+            ownerName: 'Sarah Martinez',
+            title: 'Morning Yoga Practice',
+            description: 'Daily 20-minute yoga session to improve flexibility and mindfulness',
+            type: 'single-activity',
+            visibility: 'restricted',
+            status: 'active',
+            progress: 65,
+            streak: 8,
+            category: 'Health & Fitness',
+            createdAt: '2024-01-20T08:00:00Z',
+            dueDate: '2024-03-20',
+            scheduleType: 'recurring',
+            recurrencePattern: 'daily',
+            activities: ['Complete 20-minute yoga session'],
+            accountabilityPartners: [{ id: 'mock-user-id', name: 'You', avatar: '/placeholder-avatar.jpg' }]
+          },
+          {
+            id: 'partner-2', 
+            userId: 'mike-chen',
+            ownerName: 'Mike Chen',
+            title: 'Learn Python Programming',
+            description: 'Complete Python course and build 3 projects',
+            type: 'multi-activity',
+            visibility: 'restricted',
+            status: 'active',
+            progress: 40,
+            streak: 0,
+            category: 'Learning',
+            createdAt: '2024-02-01T10:00:00Z',
+            dueDate: '2024-04-01',
+            scheduleType: 'date',
+            activities: [
+              { title: 'Complete Python basics course', completed: true },
+              { title: 'Build calculator app', completed: true },
+              { title: 'Build todo list app', completed: false },
+              { title: 'Build weather app', completed: false },
+              { title: 'Complete final project', completed: false }
+            ],
+            accountabilityPartners: [{ id: 'mock-user-id', name: 'You', avatar: '/placeholder-avatar.jpg' }]
+          }
+        ]
+        localStorage.setItem('partnerGoals', JSON.stringify(partnerGoals))
+      }
+      
+      // Check if this is a partner goal first
+      const partnerGoals = JSON.parse(localStorage.getItem('partnerGoals') || '[]')
+      const partnerGoal = partnerGoals.find((g: any) => g.id === goalId)
+      if (partnerGoal) {
+          const mappedGoal: Goal = {
+            id: partnerGoal.id,
+            user_id: partnerGoal.userId,
+            title: partnerGoal.title,
+            description: partnerGoal.description || '',
+            goal_type: partnerGoal.type === 'multi-activity' ? 'multi' : 'single',
+            visibility: partnerGoal.visibility || 'private',
+            start_date: partnerGoal.createdAt,
+            is_suspended: partnerGoal.status === 'paused',
+            created_at: partnerGoal.createdAt,
+            updated_at: partnerGoal.updatedAt || partnerGoal.createdAt,
+            completed_at: partnerGoal.completedAt || null,
+          }
+          
+          const mappedActivities: Activity[] = (partnerGoal.activities || []).map((activity: any, index: number) => ({
+            id: String(index + 1),
+            goal_id: goalId,
+            title: activity.title || activity,
+            description: activity.description,
+            is_completed: activity.completed || false,
+            order_index: index,
+            created_at: partnerGoal.createdAt,
+            updated_at: partnerGoal.updatedAt || partnerGoal.createdAt,
+            completed_at: activity.completedAt
+          }))
+          
+          setGoal(mappedGoal)
+          setActivities(mappedActivities)
+          setStoreMeta({ 
+            dueDate: partnerGoal.dueDate, 
+            recurrencePattern: partnerGoal.recurrencePattern, 
+            recurrenceDays: partnerGoal.recurrenceDays,
+            scheduleType: partnerGoal.scheduleType
+          })
+          setStoreRole({
+            isGroupGoal: false,
+            groupMembers: [],
+            accountabilityPartners: partnerGoal.accountabilityPartners || [],
+            ownerName: partnerGoal.ownerName
+          })
+          setLoading(false)
+          return
+        }
+      
       if (!storedGoals) {
         setGoal(null)
         setLoading(false)
@@ -143,8 +245,17 @@ export default function GoalDetailPage() {
         order_index: index,
         created_at: foundGoal.createdAt,
         updated_at: foundGoal.updatedAt || foundGoal.createdAt,
-        completed_at: activity.completedAt
+        completed_at: activity.completedAt,
+        assigned_members: activity.assigned_members || []
       }))
+      
+      if (foundGoal.isGroupGoal) {
+        const assignments: {[key: string]: string[]} = {}
+        mappedActivities.forEach(activity => {
+          assignments[activity.id] = activity.assigned_members || []
+        })
+        setActivityAssignments(assignments)
+      }
       
       setGoal(mappedGoal)
       setActivities(mappedActivities)
@@ -156,11 +267,14 @@ export default function GoalDetailPage() {
       })
       setStoreRole({
         isGroupGoal: foundGoal.isGroupGoal || false,
-        groupMembers: foundGoal.groupMembers || [],
-        accountabilityPartners: foundGoal.accountabilityPartners || []
+        groupMembers: (foundGoal.groupMembers || []).map((member: any) => ({
+          ...member,
+          status: member.status || 'accepted'
+        })),
+        accountabilityPartners: foundGoal.accountabilityPartners || [],
+        ownerName: foundGoal.ownerName
       })
     } catch (error) {
-      console.error('Error loading goal:', error)
       setGoal(null)
     }
     setLoading(false)
@@ -184,13 +298,15 @@ export default function GoalDetailPage() {
             title: a.title,
             description: a.description,
             completed: a.is_completed,
-            completedAt: a.completed_at
+            completedAt: a.completed_at,
+            assigned_members: activityAssignments[a.id] || []
           }))
           localStorage.setItem('goals', JSON.stringify(goals))
+          window.dispatchEvent(new CustomEvent('goalUpdated'))
         }
       }
     } catch (error) {
-      console.error('Error updating activity:', error)
+      toast.error("Failed to update activity")
     }
     
     toast.success(isCompleted ? "Activity unchecked" : "Activity completed!")
@@ -210,13 +326,15 @@ export default function GoalDetailPage() {
             goals[goalIndex].completedAt = completedGoal.completed_at
             goals[goalIndex].status = 'completed'
             localStorage.setItem('goals', JSON.stringify(goals))
+            window.dispatchEvent(new CustomEvent('goalUpdated'))
           }
         }
       } catch (error) {
-        console.error('Error completing goal:', error)
+        toast.error("Failed to complete goal")
       }
       
       toast.success("🎉 Goal completed! Great job!")
+      await notifications.goalCompleted(goal.title)
     }
   }
 
@@ -233,10 +351,11 @@ export default function GoalDetailPage() {
           if (goalIndex !== -1) {
             goals[goalIndex].status = updatedGoal.is_suspended ? 'paused' : 'active'
             localStorage.setItem('goals', JSON.stringify(goals))
+            window.dispatchEvent(new CustomEvent('goalUpdated'))
           }
         }
       } catch (error) {
-        console.error('Error updating goal status:', error)
+        toast.error("Failed to update goal status")
       }
       
       toast.success(goal.is_suspended ? "Goal resumed" : "Goal suspended")
@@ -251,12 +370,13 @@ export default function GoalDetailPage() {
           const goals = JSON.parse(storedGoals)
           const filteredGoals = goals.filter((g: any) => g.id !== goalId)
           localStorage.setItem('goals', JSON.stringify(filteredGoals))
+          window.dispatchEvent(new CustomEvent('goalDeleted'))
         }
+        toast.success("Goal deleted")
+        router.push("/goals")
       } catch (error) {
-        console.error('Error deleting goal:', error)
+        toast.error("Failed to delete goal")
       }
-      toast.success("Goal deleted")
-      router.push("/goals")
     }
   }
 
@@ -272,23 +392,36 @@ export default function GoalDetailPage() {
           goals[goalIndex].description = editDescription
           goals[goalIndex].visibility = editVisibility
           if (goal?.goal_type === 'multi') {
-            goals[goalIndex].activities = editActivities.filter(a => a.trim()).map((title, index) => ({
-              title: title.trim(),
-              completed: activities[index]?.is_completed || false
-            }))
+            goals[goalIndex].activities = editActivities.filter(a => a.trim()).map((title, index) => {
+              const activityId = String(index + 1)
+              const existingActivity = activities[index]
+              return {
+                title: title.trim(),
+                completed: existingActivity?.is_completed || false,
+                completedAt: existingActivity?.completed_at,
+                assigned_members: activityAssignments[activityId] || []
+              }
+            })
           }
           goals[goalIndex].updatedAt = new Date().toISOString()
           localStorage.setItem('goals', JSON.stringify(goals))
+          window.dispatchEvent(new CustomEvent('goalUpdated'))
           
           await loadGoalData()
           toast.success("Goal updated successfully!")
         }
       }
     } catch (error) {
-      console.error('Error updating goal:', error)
       toast.error("Failed to update goal")
     }
     setSaving(false)
+  }
+
+  const updateActivityAssignment = (activityId: string, memberIds: string[]) => {
+    setActivityAssignments(prev => ({
+      ...prev,
+      [activityId]: memberIds
+    }))
   }
 
   if (loading) {
@@ -323,12 +456,14 @@ export default function GoalDetailPage() {
   const isGroupGoal = !!(storeRole?.isGroupGoal)
   const isMultiActivity = goal && (goal.goal_type === "multi")
   const isAccountabilityPartner = apList.some(p => p.id === currentUserId) && !isYourGoal && !isGroupGoal
-  const goalOwnerName = isYourGoal ? "yourself" : "the goal owner"
+  const isGroupMember = groupMembersList.some(m => m.id === currentUserId && m.status === 'accepted') && !isYourGoal
+  const goalOwnerName = isYourGoal ? "yourself" : (storeRole?.ownerName || "the goal owner")
+  const acceptedMembers = groupMembersList.filter(m => m.status === 'accepted')
+  const isPartnerView = isAccountabilityPartner
 
   return (
     <MainLayout>
       <div className="space-y-4">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <Link href="/goals">
             <Button variant="ghost" size="sm">
@@ -337,7 +472,7 @@ export default function GoalDetailPage() {
             </Button>
           </Link>
           <div className="flex gap-2">
-            {!isAccountabilityPartner && (
+            {isYourGoal && (
               <Button variant="outline" size="sm" onClick={toggleSuspend}>
                 {goal.is_suspended ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
                 {goal.is_suspended ? "Resume" : "Pause"}
@@ -346,17 +481,15 @@ export default function GoalDetailPage() {
           </div>
         </div>
 
-        {/* Tabs Layout */}
         <Tabs defaultValue="details" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className={`grid w-full ${isPartnerView ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <TabsTrigger value="details">View Details</TabsTrigger>
-            <TabsTrigger value="update">Update Goal</TabsTrigger>
+            {!isPartnerView && <TabsTrigger value="update">Update Goal</TabsTrigger>}
           </TabsList>
           
           <TabsContent value="details" className="space-y-4">
             <div className="grid gap-4 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-4">
-                {/* Goal Title Card */}
                 <Card>
                   <CardHeader className="pb-3">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -378,14 +511,13 @@ export default function GoalDetailPage() {
                   </CardHeader>
                 </Card>
 
-                {/* Dynamic Update Interface Based on Goal Type */}
                 {isMultiActivity ? (
                   <Card>
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg flex items-center gap-2">
                           <Target className="h-5 w-5" />
-                          Track Activities
+                          {isGroupGoal ? "Group Activities" : "Track Activities"}
                         </CardTitle>
                         <div className="text-sm text-muted-foreground">
                           {completedActivities} / {totalActivities}
@@ -394,24 +526,52 @@ export default function GoalDetailPage() {
                       <Progress value={progress} className="h-2 mt-2" />
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      {activities.map((activity) => (
-                        <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                          <Checkbox
-                            checked={activity.is_completed}
-                            onCheckedChange={() => toggleActivity(activity.id, activity.is_completed)}
-                            disabled={isAccountabilityPartner}
-                            className="mt-0.5"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm ${activity.is_completed ? "line-through text-muted-foreground" : ""}`}>
-                              {activity.title}
-                            </p>
+                      {activities.map((activity) => {
+                        const assignedMembers = activityAssignments[activity.id] || []
+                        const isAssignedToMe = !isGroupGoal || assignedMembers.length === 0 || assignedMembers.includes(currentUserId)
+                        const canToggle = (isYourGoal || (isGroupMember && isAssignedToMe)) && !isPartnerView
+                        
+                        return (
+                          <div key={activity.id} className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                checked={activity.is_completed}
+                                onCheckedChange={() => toggleActivity(activity.id, activity.is_completed)}
+                                disabled={!canToggle}
+                                className="mt-0.5"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm ${activity.is_completed ? "line-through text-muted-foreground" : ""}`}>
+                                  {activity.title}
+                                </p>
+                                {isGroupGoal && assignedMembers.length > 0 && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <span className="text-xs text-muted-foreground">Assigned to:</span>
+                                    <div className="flex -space-x-1">
+                                      {assignedMembers.slice(0, 3).map(memberId => {
+                                        const member = acceptedMembers.find(m => m.id === memberId)
+                                        return member ? (
+                                          <div key={memberId} className="w-5 h-5 rounded-full bg-primary/20 border border-background flex items-center justify-center" title={member.name}>
+                                            <span className="text-xs font-medium">{member.name.charAt(0)}</span>
+                                          </div>
+                                        ) : null
+                                      })}
+                                      {assignedMembers.length > 3 && (
+                                        <div className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center">
+                                          <span className="text-xs">+{assignedMembers.length - 3}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              {activity.is_completed && (
+                                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                              )}
+                            </div>
                           </div>
-                          {activity.is_completed && (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                          )}
-                        </div>
-                      ))}
+                        )
+                      })}
                     </CardContent>
                   </Card>
                 ) : (
@@ -437,11 +597,23 @@ export default function GoalDetailPage() {
                             <div className="text-4xl mb-3">🎯</div>
                             <p className="text-sm text-muted-foreground">Ready to mark this goal as complete?</p>
                           </div>
-                          {!isAccountabilityPartner && (
+                          {isYourGoal && !isPartnerView && (
                             <Button onClick={completeGoal} className="w-full" size="lg">
                               <CheckCircle2 className="h-5 w-5 mr-2" />
                               Mark as Complete
                             </Button>
+                          )}
+                          {isPartnerView && (
+                            <div className="text-center py-4">
+                              <p className="text-sm text-muted-foreground mb-3">
+                                You're an accountability partner for {goalOwnerName}'s goal
+                              </p>
+                              <EncouragementCard 
+                                isPartner={true}
+                                goalOwnerName={goalOwnerName}
+                                compact={true}
+                              />
+                            </div>
                           )}
                         </>
                       )}
@@ -449,17 +621,15 @@ export default function GoalDetailPage() {
                   </Card>
                 )}
 
-                {/* Encouragement Section */}
-                {!isAccountabilityPartner && storeRole?.accountabilityPartners && storeRole.accountabilityPartners.length > 0 && (
+                {((isYourGoal || isGroupMember) && (storeRole?.accountabilityPartners?.length > 0 || isGroupGoal)) || isPartnerView && (
                   <EncouragementCard 
-                    isPartner={false}
-                    goalOwnerName={goalOwnerName}
-                    newMessageCount={2}
+                    isPartner={isPartnerView}
+                    goalOwnerName={isGroupGoal ? "the group" : goalOwnerName}
+                    newMessageCount={isPartnerView ? 0 : 2}
                   />
                 )}
               </div>
 
-              {/* Right: Goal Details Sidebar */}
               <div className="space-y-4">
                 <Card>
                   <CardHeader>
@@ -474,6 +644,30 @@ export default function GoalDetailPage() {
                       <span className="text-muted-foreground">Visibility</span>
                       <span className="capitalize">{goal.visibility}</span>
                     </div>
+                    {(() => {
+                      const goalAge = Date.now() - new Date(goal.created_at).getTime()
+                      const isMoreThanOneMinute = goalAge > 60 * 1000
+                      const streak = (() => {
+                        try {
+                          const storedGoals = localStorage.getItem('goals')
+                          if (storedGoals) {
+                            const goals = JSON.parse(storedGoals)
+                            const foundGoal = goals.find((g: any) => g.id === goalId)
+                            return foundGoal?.streak || 0
+                          }
+                        } catch {}
+                        return 0
+                      })()
+                      return isYourGoal && storeMeta?.scheduleType !== 'date' && isMoreThanOneMinute && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            <Flame className="h-3 w-3 text-orange-500" />
+                            Streak
+                          </span>
+                          <span className="font-medium">{streak} days</span>
+                        </div>
+                      )
+                    })()}
                     {storeMeta?.dueDate && (
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Due Date</span>
@@ -487,7 +681,6 @@ export default function GoalDetailPage() {
                   </CardContent>
                 </Card>
 
-                {/* Partners/Members */}
                 {(apList.length > 0 || groupMembersList.length > 0) && (
                   <Card>
                     <CardHeader>
@@ -497,15 +690,40 @@ export default function GoalDetailPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        {(isGroupGoal ? groupMembersList : apList).slice(0, 5).map((person) => (
-                          <div key={person.id} className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={person.avatar} />
-                              <AvatarFallback className="text-xs">{person.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">{person.name}</span>
-                          </div>
-                        ))}
+                        {isGroupGoal ? (
+                          groupMembersList.map((member) => (
+                            <div key={member.id} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={member.avatar} />
+                                  <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <span className="text-sm">{member.name}</span>
+                                  {member.id === goal?.user_id && (
+                                    <Crown className="h-3 w-3 text-yellow-500 inline ml-1" title="Owner" />
+                                  )}
+                                </div>
+                              </div>
+                              <Badge 
+                                variant={member.status === 'accepted' ? 'default' : member.status === 'pending' ? 'secondary' : 'destructive'}
+                                className="text-xs"
+                              >
+                                {member.status}
+                              </Badge>
+                            </div>
+                          ))
+                        ) : (
+                          apList.slice(0, 5).map((person) => (
+                            <div key={person.id} className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={person.avatar} />
+                                <AvatarFallback className="text-xs">{person.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm">{person.name}</span>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -559,21 +777,62 @@ export default function GoalDetailPage() {
                     </div>
                     
                     {goal?.goal_type === 'multi' && (
-                      <div className="space-y-2">
+                      <div className="space-y-4">
                         <Label>Activities</Label>
-                        <div className="space-y-2">
-                          {editActivities.map((activity, index) => (
-                            <Input
-                              key={index}
-                              value={activity}
-                              onChange={(e) => {
-                                const newActivities = [...editActivities]
-                                newActivities[index] = e.target.value
-                                setEditActivities(newActivities)
-                              }}
-                              placeholder={`Activity ${index + 1}`}
-                            />
-                          ))}
+                        <div className="space-y-4">
+                          {editActivities.map((activity, index) => {
+                            const activityId = String(index + 1)
+                            const assignedMembers = activityAssignments[activityId] || []
+                            
+                            return (
+                              <div key={index} className="space-y-2 p-3 border rounded-lg">
+                                <Input
+                                  value={activity}
+                                  onChange={(e) => {
+                                    const newActivities = [...editActivities]
+                                    newActivities[index] = e.target.value
+                                    setEditActivities(newActivities)
+                                  }}
+                                  placeholder={`Activity ${index + 1}`}
+                                />
+                                {isGroupGoal && isYourGoal && (
+                                  <div className="space-y-2">
+                                    <Label className="text-xs">Assignment</Label>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                          checked={assignedMembers.length === 0}
+                                          onCheckedChange={(checked) => {
+                                            if (checked) {
+                                              updateActivityAssignment(activityId, [])
+                                            }
+                                          }}
+                                        />
+                                        <span className="text-xs">Assign to all members</span>
+                                      </div>
+                                      <div className="pl-4 space-y-1">
+                                        <p className="text-xs text-muted-foreground">Or assign to specific members:</p>
+                                        {acceptedMembers.map(member => (
+                                          <div key={member.id} className="flex items-center space-x-2">
+                                            <Checkbox
+                                              checked={assignedMembers.includes(member.id)}
+                                              onCheckedChange={(checked) => {
+                                                const newAssignments = checked 
+                                                  ? [...assignedMembers, member.id]
+                                                  : assignedMembers.filter(id => id !== member.id)
+                                                updateActivityAssignment(activityId, newAssignments)
+                                              }}
+                                            />
+                                            <span className="text-xs">{member.name}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
                     )}
@@ -598,17 +857,19 @@ export default function GoalDetailPage() {
               </div>
               
               <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Quick Actions</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={deleteGoal}>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Goal
-                    </Button>
-                  </CardContent>
-                </Card>
+                {isYourGoal && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Quick Actions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <Button variant="outline" size="sm" className="w-full justify-start" onClick={deleteGoal}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Goal
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
           </TabsContent>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -39,143 +40,154 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient, type User, type Goal } from "@/backend/lib/supabase"
-import { isMockAuthEnabled, getMockUser } from "@/backend/lib/mock-auth"
+// Removed backend dependencies - using localStorage only
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
+// Mock auth helper
+const isMockAuthEnabled = () => true
+
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [goals, setGoals] = useState<Goal[]>([])
-  const [followers, setFollowers] = useState(0)
-  const [following, setFollowing] = useState(0)
+  const [goals, setGoals] = useState<any[]>([])
+  const [followers, setFollowers] = useState(125)
+  const [following, setFollowing] = useState(89)
   const [loading, setLoading] = useState(true)
   const [myStoreGoals, setMyStoreGoals] = useState<any[]>([])
   const [partnerStoreGoals, setPartnerStoreGoals] = useState<any[]>([])
+  const [userProfile, setUserProfile] = useState<any>(null)
   const router = useRouter()
-  const supabase = getSupabaseClient()
+
+  // Calculate category stats from real goals
+  const categoryStats = React.useMemo(() => {
+    try {
+      const categories = ['Health & Fitness', 'Learning', 'Career', 'Personal']
+      const categoryMap = {
+        'health-fitness': 'Health & Fitness',
+        'learning': 'Learning', 
+        'career': 'Career',
+        'personal': 'Personal'
+      }
+      
+      return categories.map(category => {
+        const categoryGoals = myStoreGoals.filter((g: any) => {
+          const mappedCategory = categoryMap[g.category as keyof typeof categoryMap] || g.category
+          return mappedCategory === category
+        })
+        const completed = categoryGoals.filter((g: any) => g.completedAt).length
+        const total = categoryGoals.length
+        
+        const iconMap = {
+          'Health & Fitness': Heart,
+          'Learning': BookOpen,
+          'Career': Briefcase,
+          'Personal': Star
+        }
+        const colorMap = {
+          'Health & Fitness': 'bg-green-500',
+          'Learning': 'bg-blue-500', 
+          'Career': 'bg-purple-500',
+          'Personal': 'bg-orange-500'
+        }
+        
+        return {
+          name: category,
+          completed,
+          total,
+          color: colorMap[category as keyof typeof colorMap],
+          icon: iconMap[category as keyof typeof iconMap]
+        }
+      }).filter(c => c.total > 0)
+    } catch {
+      return []
+    }
+  }, [myStoreGoals])
 
   useEffect(() => {
-    loadProfile()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadGoals()
+    loadUserProfile()
   }, [])
 
-  // Live update mock goals in Profile when localStorage changes
-  useEffect(() => {
-    if (!isMockAuthEnabled()) return
-    const onStorage = () => {
-      try {
-        const store = require("@/backend/lib/mock-store")
-        const sg = store.getGoals()
-        const mapped = sg.map((g: any) => ({
+  const loadUserProfile = () => {
+    try {
+      const kycData = localStorage.getItem('kycData')
+      if (kycData) {
+        setUserProfile(JSON.parse(kycData))
+      } else {
+        // Default profile if no KYC data
+        setUserProfile({
+          firstName: 'John',
+          lastName: 'Doe',
+          username: 'johndoe',
+          email: 'john@example.com',
+          phone: '+1 (555) 123-4567',
+          location: 'San Francisco, CA',
+          website: 'johndoe.com',
+          bio: 'Goal-oriented individual passionate about personal growth and helping others achieve their dreams.'
+        })
+      }
+    } catch {
+      setUserProfile({
+        firstName: 'John',
+        lastName: 'Doe',
+        username: 'johndoe',
+        email: 'john@example.com',
+        phone: '+1 (555) 123-4567',
+        location: 'San Francisco, CA',
+        website: 'johndoe.com',
+        bio: 'Goal-oriented individual passionate about personal growth and helping others achieve their dreams.'
+      })
+    }
+  }
+
+  const loadGoals = () => {
+    try {
+      const storedGoals = localStorage.getItem('goals')
+      const storedPartnerGoals = localStorage.getItem('partnerGoals')
+      
+      if (storedGoals) {
+        const goals = JSON.parse(storedGoals)
+        const mapped = goals.map((g: any) => ({
           id: String(g.id),
-          user_id: g.goalOwner?.id || 'mock-user-id',
+          user_id: 'mock-user-id',
           title: g.title,
           description: g.description,
-          goal_type: g.type,
+          goal_type: g.type === 'multi-activity' ? 'multi' : g.type === 'single-activity' ? 'single' : g.type,
           visibility: g.visibility,
           is_suspended: g.status === 'paused',
           created_at: g.createdAt,
-          updated_at: g.createdAt,
-          completed_at: g.status === 'completed' ? new Date().toISOString() : null,
+          updated_at: g.updatedAt || g.createdAt,
+          completed_at: g.completedAt || null,
           start_date: g.createdAt,
         }))
         setGoals(mapped as any)
-        const myS = sg.filter((g: any) => (g.goalOwner?.id || 'mock-user-id') === 'mock-user-id')
-        const partnerS = sg.filter((g: any) => Array.isArray(g.accountabilityPartners) && g.accountabilityPartners.some((p: any) => p.id === 'mock-user-id') && (g.goalOwner?.id || 'mock-user-id') !== 'mock-user-id')
-        setMyStoreGoals(myS)
-        setPartnerStoreGoals(partnerS)
-      } catch {}
-    }
+        setMyStoreGoals(goals)
+      }
+      
+      if (storedPartnerGoals) {
+        const partnerGoals = JSON.parse(storedPartnerGoals)
+        setPartnerStoreGoals(partnerGoals)
+      }
+    } catch {}
+    setLoading(false)
+  }
+
+  // Live update when localStorage changes
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.addEventListener('storage', onStorage)
+      window.addEventListener('storage', loadGoals)
+      window.addEventListener('goalUpdated', loadGoals)
+      window.addEventListener('goalDeleted', loadGoals)
     }
     return () => {
       if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', onStorage)
+        window.removeEventListener('storage', loadGoals)
+        window.removeEventListener('goalUpdated', loadGoals)
+        window.removeEventListener('goalDeleted', loadGoals)
       }
     }
   }, [])
 
-  const loadProfile = async () => {
-    if (isMockAuthEnabled()) {
-      setUser(getMockUser() as unknown as User)
-      try {
-        const store = require("@/backend/lib/mock-store")
-        const sg = store.getGoals()
-        const mapped = sg.map((g: any) => ({
-          id: String(g.id),
-          user_id: g.goalOwner?.id || 'mock-user-id',
-          title: g.title,
-          description: g.description,
-          goal_type: g.type,
-          visibility: g.visibility,
-          is_suspended: g.status === 'paused',
-          created_at: g.createdAt,
-          updated_at: g.createdAt,
-          completed_at: g.status === 'completed' ? new Date().toISOString() : null,
-          start_date: g.createdAt,
-        }))
-        setGoals(mapped as any)
-        const myS = sg.filter((g: any) => (g.goalOwner?.id || 'mock-user-id') === 'mock-user-id')
-        const partnerS = sg.filter((g: any) => Array.isArray(g.accountabilityPartners) && g.accountabilityPartners.some((p: any) => p.id === 'mock-user-id') && (g.goalOwner?.id || 'mock-user-id') !== 'mock-user-id')
-        setMyStoreGoals(myS)
-        setPartnerStoreGoals(partnerS)
-      } catch {}
-      setLoading(false)
-      return
-    }
-    
-    if (!supabase) return
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
-        router.push("/auth/login")
-        return
-      }
 
-      // Load user profile
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", authUser.id)
-        .single()
-
-      if (userError && userError.code !== "PGRST116") throw userError
-      setUser(userData)
-
-      // Load goals
-      const { data: goalsData, error: goalsError } = await supabase
-        .from("goals")
-        .select("*")
-        .eq("user_id", authUser.id)
-        .order("created_at", { ascending: false })
-
-      if (goalsError) throw goalsError
-      setGoals(goalsData || [])
-
-      // Load followers count
-      const { count: followersCount } = await supabase
-        .from("followers")
-        .select("*", { count: "exact", head: true })
-        .eq("following_id", authUser.id)
-
-      setFollowers(followersCount || 0)
-
-      // Load following count
-      const { count: followingCount } = await supabase
-        .from("followers")
-        .select("*", { count: "exact", head: true })
-        .eq("follower_id", authUser.id)
-
-      setFollowing(followingCount || 0)
-    } catch (error: unknown) {
-      toast.error("Failed to load profile")
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -223,13 +235,6 @@ export default function ProfilePage() {
       earnedAt: "2024-02-20",
       rarity: "rare"
     }
-  ]
-
-  const categoryStats = [
-    { name: "Health & Fitness", completed: 12, total: 15, color: "bg-green-500", icon: Heart },
-    { name: "Learning", completed: 8, total: 12, color: "bg-blue-500", icon: BookOpen },
-    { name: "Career", completed: 5, total: 8, color: "bg-purple-500", icon: Briefcase },
-    { name: "Personal", completed: 10, total: 14, color: "bg-orange-500", icon: Star }
   ]
 
   const recentActivity = [
@@ -285,34 +290,44 @@ export default function ProfilePage() {
                     <span className="hidden sm:inline">Settings</span>
                   </Button>
                 </Link>
-                <Button size="sm" className="text-xs">
-                  <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Edit Profile</span>
-                </Button>
+                <Link href="/profile/edit">
+                  <Button size="sm" className="text-xs">
+                    <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Edit Profile</span>
+                  </Button>
+                </Link>
               </div>
             </div>
 
             {/* Profile Info */}
             <div className="space-y-2 sm:space-y-3">
               <div>
-                <h1 className="text-lg sm:text-xl md:text-2xl font-bold">{user?.display_name || "John Doe"}</h1>
-                <p className="text-xs sm:text-sm text-muted-foreground">@{user?.username || "johndoe"}</p>
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
+                  {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'John Doe'}
+                </h1>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  @{userProfile?.username || 'johndoe'}
+                </p>
               </div>
 
               <p className="text-xs sm:text-sm leading-relaxed">
-                {user?.bio || "Goal-oriented individual passionate about personal growth and helping others achieve their dreams."}
+                {userProfile?.bio || 'Goal-oriented individual passionate about personal growth and helping others achieve their dreams.'}
               </p>
 
               {/* Location & Links */}
               <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <span>San Francisco, CA</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <LinkIcon className="h-3.5 w-3.5" />
-                  <span>johndoe.com</span>
-                </div>
+                {userProfile?.location && (
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span>{userProfile.location}</span>
+                  </div>
+                )}
+                {userProfile?.website && (
+                  <div className="flex items-center gap-1.5">
+                    <LinkIcon className="h-3.5 w-3.5" />
+                    <span>{userProfile.website}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5" />
                   <span>Joined January 2024</span>
@@ -428,9 +443,7 @@ export default function ProfilePage() {
                               </Badge>
                               {isMockAuthEnabled() && (() => {
                                 try {
-                                  const store = require("@/backend/lib/mock-store")
-                                  const sg = store.getGoals()
-                                  const s = sg.find((g: any) => String(g.id) === String(goal.id))
+                                  const s = myStoreGoals.find((g: any) => String(g.id) === String(goal.id))
                                   if (!s) return null
                                   return (
                                     <>
@@ -474,9 +487,7 @@ export default function ProfilePage() {
                               </Badge>
                               {isMockAuthEnabled() && (() => {
                                 try {
-                                  const store = require("@/backend/lib/mock-store")
-                                  const sg = store.getGoals()
-                                  const s = sg.find((g: any) => String(g.id) === String(goal.id))
+                                  const s = myStoreGoals.find((g: any) => String(g.id) === String(goal.id))
                                   if (!s) return null
                                   return (
                                     <>
@@ -516,9 +527,7 @@ export default function ProfilePage() {
                               </Badge>
                               {isMockAuthEnabled() && (() => {
                                 try {
-                                  const store = require("@/backend/lib/mock-store")
-                                  const sg = store.getGoals()
-                                  const s = sg.find((g: any) => String(g.id) === String(goal.id))
+                                  const s = myStoreGoals.find((g: any) => String(g.id) === String(goal.id))
                                   if (!s) return null
                                   return (
                                     <>
@@ -543,8 +552,8 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Partner Goals (Mock) */}
-            {isMockAuthEnabled() && partnerStoreGoals.length > 0 && (
+            {/* Partner Goals */}
+            {partnerStoreGoals.length > 0 && (
               <Card className="hover-lift mt-4 sm:mt-6">
                 <CardHeader className="p-4 sm:p-6">
                   <div className="flex items-center justify-between gap-2">
