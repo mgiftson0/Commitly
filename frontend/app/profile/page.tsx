@@ -291,31 +291,34 @@ export default function ProfilePage() {
   return (
     <MainLayout>
       <div className="space-y-4 sm:space-y-6">
-        {/* Profile Header Card */}
-        <Card className="overflow-hidden">
-          {/* Cover Image */}
-          <div className="h-24 sm:h-32 md:h-40 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20" />
-          
-          <CardContent className="p-3 sm:p-4 md:p-6">
+        {/* Enhanced Profile Header Card */}
+        <Card className="overflow-hidden shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
+          {/* Enhanced Cover Image */}
+          <div className="h-24 sm:h-32 md:h-40 bg-gradient-to-br from-primary/10 via-primary/20 to-primary/10 relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
+          </div>
+
+          <CardContent className="p-4 sm:p-6 md:p-8">
             {/* Avatar & Action Buttons */}
-            <div className="flex justify-between items-start mb-3 sm:mb-4">
+            <div className="flex justify-between items-start mb-4 sm:mb-6">
               <div className="relative -mt-12 sm:-mt-16">
-                <Avatar className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 border-4 border-background">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-xl" />
+                <Avatar className="relative h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
                   <AvatarImage src="/placeholder-avatar.jpg" />
-                  <AvatarFallback className="text-xl sm:text-2xl md:text-3xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                    JD
+                  <AvatarFallback className="text-xl sm:text-2xl md:text-3xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 text-primary-foreground font-bold">
+                    {userProfile ? `${userProfile.firstName[0]}${userProfile.lastName[0]}` : 'JD'}
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-2">
                 <Link href="/settings">
-                  <Button variant="outline" size="sm" className="text-xs">
+                  <Button variant="outline" size="sm" className="text-xs shadow-sm">
                     <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Settings</span>
                   </Button>
                 </Link>
                 <Link href="/profile/edit">
-                  <Button size="sm" className="text-xs">
+                  <Button size="sm" className="text-xs shadow-sm">
                     <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Edit Profile</span>
                   </Button>
@@ -323,58 +326,58 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Profile Info */}
-            <div className="space-y-2 sm:space-y-3">
+            {/* Enhanced Profile Info */}
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                   {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'John Doe'}
                 </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground">
+                <p className="text-sm sm:text-base text-muted-foreground font-medium">
                   @{userProfile?.username || 'johndoe'}
                 </p>
               </div>
 
-              <p className="text-xs sm:text-sm leading-relaxed">
+              <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
                 {userProfile?.bio || 'Goal-oriented individual passionate about personal growth and helping others achieve their dreams.'}
               </p>
 
-              {/* Location & Links */}
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+              {/* Enhanced Location & Links */}
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-muted-foreground">
                 {userProfile?.location && (
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5" />
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full">
+                    <MapPin className="h-4 w-4" />
                     <span>{userProfile.location}</span>
                   </div>
                 )}
                 {userProfile?.website && (
-                  <div className="flex items-center gap-1.5">
-                    <LinkIcon className="h-3.5 w-3.5" />
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full">
+                    <LinkIcon className="h-4 w-4" />
                     <span>{userProfile.website}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full">
+                  <Calendar className="h-4 w-4" />
                   <span>Joined January 2024</span>
                 </div>
               </div>
 
-              {/* Twitter-style Stats Row */}
-              <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-2">
-                <button className="hover:underline">
-                  <span className="font-bold text-sm sm:text-base">{followers}</span>
-                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Followers</span>
-                </button>
-                <button className="hover:underline">
-                  <span className="font-bold text-sm sm:text-base">{following}</span>
-                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Following</span>
-                </button>
-                <div>
-                  <span className="font-bold text-sm sm:text-base">{goals.length}</span>
-                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Goals</span>
+              {/* Enhanced Stats Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-3 border-t border-border/50">
+                <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="font-bold text-lg sm:text-xl text-primary">{followers}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Followers</div>
                 </div>
-                <div>
-                  <span className="font-bold text-sm sm:text-base">{achievements.filter(a => a.unlocked).length}</span>
-                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Badges</span>
+                <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="font-bold text-lg sm:text-xl text-primary">{following}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Following</div>
+                </div>
+                <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="font-bold text-lg sm:text-xl text-primary">{goals.length}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Goals</div>
+                </div>
+                <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="font-bold text-lg sm:text-xl text-primary">{achievements.filter(a => a.unlocked).length}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Badges</div>
                 </div>
               </div>
             </div>
@@ -747,7 +750,7 @@ export default function ProfilePage() {
                     <p className="text-xs">No recent activity</p>
                   </div>
                 ) : (
-                  recentActivity.map((activity) => {
+                  recentActivity.map((activity: any) => {
                     const Icon = activity.icon
                     return (
                       <div key={activity.id} className="flex items-start gap-2 sm:gap-3">
@@ -788,7 +791,10 @@ export default function ProfilePage() {
       />
       
       {/* Celebration Animation */}
-      {showCelebration && <Celebration />}
+      <Celebration
+        show={showCelebration}
+        onComplete={() => setShowCelebration(false)}
+      />
     </MainLayout>
   )
 }

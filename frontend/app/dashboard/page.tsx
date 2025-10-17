@@ -353,36 +353,36 @@ export default function DashboardPage() {
       <div className="space-y-6">
         {/* Daily Motivation */}
         {motivationEnabled && showMotivation && (
-          <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 animate-in slide-in-from-top-2 duration-500">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full">
-                <Star className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-800 rounded-2xl p-6 shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/60 rounded-2xl">
+                <Star className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex-1">
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-blue-100 dark:border-blue-800">
-                  <p className="text-sm text-gray-900 dark:text-gray-100 italic mb-2">
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-blue-100 dark:border-blue-800">
+                  <p className="text-sm text-gray-900 dark:text-gray-100 italic mb-2 leading-relaxed">
                     "{todayMotivation.quote}"
                   </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                     — {todayMotivation.author}
                   </p>
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={toggleMotivation}
-                  className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="h-8 w-8 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full"
                   title="Toggle daily notifications"
                 >
-                  <Bell className="h-3 w-3" />
+                  <Bell className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowMotivation(false)}
-                  className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="h-8 w-8 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full"
                   title="Hide motivation"
                 >
                   ×
@@ -393,108 +393,110 @@ export default function DashboardPage() {
         )}
 
         {/* Welcome Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Welcome back, <span className="text-gradient-primary">{(() => {
-                try {
-                  const kycData = localStorage.getItem('kycData')
-                  if (kycData) {
-                    const profile = JSON.parse(kycData)
-                    return profile.firstName || 'John'
-                  }
-                } catch {}
-                return 'John'
-              })()}!</span>
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              You&apos;re on a {todayStats.streak}-day streak! Keep up the great work! 🔥
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/goals/create">
-              <Button className="hover-lift" size="sm">
-                <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">New Goal</span>
-              </Button>
-            </Link>
-            <Link href="/partners/find" className="hidden sm:block">
-              <Button variant="outline" className="hover-lift" size="sm">
-                <Users className="h-4 w-4 mr-2" />
-                Find Partners
-              </Button>
-            </Link>
-            {!motivationEnabled && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setMotivationEnabled(true)
-                  setShowMotivation(true)
-                  localStorage.setItem('dailyMotivationEnabled', 'true')
-                }}
-                className="hover-lift animate-pulse"
-              >
-                <Star className="h-4 w-4 mr-2 animate-spin" />
-                Enable Motivation
-              </Button>
-            )}
+        <div className="relative bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/50 dark:to-blue-950/30 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                Welcome back, <span className="text-blue-600 dark:text-blue-400">{(() => {
+                  try {
+                    const kycData = localStorage.getItem('kycData')
+                    if (kycData) {
+                      const profile = JSON.parse(kycData)
+                      return profile.firstName || 'John'
+                    }
+                  } catch {}
+                  return 'John'
+                })()}!</span>
+              </h1>
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-1">
+                You're on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! Keep up the great work! 🔥
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Link href="/goals/create">
+                <Button className="shadow-md bg-blue-600 hover:bg-blue-700 text-white" size="sm">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">New Goal</span>
+                </Button>
+              </Link>
+              <Link href="/partners/find" className="hidden sm:block">
+                <Button variant="outline" className="shadow-md border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" size="sm">
+                  <Users className="h-4 w-4 mr-2" />
+                  Find Partners
+                </Button>
+              </Link>
+              {!motivationEnabled && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setMotivationEnabled(true)
+                    setShowMotivation(true)
+                    localStorage.setItem('dailyMotivationEnabled', 'true')
+                  }}
+                  className="shadow-md animate-pulse border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/30"
+                >
+                  <Star className="h-4 w-4 mr-2 animate-spin text-amber-600 dark:text-amber-400" />
+                  Enable Motivation
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Today's Summary Cards */}
         <div className="flex gap-3 sm:gap-4 overflow-x-auto">
-          <Card className="hover-lift min-w-[160px] flex-shrink-0 backdrop-blur-sm bg-card/80 border border-white/20">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <div className="p-2 sm:p-3 rounded-full bg-green-500/10 w-fit">
-                  <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30 w-fit">
+                  <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{todayStats.completed}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Completed</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{todayStats.completed}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="hover-lift min-w-[160px] flex-shrink-0 backdrop-blur-sm bg-card/80 border border-white/20">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <div className="p-2 sm:p-3 rounded-full bg-orange-500/10 w-fit">
-                  <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30 w-fit">
+                  <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{todayStats.pending}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Pending</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{todayStats.pending}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="hover-lift min-w-[160px] flex-shrink-0 backdrop-blur-sm bg-card/80 border border-white/20">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <div className="p-2 sm:p-3 rounded-full bg-blue-500/10 w-fit">
-                  <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 w-fit">
+                  <Flame className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Streak</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{todayStats.streak}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Streak</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{todayStats.streak}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="hover-lift min-w-[160px] flex-shrink-0 backdrop-blur-sm bg-card/80 border border-white/20">
+          <Card className="hover-lift min-w-[160px] flex-shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <div className="p-2 sm:p-3 rounded-full bg-purple-500/10 w-fit">
-                  <Award className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 w-fit">
+                  <Award className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Best</p>
-                  <p className="text-2xl sm:text-3xl font-bold">{todayStats.longestStreak}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Best</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{todayStats.longestStreak}</p>
                 </div>
               </div>
             </CardContent>
@@ -540,28 +542,26 @@ export default function DashboardPage() {
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .slice(0, 3)
                     .map((goal) => (
-                    <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer relative overflow-hidden" onClick={() => router.push(`/goals/${goal.id}`)}>
-                      <div className="absolute inset-0 rounded-lg border-2 border-transparent bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 animate-pulse opacity-50"></div>
-                      <div className="absolute inset-0 rounded-lg border border-blue-400/30 animate-pulse"></div>
-                      <div className="p-2 rounded-lg bg-primary/10 relative z-10">
-                        <Target className="h-4 w-4 text-primary" />
+                    <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer" onClick={() => router.push(`/goals/${goal.id}`)}>
+                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                        <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <div className="flex-1 min-w-0 relative z-10">
-                        <h4 className="font-medium text-sm truncate">{goal.title}</h4>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">{goal.title}</h4>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="outline" className="text-xs">
                             {goal.goal_type}
                           </Badge>
                           {goal.streak > 0 && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Flame className="h-3 w-3 text-orange-500" />
+                            <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
+                              <Flame className="h-3 w-3 text-orange-500 dark:text-orange-400" />
                               <span>{goal.streak}d</span>
                             </div>
                           )}
                         </div>
                       </div>
-                      <div className="text-right relative z-10">
-                        <div className="text-xs font-medium">{goal.progress}%</div>
+                      <div className="text-right">
+                        <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{goal.progress}%</div>
                         <Progress value={goal.progress} className="w-16 h-1.5 mt-1" />
                       </div>
                     </div>
@@ -592,12 +592,12 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-4 flex-1 overflow-y-auto">
-                  {recentActivity.map((activity) => {
+                  {recentActivity.map((activity: any) => {
                     const Icon = activity.icon
                     return (
-                      <div 
-                        key={activity.id} 
-                        className="flex items-start gap-3 p-3 rounded-lg backdrop-blur-sm bg-card/50 border border-white/10 hover:bg-accent/50 transition-colors cursor-pointer min-h-[60px]"
+                      <div
+                        key={activity.id}
+                        className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer min-h-[60px]"
                         onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
                       >
                         <div className={`p-2 rounded-full bg-muted`}>
@@ -783,54 +783,46 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="grid grid-cols-4 gap-3">
               <Link href="/goals/create">
-                <div className="aspect-square p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all hover:scale-105 cursor-pointer shadow-xl border border-blue-400/20 backdrop-blur-sm">
-                  <div className="h-full flex flex-col items-center justify-center text-center relative">
-                    <div className="absolute top-1 right-1 w-2 h-2 bg-white/40 rounded-full animate-pulse"></div>
-                    <div className="absolute top-0 left-0 w-3 h-3 bg-white/20 rounded-full"></div>
+                <div className="aspect-square p-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all hover:scale-105 cursor-pointer shadow-lg">
+                  <div className="h-full flex flex-col items-center justify-center text-center">
                     <div className="p-2 bg-white/20 rounded-full mb-2">
                       <Plus className="h-6 w-6" />
                     </div>
-                    <div className="text-[10px] font-bold leading-tight">CREATE</div>
-                    <div className="text-[8px] opacity-90 font-medium">New Goal</div>
+                    <div className="text-xs font-bold leading-tight">CREATE</div>
+                    <div className="text-[10px] opacity-90 font-medium">New Goal</div>
                   </div>
                 </div>
               </Link>
               <Link href="/partners/find">
-                <div className="aspect-square p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 transition-all hover:scale-105 cursor-pointer shadow-xl border border-purple-400/20 backdrop-blur-sm">
-                  <div className="h-full flex flex-col items-center justify-center text-center relative">
-                    <div className="absolute top-1 right-1 w-2 h-2 bg-white/40 rounded-full animate-pulse"></div>
-                    <div className="absolute bottom-1 left-1 w-2 h-2 bg-white/30 rounded-full"></div>
+                <div className="aspect-square p-3 rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-all hover:scale-105 cursor-pointer shadow-lg">
+                  <div className="h-full flex flex-col items-center justify-center text-center">
                     <div className="p-2 bg-white/20 rounded-full mb-2">
                       <Users className="h-6 w-6" />
                     </div>
-                    <div className="text-[10px] font-bold leading-tight">PARTNERS</div>
-                    <div className="text-[8px] opacity-90 font-medium">Find Help</div>
+                    <div className="text-xs font-bold leading-tight">PARTNERS</div>
+                    <div className="text-[10px] opacity-90 font-medium">Find Help</div>
                   </div>
                 </div>
               </Link>
               <Link href="/goals">
-                <div className="aspect-square p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all hover:scale-105 cursor-pointer shadow-xl border border-green-400/20 backdrop-blur-sm">
-                  <div className="h-full flex flex-col items-center justify-center text-center relative">
-                    <div className="absolute top-1 right-1 w-2 h-2 bg-white/40 rounded-full animate-pulse"></div>
-                    <div className="absolute top-2 left-1 w-1 h-1 bg-white/40 rounded-full"></div>
+                <div className="aspect-square p-3 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-all hover:scale-105 cursor-pointer shadow-lg">
+                  <div className="h-full flex flex-col items-center justify-center text-center">
                     <div className="p-2 bg-white/20 rounded-full mb-2">
                       <Target className="h-6 w-6" />
                     </div>
-                    <div className="text-[10px] font-bold leading-tight">BROWSE</div>
-                    <div className="text-[8px] opacity-90 font-medium">All Goals</div>
+                    <div className="text-xs font-bold leading-tight">BROWSE</div>
+                    <div className="text-[10px] opacity-90 font-medium">All Goals</div>
                   </div>
                 </div>
               </Link>
               <Link href="/achievements">
-                <div className="aspect-square p-3 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 transition-all hover:scale-105 cursor-pointer shadow-xl border border-yellow-400/20 backdrop-blur-sm">
-                  <div className="h-full flex flex-col items-center justify-center text-center relative">
-                    <div className="absolute top-1 right-1 w-2 h-2 bg-white/40 rounded-full animate-pulse"></div>
-                    <div className="absolute bottom-2 right-2 w-1 h-1 bg-white/50 rounded-full"></div>
+                <div className="aspect-square p-3 rounded-xl bg-orange-600 text-white hover:bg-orange-700 transition-all hover:scale-105 cursor-pointer shadow-lg">
+                  <div className="h-full flex flex-col items-center justify-center text-center">
                     <div className="p-2 bg-white/20 rounded-full mb-2">
                       <Award className="h-6 w-6" />
                     </div>
-                    <div className="text-[10px] font-bold leading-tight">AWARDS</div>
-                    <div className="text-[8px] opacity-90 font-medium">Badges</div>
+                    <div className="text-xs font-bold leading-tight">AWARDS</div>
+                    <div className="text-[10px] opacity-90 font-medium">Badges</div>
                   </div>
                 </div>
               </Link>

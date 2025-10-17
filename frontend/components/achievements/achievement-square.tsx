@@ -18,33 +18,41 @@ interface AchievementSquareProps {
     total: number
     progressPercentage: number
   }
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
 }
 
 const rarityConfig = {
-  common: { 
-    unlockedBg: "bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/30 dark:to-emerald-800/30",
-    lockedBg: "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50", 
-    border: "border-gray-300 dark:border-gray-600",
-    badge: "bg-gray-500 text-white"
+  common: {
+    unlockedBg: "bg-white/10 backdrop-blur-sm border border-white/20",
+    lockedBg: "bg-gray-900/10 backdrop-blur-sm border border-gray-700/20",
+    border: "border-white/30 dark:border-gray-600/30",
+    badge: "bg-gray-600/80 backdrop-blur-sm text-white border border-white/20",
+    iconBg: "bg-green-500/20 backdrop-blur-sm border border-green-400/30",
+    glow: "shadow-green-200/50 dark:shadow-green-900/30"
   },
-  rare: { 
-    unlockedBg: "bg-gradient-to-br from-blue-50 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-800/30",
-    lockedBg: "bg-gradient-to-br from-blue-50/30 to-blue-100/30 dark:from-blue-900/10 dark:to-blue-800/10", 
-    border: "border-blue-400 dark:border-blue-600",
-    badge: "bg-blue-500 text-white"
+  rare: {
+    unlockedBg: "bg-white/15 backdrop-blur-md border border-white/30",
+    lockedBg: "bg-gray-900/15 backdrop-blur-sm border border-gray-600/20",
+    border: "border-blue-300/40 dark:border-blue-600/40",
+    badge: "bg-blue-600/80 backdrop-blur-sm text-white border border-white/20",
+    iconBg: "bg-blue-500/25 backdrop-blur-sm border border-blue-400/40",
+    glow: "shadow-blue-200/60 dark:shadow-blue-900/40"
   },
-  epic: { 
-    unlockedBg: "bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-900/30 dark:to-pink-800/30",
-    lockedBg: "bg-gradient-to-br from-purple-50/30 to-purple-100/30 dark:from-purple-900/10 dark:to-purple-800/10", 
-    border: "border-purple-400 dark:border-purple-600",
-    badge: "bg-purple-500 text-white"
+  epic: {
+    unlockedBg: "bg-white/20 backdrop-blur-lg border border-white/40",
+    lockedBg: "bg-gray-900/20 backdrop-blur-sm border border-gray-500/25",
+    border: "border-purple-300/50 dark:border-purple-500/50",
+    badge: "bg-purple-600/80 backdrop-blur-sm text-white border border-white/20",
+    iconBg: "bg-purple-500/30 backdrop-blur-md border border-purple-400/50",
+    glow: "shadow-purple-200/70 dark:shadow-purple-900/50"
   },
-  legendary: { 
-    unlockedBg: "bg-gradient-to-br from-yellow-50 via-orange-100 to-red-100 dark:from-yellow-900/30 dark:via-orange-800/30 dark:to-red-800/30",
-    lockedBg: "bg-gradient-to-br from-yellow-50/30 via-orange-50/30 to-red-50/30 dark:from-yellow-900/10 dark:via-orange-900/10 dark:to-red-900/10", 
-    border: "border-2 border-gradient-to-r from-yellow-400 via-orange-400 to-red-400",
-    badge: "bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 text-white"
+  legendary: {
+    unlockedBg: "bg-gradient-to-br from-white/25 via-orange-50/20 to-red-50/20 backdrop-blur-xl border-2 border-gradient-to-r from-yellow-300/60 via-orange-300/60 to-red-300/60",
+    lockedBg: "bg-gradient-to-br from-gray-900/25 via-gray-800/20 to-gray-700/20 backdrop-blur-sm border border-gray-500/30",
+    border: "border-2 border-yellow-300/40 via-orange-300/40 to-red-300/40",
+    badge: "bg-gradient-to-r from-yellow-500/80 via-orange-500/80 to-red-500/80 backdrop-blur-sm text-white border border-white/20",
+    iconBg: "bg-gradient-to-r from-yellow-400/30 via-orange-400/30 to-red-400/30 backdrop-blur-md border border-yellow-300/50",
+    glow: "shadow-yellow-200/80 via-orange-200/80 to-red-200/80 dark:shadow-yellow-900/60"
   }
 }
 
@@ -52,6 +60,7 @@ export function AchievementSquare({ achievement, size = 'md' }: AchievementSquar
   const config = rarityConfig[achievement.rarity]
   const Icon = achievement.icon
   const isSmall = size === 'sm'
+  const isLarge = size === 'lg'
   const isLocked = !achievement.unlocked
 
   return (
@@ -60,7 +69,7 @@ export function AchievementSquare({ achievement, size = 'md' }: AchievementSquar
       isLocked ? config.lockedBg : config.unlockedBg,
       config.border,
       isLocked && "opacity-70",
-      isSmall ? "p-3 min-h-[80px]" : "p-4 min-h-[100px]"
+      isSmall ? "p-3 min-h-[80px]" : isLarge ? "p-6 min-h-[140px]" : "p-4 min-h-[100px]"
     )}>
       {/* Rarity badge */}
       <div className="absolute -top-1 -right-1 z-10">
@@ -81,13 +90,16 @@ export function AchievementSquare({ achievement, size = 'md' }: AchievementSquar
         {/* Icon */}
         <div className="flex-1 flex items-center justify-center">
           <div className={cn(
-            "rounded-full p-2 bg-white/80 dark:bg-gray-800/80",
-            isSmall ? "p-1.5" : "p-2"
+            "rounded-full transition-all duration-300 hover:scale-110",
+            config.iconBg,
+            isSmall ? "p-2" : isLarge ? "p-4" : "p-3",
+            achievement.unlocked && config.glow
           )}>
             <Icon className={cn(
               achievement.color,
-              isSmall ? "h-6 w-6" : "h-8 w-8",
-              isLocked && "text-gray-400"
+              isSmall ? "h-6 w-6" : isLarge ? "h-10 w-10" : "h-8 w-8",
+              isLocked && "text-gray-400",
+              achievement.unlocked && "drop-shadow-sm"
             )} />
           </div>
         </div>
@@ -96,7 +108,7 @@ export function AchievementSquare({ achievement, size = 'md' }: AchievementSquar
         <div className="text-center mt-1">
           <h3 className={cn(
             "font-medium text-gray-900 dark:text-gray-100 line-clamp-2 leading-tight",
-            isSmall ? "text-[10px]" : "text-xs"
+            isSmall ? "text-[10px]" : isLarge ? "text-sm" : "text-xs"
           )}>
             {achievement.title}
           </h3>
