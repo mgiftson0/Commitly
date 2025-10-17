@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   Target,
   Plus,
@@ -39,6 +40,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { notifications } from "@/lib/notifications"
+import { createGoalCreatedActivity } from "@/lib/activity-tracker"
 
 export default function CreateGoalPage() {
   const [title, setTitle] = useState("")
@@ -57,6 +59,8 @@ export default function CreateGoalPage() {
   const [singleActivity, setSingleActivity] = useState("")
   const [scheduleType, setScheduleType] = useState<'date' | 'recurring'>('date')
   const [singleDate, setSingleDate] = useState("")
+  const [endCondition, setEndCondition] = useState<'ongoing' | 'by-date' | 'after-completions'>('by-date')
+  const [targetCompletions, setTargetCompletions] = useState("")
   
   // Mock current user (owner)
   const currentUser = { id: "mock-user-id", name: "You", username: "you" }
@@ -141,7 +145,9 @@ export default function CreateGoalPage() {
         scheduleType,
         recurrencePattern: scheduleType === 'recurring' ? recurrencePattern : null,
         recurrenceDays: (scheduleType === 'recurring' && recurrencePattern === 'custom') ? recurrenceDays : null,
-        dueDate: singleDate || null,
+        dueDate: endCondition === 'by-date' ? singleDate : null,
+        endCondition,
+        targetCompletions: endCondition === 'after-completions' ? parseInt(targetCompletions) : null,
         activities: goalType === 'multi-activity'
           ? activities.filter(a => a.trim()).map(a => a.trim())
           : goalType === 'single-activity' && singleActivity.trim()
@@ -172,6 +178,7 @@ export default function CreateGoalPage() {
       
       toast.success('Goal created successfully!')
       await notifications.goalCreated(title)
+      createGoalCreatedActivity(title, goalId)
       router.push('/goals')
     } catch (error: any) {
       toast.error(error.message || 'Failed to create goal')
@@ -180,41 +187,88 @@ export default function CreateGoalPage() {
     }
   }
 
+  // Template selection state
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [templateGoalType, setTemplateGoalType] = useState<'single-activity' | 'multi-activity'>('single-activity')
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([])
+  const [selectedSingleActivity, setSelectedSingleActivity] = useState<string>('')
+
+  // Activity suggestions by category
+  const activitySuggestions = {
+    'health-fitness': ["30 minutes cardio", "Strength training", "Stretch routine", "Drink 8 glasses water", "Walk 10k steps"],
+    'learning': ["Read 20 pages", "Take notes", "Practice coding", "Watch tutorial", "Complete course module"],
+    'career': ["Update resume", "Network with colleagues", "Learn new skill", "Apply for jobs", "Complete project"],
+    'personal': ["Write in journal", "Meditate 10 minutes", "Call family/friends", "Organize space", "Practice gratitude"],
+    'wellness': ["Meditate 10 minutes", "Practice breathing", "Take vitamins", "Get 8 hours sleep", "Limit screen time"],
+    'finance': ["Track expenses", "Review budget", "Save money", "Pay bills", "Research investments"],
+    'relationships': ["Call family", "Text friends", "Plan date night", "Write thank you note", "Listen actively"],
+    'creative': ["Draw for 30 minutes", "Write 500 words", "Take photos", "Practice instrument", "Learn new technique"]
+  }
+
   // Goal templates for inspiration
   const goalTemplates = [
     {
       title: "Morning Workout",
       description: "Build strength and energy for the day",
-      type: "recurring" as const,
-      category: "Health & Fitness",
+      category: "health-fitness",
       icon: Dumbbell,
       color: "text-green-600"
     },
     {
-      title: "Read for 30 minutes",
+      title: "Daily Reading",
       description: "Expand knowledge and reduce stress",
-      type: "recurring" as const,
-      category: "Learning",
+      category: "learning",
       icon: BookOpen,
       color: "text-blue-600"
     },
     {
-      title: "Complete Project Portfolio",
-      description: "Showcase your work and skills",
-      type: "single" as const,
-      category: "Career",
+      title: "Career Development",
+      description: "Advance your professional growth",
+      category: "career",
       icon: Briefcase,
       color: "text-purple-600"
     },
     {
-      title: "Practice Meditation",
+      title: "Mindfulness Practice",
       description: "Find inner peace and mindfulness",
-      type: "recurring" as const,
-      category: "Wellness",
+      category: "wellness",
       icon: Heart,
       color: "text-pink-600"
     }
   ]
+
+  const applyTemplate = () => {
+    if (!selectedTemplate) return
+    
+    setTitle(selectedTemplate.title)
+    setDescription(selectedTemplate.description)
+    setCategory(selectedTemplate.category)
+    setGoalType(templateGoalType)
+    
+    if (templateGoalType === 'single-activity') {
+      setSingleActivity(selectedSingleActivity || selectedTemplate.title)
+    } else {
+      setActivities(selectedActivities.length > 0 ? selectedActivities : [""])
+    }
+    
+    setShowTemplateModal(false)
+    setSelectedTemplate(null)
+    setSelectedActivities([])
+    setSelectedSingleActivity('')
+  }
+
+  const toggleActivitySelection = (activity: string) => {
+    if (templateGoalType === 'single-activity') {
+      setSelectedSingleActivity(activity === selectedSingleActivity ? '' : activity)
+    } else {
+      setSelectedActivities(prev => 
+        prev.includes(activity) 
+          ? prev.filter(a => a !== activity)
+          : [...prev, activity]
+      )
+    }
+  }
 
   return (
     <MainLayout>
@@ -433,7 +487,7 @@ export default function CreateGoalPage() {
                   <div className="space-y-4">
                     <Label className="text-sm font-medium">Goal Type <span className="text-destructive">*</span></Label>
                     <RadioGroup value={goalType} onValueChange={(value: string) => setGoalType(value as 'single-activity' | 'multi-activity')}>
-                      <div className="grid gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
                         <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${
                           goalType === 'single-activity' ? 'border-primary bg-primary/5' : 'border-border'
                         }`}>
@@ -521,18 +575,79 @@ export default function CreateGoalPage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <Label className="text-sm font-medium">Recurrence Pattern <span className="text-destructive">*</span></Label>
-                        <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
-                          <SelectTrigger className="focus-ring">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="daily">Daily</SelectItem>
-                            <SelectItem value="weekly">Weekly</SelectItem>
-                            <SelectItem value="monthly">Monthly</SelectItem>
-                            <SelectItem value="custom">Custom Days</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="grid gap-4 sm:grid-cols-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Recurrence Pattern <span className="text-destructive">*</span></Label>
+                            <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
+                              <SelectTrigger className="focus-ring">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="custom">Custom Days</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">End Condition <span className="text-destructive">*</span></Label>
+                            <Select value={endCondition} onValueChange={(value: 'ongoing' | 'by-date' | 'after-completions') => setEndCondition(value)}>
+                              <SelectTrigger className="focus-ring">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ongoing">Ongoing (No end date)</SelectItem>
+                                <SelectItem value="by-date">
+                                  {recurrencePattern === 'daily' ? 'End Date' : 
+                                   recurrencePattern === 'weekly' ? 'Target Week' :
+                                   recurrencePattern === 'monthly' ? 'Target Month' : 'End Date'}
+                                </SelectItem>
+                                <SelectItem value="after-completions">After Completions</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {endCondition === 'by-date' && (
+                            <div className="space-y-2">
+                              <Label htmlFor="recurringDue" className="text-sm font-medium">
+                                {recurrencePattern === 'daily' ? 'End Date' : 
+                                 recurrencePattern === 'weekly' ? 'Target Week End' :
+                                 recurrencePattern === 'monthly' ? 'Target Month End' : 'End Date'} <span className="text-destructive">*</span>
+                              </Label>
+                              <Input 
+                                id="recurringDue" 
+                                type="date" 
+                                value={singleDate} 
+                                onChange={(e) => setSingleDate(e.target.value)} 
+                                className="focus-ring" 
+                                min={new Date().toISOString().split('T')[0]}
+                                max={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                                required
+                              />
+                            </div>
+                          )}
+                          {endCondition === 'after-completions' && (
+                            <div className="space-y-2">
+                              <Label htmlFor="targetCompletions" className="text-sm font-medium">
+                                Target Completions <span className="text-destructive">*</span>
+                              </Label>
+                              <Input 
+                                id="targetCompletions" 
+                                type="number" 
+                                min="1"
+                                max="365"
+                                value={targetCompletions} 
+                                onChange={(e) => setTargetCompletions(e.target.value)} 
+                                className="focus-ring" 
+                                placeholder={recurrencePattern === 'daily' ? 'e.g., 30 days' :
+                                           recurrencePattern === 'weekly' ? 'e.g., 12 weeks' :
+                                           recurrencePattern === 'monthly' ? 'e.g., 6 months' :
+                                           'e.g., 20 cycles'}
+                                required
+                              />
+                            </div>
+                          )}
+                        </div>
 
                         {recurrencePattern === "custom" && (
                           <div className="space-y-3">
@@ -554,20 +669,8 @@ export default function CreateGoalPage() {
                           </div>
                         )}
                         
-                        <div className="space-y-2">
-                          <Label htmlFor="recurringDue" className="text-sm font-medium">Due Date <span className="text-destructive">*</span></Label>
-                          <Input 
-                            id="recurringDue" 
-                            type="date" 
-                            value={singleDate} 
-                            onChange={(e) => setSingleDate(e.target.value)} 
-                            className="focus-ring" 
-                            min={new Date().toISOString().split('T')[0]}
-                            max={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                            required
-                          />
-                          <p className="text-xs text-muted-foreground">Maximum 2 months from today</p>
-                        </div>
+                        
+
                       </div>
                     )}
                   </div>
@@ -582,7 +685,36 @@ export default function CreateGoalPage() {
                           Add Activity
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground">Add at least 2 activities</p>
+                      <p className="text-xs text-muted-foreground">Add at least 2 activities or choose from suggestions</p>
+                      
+                      {/* Activity Suggestions Dropdown */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">Quick Add Suggestions:</Label>
+                        <Select value="" onValueChange={(value) => {
+                          const emptyIndex = activities.findIndex(a => !a.trim())
+                          if (emptyIndex !== -1) {
+                            updateActivity(emptyIndex, value)
+                          } else {
+                            setActivities([...activities, value])
+                          }
+                        }}>
+                          <SelectTrigger className="focus-ring">
+                            <SelectValue placeholder="Choose from suggestions..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[
+                              "30 minutes cardio", "Read 20 pages", "Meditate 10 minutes", "Drink 8 glasses water", "Write in journal",
+                              "Practice coding", "Learn new skill", "Call family/friends", "Organize workspace", "Plan tomorrow",
+                              "Stretch routine", "Healthy breakfast", "No social media", "Take vitamins", "Walk 10k steps"
+                            ].map((suggestion) => (
+                              <SelectItem key={suggestion} value={suggestion}>
+                                {suggestion}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
                       <div className="space-y-3">
                         {activities.map((activity, index) => (
                           <div key={index} className="flex gap-2">
@@ -738,7 +870,7 @@ export default function CreateGoalPage() {
                         Cancel
                       </Button>
                     </Link>
-                    <Button type="submit" className="flex-1 hover-lift" disabled={loading || !title.trim() || !description.trim() || !category || !goalNature || (goalType === 'single-activity' && !singleActivity.trim()) || (goalType === 'multi-activity' && activities.filter(a => a.trim()).length < 2) || (scheduleType === 'date' && !singleDate) || (scheduleType === 'recurring' && recurrencePattern === 'custom' && recurrenceDays.length === 0)}>
+                    <Button type="submit" className="flex-1 hover-lift" disabled={loading || !title.trim() || !description.trim() || !category || !goalNature || (goalType === 'single-activity' && !singleActivity.trim()) || (goalType === 'multi-activity' && activities.filter(a => a.trim()).length < 2) || (scheduleType === 'date' && !singleDate) || (scheduleType === 'recurring' && recurrencePattern === 'custom' && recurrenceDays.length === 0) || (scheduleType === 'recurring' && endCondition === 'by-date' && !singleDate) || (scheduleType === 'recurring' && endCondition === 'after-completions' && !targetCompletions)}>
                       {loading ? (
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -779,9 +911,8 @@ export default function CreateGoalPage() {
                       variant="outline"
                       className="w-full justify-start h-auto p-3 hover-lift"
                       onClick={() => {
-                        setTitle(template.title)
-                        setDescription(template.description)
-                        setGoalType(template.type as 'single-activity' | 'multi-activity' | 'recurring')
+                        setSelectedTemplate(template)
+                        setShowTemplateModal(true)
                       }}
                     >
                       <div className="flex items-start gap-3 text-left">
@@ -794,7 +925,7 @@ export default function CreateGoalPage() {
                             {template.description}
                           </div>
                           <Badge variant="secondary" className="text-xs mt-1">
-                            {template.category}
+                            {template.category.replace('-', ' ')}
                           </Badge>
                         </div>
                       </div>
@@ -803,6 +934,90 @@ export default function CreateGoalPage() {
                 })}
               </CardContent>
             </Card>
+
+            {/* Template Selection Modal */}
+            <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Customize Template</DialogTitle>
+                </DialogHeader>
+                {selectedTemplate && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <selectedTemplate.icon className={`h-5 w-5 ${selectedTemplate.color}`} />
+                      <div>
+                        <div className="font-medium">{selectedTemplate.title}</div>
+                        <div className="text-sm text-muted-foreground">{selectedTemplate.description}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Goal Type</Label>
+                      <RadioGroup value={templateGoalType} onValueChange={(v: 'single-activity' | 'multi-activity') => setTemplateGoalType(v)}>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="single-activity" id="template-single" />
+                          <Label htmlFor="template-single" className="text-sm">Single Activity</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="multi-activity" id="template-multi" />
+                          <Label htmlFor="template-multi" className="text-sm">Multi-Activity Checklist</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        {templateGoalType === 'single-activity' ? 'Choose One Activity' : 'Select Activities'}
+                      </Label>
+                      <div className="space-y-1">
+                        {(activitySuggestions[selectedTemplate.category as keyof typeof activitySuggestions] || []).map((activity, i) => {
+                          const isSelected = templateGoalType === 'single-activity' 
+                            ? selectedSingleActivity === activity
+                            : selectedActivities.includes(activity)
+                          
+                          return (
+                            <Button
+                              key={i}
+                              variant={isSelected ? "default" : "ghost"}
+                              size="sm"
+                              className="w-full justify-start h-auto p-2 text-sm"
+                              onClick={() => toggleActivitySelection(activity)}
+                            >
+                              <div className="flex items-center gap-2">
+                                {templateGoalType === 'single-activity' ? (
+                                  <div className={`w-3 h-3 rounded-full border-2 ${isSelected ? 'bg-primary border-primary' : 'border-muted-foreground'}`} />
+                                ) : (
+                                  <Checkbox checked={isSelected} readOnly />
+                                )}
+                                {activity}
+                              </div>
+                            </Button>
+                          )
+                        })}
+                      </div>
+                      {templateGoalType === 'multi-activity' && (
+                        <p className="text-xs text-muted-foreground">
+                          Selected: {selectedActivities.length}/5
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button variant="outline" onClick={() => setShowTemplateModal(false)} className="flex-1">
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={applyTemplate} 
+                        className="flex-1"
+                        disabled={templateGoalType === 'single-activity' ? !selectedSingleActivity : selectedActivities.length === 0}
+                      >
+                        Apply Template
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
 
             {/* Tips Card */}
             <Card className="hover-lift">

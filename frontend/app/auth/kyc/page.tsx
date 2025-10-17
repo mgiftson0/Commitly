@@ -30,8 +30,7 @@ import {
   Users
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient } from "@/backend/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/backend/lib/mock-auth"
+
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -42,89 +41,46 @@ export default function KYCPage() {
   const [bio, setBio] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = getSupabaseClient()
 
   useEffect(() => {
-    // Check if user is authenticated
-    const checkAuth = async () => {
-      if (isMockAuthEnabled()) {
-        // In mock mode, allow KYC to proceed
-        return
-      }
-      
-      if (!supabase) return
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        toast.error("Please sign up first")
-        router.push("/auth/signup")
-        return
-      }
-
-      // Check if user profile already exists
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("id", user.id)
-        .single()
-
-      if (existingUser) {
-        toast.info("Profile already exists")
-        router.push("/dashboard")
-      }
+    // Check if KYC already completed
+    const existingKyc = localStorage.getItem('kycData')
+    if (existingKyc) {
+      toast.info("Profile already exists")
+      router.push("/dashboard")
     }
-
-    checkAuth()
-  }, [router, supabase])
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (isMockAuthEnabled()) {
-      setLoading(true)
-      await mockDelay(1000)
-      toast.success("Profile created successfully! (Mock Mode)")
-      router.push("/dashboard")
-      setLoading(false)
-      return
-    }
-    
-    if (!supabase) {
-      toast.error("Authentication service is not available")
-      return
-    }
     setLoading(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
-
-      // Insert user record
-      const { error: insertError } = await supabase.from("users").insert({
-        id: user.id,
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Save KYC data to localStorage
+      const kycData = {
         username: username.toLowerCase(),
-        display_name: displayName,
-        phone_number: phoneNumber,
-        email: user.email!,
+        firstName: displayName.split(' ')[0] || displayName,
+        lastName: displayName.split(' ').slice(1).join(' ') || '',
+        phoneNumber,
+        email: 'user@example.com',
         bio: bio || null,
-      })
-
-      if (insertError) {
-        console.error("Insert error:", insertError)
-        throw insertError
+        location,
+        website,
+        interests,
+        goalCategories,
+        profilePicture,
+        createdAt: new Date().toISOString()
       }
-
+      
+      localStorage.setItem('kycData', JSON.stringify(kycData))
       toast.success("Profile created successfully!")
       router.push("/dashboard")
-    } catch (error: unknown) {
+    } catch (error) {
       console.error("KYC error:", error)
-      const err = error as { code?: string; message?: string }
-      if (err.code === "23505") {
-        toast.error("Username or phone number already taken")
-      } else if (err.message) {
-        toast.error(`Database error: ${err.message}`)
-      } else {
-        toast.error("Failed to create profile. Please try again.")
-      }
+      toast.error("Failed to create profile. Please try again.")
     } finally {
       setLoading(false)
     }

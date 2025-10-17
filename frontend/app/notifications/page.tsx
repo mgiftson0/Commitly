@@ -27,17 +27,23 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient, type Notification } from "@/backend/lib/supabase"
-import { isMockAuthEnabled } from "@/backend/lib/mock-auth"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
-import { getNotifications as getMockNotificationsStore } from "@/backend/lib/mock-store"
+
+type Notification = {
+  id: string
+  title: string
+  message: string
+  type: string
+  is_read: boolean
+  created_at: string
+  related_goal_id?: string
+}
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = getSupabaseClient()
 
   useEffect(() => {
     loadNotifications()
@@ -45,29 +51,12 @@ export default function NotificationsPage() {
   }, [])
 
   const loadNotifications = async () => {
-    if (isMockAuthEnabled()) {
-      // Use mock data (already defined in component)
-      setLoading(false)
-      return
-    }
-    
-    if (!supabase) return
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push("/auth/login")
-        return
+      const stored = localStorage.getItem('notifications')
+      if (stored) {
+        setNotifications(JSON.parse(stored))
       }
-
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-
-      if (error) throw error
-      setNotifications(data || [])
-    } catch (_error: unknown) {
+    } catch (error) {
       toast.error("Failed to load notifications")
     } finally {
       setLoading(false)
@@ -75,44 +64,44 @@ export default function NotificationsPage() {
   }
 
   const markAsRead = async (notificationId: string) => {
-    if (isMockAuthEnabled()) {
-      toast.info("Feature disabled in mock mode")
-      return
-    }
-    if (!supabase) return
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ is_read: true })
-        .eq("id", notificationId)
-
-      if (error) throw error
-      await loadNotifications()
-    } catch (_error: unknown) {
+      const stored = localStorage.getItem('notifications')
+      if (stored) {
+        const notifications = JSON.parse(stored)
+        const updated = notifications.map((n: any) => 
+          n.id === notificationId ? { ...n, is_read: true } : n
+        )
+        localStorage.setItem('notifications', JSON.stringify(updated))
+        await loadNotifications()
+        // Trigger header bell update
+        window.dispatchEvent(new CustomEvent('storage'))
+      }
+    } catch (error) {
       toast.error("Failed to mark as read")
     }
   }
 
-  const markAllAsRead = async () => {
-    if (isMockAuthEnabled()) {
-      toast.info("Feature disabled in mock mode")
-      return
+  const handleNotificationClick = (notification: any) => {
+    // Mark as read
+    markAsRead(notification.id)
+    
+    // Navigate if has related goal
+    if (notification.related_goal_id) {
+      router.push(`/goals/${notification.related_goal_id}`)
     }
-    if (!supabase) return
+  }
+
+  const markAllAsRead = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { error } = await supabase
-        .from("notifications")
-        .update({ is_read: true })
-        .eq("user_id", user.id)
-        .eq("is_read", false)
-
-      if (error) throw error
-      await loadNotifications()
-      toast.success("All notifications marked as read")
-    } catch (_error: unknown) {
+      const stored = localStorage.getItem('notifications')
+      if (stored) {
+        const notifications = JSON.parse(stored)
+        const updated = notifications.map((n: any) => ({ ...n, is_read: true }))
+        localStorage.setItem('notifications', JSON.stringify(updated))
+        await loadNotifications()
+        toast.success("All notifications marked as read")
+      }
+    } catch (error) {
       toast.error("Failed to mark all as read")
     }
   }
@@ -205,19 +194,10 @@ export default function NotificationsPage() {
     }
   ]
 
-  // Merge stored notifications with seed list (stored first)
-  // Add user property to stored notifications to match NotificationItem interface
-  const stored = getMockNotificationsStore().map(notification => ({
-    ...notification,
-    id: parseInt(notification.id) || Math.floor(Math.random() * 1000000),
-    related_goal_id: notification.related_goal_id ? String(notification.related_goal_id) : null,
-    is_read: notification.is_read ?? false,
-    user: {
-      name: "System",
-      avatar: null
-    }
-  }))
-  const mockNotifications = [...stored, ...mockSeedNotifications]
+  const mockNotifications = [
+    ...notifications.map(n => ({ ...n, related_goal_id: n.related_goal_id || null, user: { name: 'System', avatar: null } })),
+    ...mockSeedNotifications
+  ]
 
   const unreadCount = mockNotifications.filter(n => !n.is_read).length
   const todayNotifications = mockNotifications.filter(n =>
@@ -335,19 +315,19 @@ export default function NotificationsPage() {
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
-            <NotificationsList notifications={mockNotifications} />
+            <NotificationsList notifications={mockNotifications} onNotificationClick={handleNotificationClick} />
           </TabsContent>
 
           <TabsContent value="unread" className="space-y-4">
-            <NotificationsList notifications={mockNotifications.filter(n => !n.is_read)} />
+            <NotificationsList notifications={mockNotifications.filter(n => !n.is_read)} onNotificationClick={handleNotificationClick} />
           </TabsContent>
 
           <TabsContent value="achievements" className="space-y-4">
-            <NotificationsList notifications={mockNotifications.filter(n => n.type === 'achievement' || n.type === 'streak_milestone')} />
+            <NotificationsList notifications={mockNotifications.filter(n => n.type === 'achievement' || n.type === 'streak_milestone')} onNotificationClick={handleNotificationClick} />
           </TabsContent>
 
           <TabsContent value="social" className="space-y-4">
-            <NotificationsList notifications={mockNotifications.filter(n => n.type === 'accountability_request' || n.type === 'partner_update')} />
+            <NotificationsList notifications={mockNotifications.filter(n => n.type === 'accountability_request' || n.type === 'partner_update')} onNotificationClick={handleNotificationClick} />
           </TabsContent>
         </Tabs>
       </div>
@@ -356,7 +336,7 @@ export default function NotificationsPage() {
 }
 
 interface NotificationItem {
-  id: number
+  id: number | string
   title: string
   message: string
   type: string
@@ -369,7 +349,7 @@ interface NotificationItem {
   }
 }
 
-function NotificationsList({ notifications }: { notifications: NotificationItem[] }) {
+function NotificationsList({ notifications, onNotificationClick }: { notifications: NotificationItem[], onNotificationClick: (notification: NotificationItem) => void }) {
   if (notifications.length === 0) {
     return (
       <Card>
@@ -383,33 +363,40 @@ function NotificationsList({ notifications }: { notifications: NotificationItem[
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {notifications.map((notification) => (
-        <NotificationCard key={notification.id} notification={notification} />
+        <NotificationCard key={notification.id} notification={notification} onNotificationClick={onNotificationClick} />
       ))}
     </div>
   )
 }
 
-function NotificationCard({ notification }: { notification: NotificationItem }) {
+function NotificationCard({ notification, onNotificationClick }: { notification: NotificationItem, onNotificationClick: (notification: NotificationItem) => void }) {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "goal_completed":
-        return <CheckCircle2 className="h-5 w-5 text-green-600" />
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />
       case "streak_milestone":
-        return <Flame className="h-5 w-5 text-orange-600" />
+        return <Flame className="h-4 w-4 text-orange-600" />
       case "accountability_request":
-        return <Users className="h-5 w-5 text-purple-600" />
+        return <Users className="h-4 w-4 text-purple-600" />
       case "reminder":
-        return <Clock className="h-5 w-5 text-blue-600" />
+        return <Clock className="h-4 w-4 text-blue-600" />
       case "achievement":
-        return <Trophy className="h-5 w-5 text-yellow-600" />
+        return <Trophy className="h-4 w-4 text-yellow-600" />
+      case "goal_created":
+        return <Target className="h-4 w-4 text-blue-600" />
+      case "activity_completed":
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />
+      case "encouragement_received":
+        return <Heart className="h-4 w-4 text-pink-600" />
       default:
-        return <Bell className="h-5 w-5 text-slate-600" />
+        return <Bell className="h-4 w-4 text-slate-600" />
     }
   }
 
   const getNotificationColor = (type: string) => {
+    if (notification.is_read) return ""
     switch (type) {
       case "goal_completed":
         return "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
@@ -422,121 +409,53 @@ function NotificationCard({ notification }: { notification: NotificationItem }) 
       case "achievement":
         return "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950"
       default:
-        return ""
+        return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950"
     }
   }
 
+  const timeAgo = (date: string) => {
+    const diff = Date.now() - new Date(date).getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+    
+    if (days > 0) return `${days}d ago`
+    if (hours > 0) return `${hours}h ago`
+    if (minutes > 0) return `${minutes}m ago`
+    return 'Just now'
+  }
+
   return (
-    <Card className={`hover-lift group transition-all ${!notification.is_read ? getNotificationColor(notification.type) : ""}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-4">
-          {/* Notification Icon */}
-          <div className="flex-shrink-0 mt-1">
-            <div className="p-2 rounded-full bg-muted">
-              {getNotificationIcon(notification.type)}
-            </div>
+    <div 
+      className={`p-3 rounded-lg border transition-all cursor-pointer hover:bg-accent/50 ${getNotificationColor(notification.type)} ${notification.related_goal_id ? 'hover:border-primary/50' : ''}`}
+      onClick={() => onNotificationClick(notification)}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 mt-0.5">
+          <div className="p-1.5 rounded-full bg-background/80">
+            {getNotificationIcon(notification.type)}
           </div>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-sm">{notification.title}</h3>
-                  {!notification.is_read && (
-                    <Badge variant="default" className="text-xs">New</Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {notification.message}
-                </p>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span>{new Date(notification.created_at).toLocaleDateString()}</span>
-                  <span>{new Date(notification.created_at).toLocaleTimeString()}</span>
-                  {notification.user && (
-                    <span className="flex items-center gap-1">
-                      <Avatar className="h-4 w-4">
-                        <AvatarImage src={notification.user.avatar || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {notification.user.name.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      {notification.user.name}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {!notification.is_read && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Check className="h-4 w-4" />
-                  </Button>
-                )}
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Request Actions (Accept/Decline) */}
-            {(notification.type === 'accountability_request' || notification.type === 'group_invite') && (
-              <div className="mt-3 pt-3 border-t flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    try {
-                      const store = require("@/backend/lib/mock-store")
-                      const goalId = (notification as any).related_goal_id
-                      if (goalId) {
-                        store.setInviteStatus(notification.type === 'accountability_request' ? 'partner' : 'group', goalId, 'accepted')
-                        store.addNotification({ title: notification.type === 'accountability_request' ? 'Partner Request Accepted' : 'Group Invite Accepted', message: 'Request accepted.', type: 'partner_update', related_goal_id: goalId })
-                        toast.success('Accepted')
-                      } else {
-                        toast.info('No goal attached to this request')
-                      }
-                    } catch {}
-                  }}
-                >
-                  Accept
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    try {
-                      const store = require("@/backend/lib/mock-store")
-                      const goalId = (notification as any).related_goal_id
-                      if (goalId) {
-                        store.setInviteStatus(notification.type === 'accountability_request' ? 'partner' : 'group', goalId, 'declined')
-                        store.addNotification({ title: notification.type === 'accountability_request' ? 'Partner Request Declined' : 'Group Invite Declined', message: 'Request declined.', type: 'partner_update', related_goal_id: goalId })
-                        toast.success('Declined')
-                      } else {
-                        toast.info('No goal attached to this request')
-                      }
-                    } catch {}
-                  }}
-                >
-                  Decline
-                </Button>
-              </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-medium text-sm">{notification.title}</h3>
+            {!notification.is_read && (
+              <div className="w-2 h-2 bg-blue-500 rounded-full" />
             )}
-
-            {/* Related Goal Action */}
+          </div>
+          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+            {notification.message}
+          </p>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {timeAgo(notification.created_at)}
+            </span>
             {notification.related_goal_id && (
-              <div className="mt-3 pt-3 border-t">
-                <Link href={`/goals/${notification.related_goal_id}`}>
-                  <Button variant="outline" size="sm" className="hover-lift">
-                    View Goal
-                    <ArrowLeft className="h-4 w-4 ml-1 rotate-180" />
-                  </Button>
-                </Link>
-              </div>
+              <span className="text-xs text-primary font-medium">View Goal →</span>
             )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

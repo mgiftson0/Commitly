@@ -13,6 +13,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
   Target,
   ArrowLeft,
   CheckCircle2,
@@ -35,7 +46,8 @@ import {
   Star,
   GitFork,
   Crown,
-  Save
+  Save,
+  AlertTriangle
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
@@ -43,6 +55,7 @@ import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
 import { notifications } from "@/lib/notifications"
+import { createActivityCompletedActivity, createGoalCompletedActivity } from "@/lib/activity-tracker"
 
 type Goal = {
   id: string
@@ -76,7 +89,7 @@ export default function GoalDetailPage() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [note, setNote] = useState("")
   const [loading, setLoading] = useState(true)
-  const [storeMeta, setStoreMeta] = useState<{ dueDate?: string | null; recurrencePattern?: string; recurrenceDays?: string[] } | null>(null)
+  const [storeMeta, setStoreMeta] = useState<{ dueDate?: string | null; recurrencePattern?: string; recurrenceDays?: string[]; scheduleType?: string } | null>(null)
   const [storeRole, setStoreRole] = useState<{ isGroupGoal?: boolean; groupMembers?: { id: string; name: string; avatar?: string; status?: 'pending' | 'accepted' | 'declined' }[]; accountabilityPartners?: { id: string; name: string; avatar?: string }[]; ownerName?: string } | null>(null)
   const [activityAssignments, setActivityAssignments] = useState<{[key: string]: string[]}>({})
   
@@ -86,6 +99,8 @@ export default function GoalDetailPage() {
   const [editVisibility, setEditVisibility] = useState<"public" | "private" | "restricted">("private")
   const [editActivities, setEditActivities] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   
   const router = useRouter()
   const params = useParams()
@@ -180,7 +195,7 @@ export default function GoalDetailPage() {
           const mappedActivities: Activity[] = (partnerGoal.activities || []).map((activity: any, index: number) => ({
             id: String(index + 1),
             goal_id: goalId,
-            title: activity.title || activity,
+            title: typeof activity === 'string' ? activity : (activity.title || String(activity)),
             description: activity.description,
             is_completed: activity.completed || false,
             order_index: index,
@@ -239,7 +254,7 @@ export default function GoalDetailPage() {
       const mappedActivities: Activity[] = (foundGoal.activities || []).map((activity: any, index: number) => ({
         id: String(index + 1),
         goal_id: goalId,
-        title: activity.title || activity,
+        title: typeof activity === 'string' ? activity : (activity.title || String(activity)),
         description: activity.description,
         is_completed: activity.completed || false,
         order_index: index,
@@ -281,6 +296,9 @@ export default function GoalDetailPage() {
   }
 
   const toggleActivity = async (activityId: string, isCompleted: boolean) => {
+    const activity = activities.find(a => a.id === activityId)
+    if (!activity) return
+    
     const updatedActivities = activities.map(a => 
       a.id === activityId 
         ? { ...a, is_completed: !isCompleted, completed_at: !isCompleted ? new Date().toISOString() : undefined }
@@ -305,6 +323,11 @@ export default function GoalDetailPage() {
           window.dispatchEvent(new CustomEvent('goalUpdated'))
         }
       }
+      
+      // Add activity to recent activity feed if completed
+      if (!isCompleted && goal) {
+        createActivityCompletedActivity(activity.title, goal.title, goalId)
+      }
     } catch (error) {
       toast.error("Failed to update activity")
     }
@@ -325,6 +348,7 @@ export default function GoalDetailPage() {
           if (goalIndex !== -1) {
             goals[goalIndex].completedAt = completedGoal.completed_at
             goals[goalIndex].status = 'completed'
+            goals[goalIndex].progress = 100
             localStorage.setItem('goals', JSON.stringify(goals))
             window.dispatchEvent(new CustomEvent('goalUpdated'))
           }
@@ -335,6 +359,8 @@ export default function GoalDetailPage() {
       
       toast.success("🎉 Goal completed! Great job!")
       await notifications.goalCompleted(goal.title)
+      createGoalCompletedActivity(goal.title, goalId)
+      setShowCompleteDialog(false)
     }
   }
 
@@ -363,21 +389,20 @@ export default function GoalDetailPage() {
   }
 
   const deleteGoal = async () => {
-    if (confirm("Are you sure you want to delete this goal?")) {
-      try {
-        const storedGoals = localStorage.getItem('goals')
-        if (storedGoals) {
-          const goals = JSON.parse(storedGoals)
-          const filteredGoals = goals.filter((g: any) => g.id !== goalId)
-          localStorage.setItem('goals', JSON.stringify(filteredGoals))
-          window.dispatchEvent(new CustomEvent('goalDeleted'))
-        }
-        toast.success("Goal deleted")
-        router.push("/goals")
-      } catch (error) {
-        toast.error("Failed to delete goal")
+    try {
+      const storedGoals = localStorage.getItem('goals')
+      if (storedGoals) {
+        const goals = JSON.parse(storedGoals)
+        const filteredGoals = goals.filter((g: any) => g.id !== goalId)
+        localStorage.setItem('goals', JSON.stringify(filteredGoals))
+        window.dispatchEvent(new CustomEvent('goalDeleted'))
       }
+      toast.success("Goal deleted")
+      router.push("/goals")
+    } catch (error) {
+      toast.error("Failed to delete goal")
     }
+    setShowDeleteDialog(false)
   }
 
   const saveGoalUpdates = async () => {
@@ -472,7 +497,7 @@ export default function GoalDetailPage() {
             </Button>
           </Link>
           <div className="flex gap-2">
-            {isYourGoal && (
+            {isYourGoal && !goal.completed_at && (
               <Button variant="outline" size="sm" onClick={toggleSuspend}>
                 {goal.is_suspended ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
                 {goal.is_suspended ? "Resume" : "Pause"}
@@ -482,9 +507,9 @@ export default function GoalDetailPage() {
         </div>
 
         <Tabs defaultValue="details" className="space-y-4">
-          <TabsList className={`grid w-full ${isPartnerView ? 'grid-cols-1' : 'grid-cols-2'}`}>
+          <TabsList className={`grid w-full ${isPartnerView || goal.completed_at ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <TabsTrigger value="details">View Details</TabsTrigger>
-            {!isPartnerView && <TabsTrigger value="update">Update Goal</TabsTrigger>}
+            {!isPartnerView && !goal.completed_at && <TabsTrigger value="update">Update Goal</TabsTrigger>}
           </TabsList>
           
           <TabsContent value="details" className="space-y-4">
@@ -598,10 +623,28 @@ export default function GoalDetailPage() {
                             <p className="text-sm text-muted-foreground">Ready to mark this goal as complete?</p>
                           </div>
                           {isYourGoal && !isPartnerView && (
-                            <Button onClick={completeGoal} className="w-full" size="lg">
-                              <CheckCircle2 className="h-5 w-5 mr-2" />
-                              Mark as Complete
-                            </Button>
+                            <AlertDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+                              <AlertDialogTrigger asChild>
+                                <Button className="w-full" size="lg">
+                                  <CheckCircle2 className="h-5 w-5 mr-2" />
+                                  Mark as Complete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Complete Goal</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to mark this goal as complete? This action cannot be undone and you won't be able to edit the goal anymore.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={completeGoal}>
+                                    Complete Goal
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           )}
                           {isPartnerView && (
                             <div className="text-center py-4">
@@ -621,11 +664,18 @@ export default function GoalDetailPage() {
                   </Card>
                 )}
 
-                {((isYourGoal || isGroupMember) && (storeRole?.accountabilityPartners?.length > 0 || isGroupGoal)) || isPartnerView && (
+                {(((isYourGoal || isGroupMember) && ((storeRole?.accountabilityPartners?.length || 0) > 0 || isGroupGoal)) || isPartnerView) && (
                   <EncouragementCard 
                     isPartner={isPartnerView}
                     goalOwnerName={isGroupGoal ? "the group" : goalOwnerName}
-                    newMessageCount={isPartnerView ? 0 : 2}
+                    newMessageCount={(() => {
+                      try {
+                        const messages = JSON.parse(localStorage.getItem(`encouragement_${goalId}`) || '[]')
+                        return isPartnerView ? 0 : messages.filter((msg: any) => !msg.read).length
+                      } catch {
+                        return 0
+                      }
+                    })()}
                   />
                 )}
               </div>
@@ -701,7 +751,7 @@ export default function GoalDetailPage() {
                                 <div>
                                   <span className="text-sm">{member.name}</span>
                                   {member.id === goal?.user_id && (
-                                    <Crown className="h-3 w-3 text-yellow-500 inline ml-1" title="Owner" />
+                                    <Crown className="h-3 w-3 text-yellow-500 inline ml-1" />
                                   )}
                                 </div>
                               </div>
@@ -838,19 +888,35 @@ export default function GoalDetailPage() {
                     )}
                     
                     <div className="flex gap-2 pt-4">
-                      <Button onClick={saveGoalUpdates} disabled={saving || !editTitle.trim()}>
-                        {saving ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Saving...
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Save className="h-4 w-4" />
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button disabled={saving || !editTitle.trim()}>
+                            <Save className="h-4 w-4 mr-2" />
                             Save Changes
-                          </div>
-                        )}
-                      </Button>
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Save Changes</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to save these changes to your goal?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={saveGoalUpdates} disabled={saving}>
+                              {saving ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  Saving...
+                                </div>
+                              ) : (
+                                "Save Changes"
+                              )}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </CardContent>
                 </Card>
@@ -863,10 +929,28 @@ export default function GoalDetailPage() {
                       <CardTitle className="text-base">Quick Actions</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      <Button variant="outline" size="sm" className="w-full justify-start" onClick={deleteGoal}>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Goal
-                      </Button>
+                      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full justify-start">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Goal
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Goal</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this goal? This action cannot be undone and all progress will be lost.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={deleteGoal} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Delete Goal
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </CardContent>
                   </Card>
                 )}

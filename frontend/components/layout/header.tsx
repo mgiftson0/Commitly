@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -37,11 +37,46 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [bellShake, setBellShake] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const router = useRouter()
 
   // Handle hydration
   React.useEffect(() => {
     setMounted(true)
+  }, [])
+
+  // Load unread notifications count
+  const loadUnreadCount = () => {
+    try {
+      const notifications = JSON.parse(localStorage.getItem('notifications') || '[]')
+      const unread = notifications.filter((n: any) => !n.is_read).length
+      setUnreadCount(unread)
+    } catch {
+      setUnreadCount(0)
+    }
+  }
+
+  // Listen for new notifications
+  useEffect(() => {
+    loadUnreadCount()
+    
+    const handleNewNotification = () => {
+      setBellShake(true)
+      loadUnreadCount()
+      setTimeout(() => setBellShake(false), 1000)
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('newNotification', handleNewNotification)
+      window.addEventListener('storage', loadUnreadCount)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('newNotification', handleNewNotification)
+        window.removeEventListener('storage', loadUnreadCount)
+      }
+    }
   }, [])
 
   const handleLogout = () => {
@@ -195,8 +230,13 @@ export function Header({ onMenuClick }: HeaderProps) {
 
           {/* Notifications */}
           <Link href="/notifications">
-            <Button variant="ghost" size="icon" className="hover-lift">
-              <Bell className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="hover-lift relative" onClick={loadUnreadCount}>
+              <Bell className={`h-5 w-5 transition-transform duration-200 ${bellShake ? 'animate-bounce' : ''}`} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </Button>
           </Link>
 

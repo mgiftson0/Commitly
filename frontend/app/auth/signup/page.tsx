@@ -9,8 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Target, Eye, EyeOff, Mail, Lock, Chrome } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient } from "@/backend/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/backend/lib/mock-auth"
+
 import { toast } from "sonner"
 
 export default function SignUpPage() {
@@ -22,7 +21,6 @@ export default function SignUpPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
   const router = useRouter()
-  const supabase = getSupabaseClient()
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,71 +36,26 @@ export default function SignUpPage() {
       return
     }
 
-    // Check if mock auth is enabled
-    if (isMockAuthEnabled()) {
-      setLoading(true)
-      await mockDelay(1000)
-      toast.success("Account created! (Mock Auth Mode)")
-      router.push("/auth/kyc")
-      setLoading(false)
-      return
-    }
-
-    if (!supabase) {
-      toast.error("Authentication service is not available. Please check configuration.")
-      return
-    }
-
     setLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-
-      if (error) throw error
-
-      if (data.user) {
-        toast.success("Account created! Please check your email to verify.")
-        router.push("/auth/kyc")
-      }
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast.success("Account created!")
+      router.push("/auth/kyc")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to sign up"
-      toast.error(message)
+      toast.error("Failed to sign up")
     } finally {
       setLoading(false)
     }
   }
 
   const handleGoogleLogin = async () => {
-    if (isMockAuthEnabled()) {
-      await mockDelay(800)
-      toast.success("Google signup successful! (Mock Auth Mode)")
-      router.push("/auth/kyc")
-      return
-    }
-    
-    if (!supabase) {
-      toast.error("Authentication service is not available. Please check configuration.")
-      return
-    }
-
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`
-        }
-      })
-
-      if (error) throw error
+      await new Promise(resolve => setTimeout(resolve, 800))
+      toast.success("Google signup successful!")
+      router.push("/auth/kyc")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to sign up with Google"
-      toast.error(message)
+      toast.error("Failed to sign up with Google")
     }
   }
 

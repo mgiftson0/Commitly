@@ -7,19 +7,14 @@ import { Target, Users, TrendingUp, Award, Star, Mail, Twitter, Github, Linkedin
 import Link from "next/link"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
-import { isSupabaseConfigured } from "@/backend/lib/supabase"
+
 
 export default function LandingPage() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  const [supabaseReady, setSupabaseReady] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    // Only check on client side
-    if (typeof window !== 'undefined') {
-      setSupabaseReady(isSupabaseConfigured())
-    }
   }, [])
 
   if (!mounted) return null
@@ -44,20 +39,12 @@ export default function LandingPage() {
               >
                 {theme === "dark" ? "??" : "??"}
               </Button>
-              {supabaseReady ? (
-                <>
-                  <Link href="/auth/login">
-                    <Button variant="ghost">Login</Button>
-                  </Link>
-                  <Link href="/auth/signup">
-                    <Button>Sign Up</Button>
-                  </Link>
-                </>
-              ) : (
-                <Button variant="outline" disabled>
-                  Setup Required
-                </Button>
-              )}
+              <Link href="/auth/login">
+                <Button variant="ghost">Login</Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button>Sign Up</Button>
+              </Link>
             </div>
 
             {/* Mobile Navigation */}
@@ -69,22 +56,16 @@ export default function LandingPage() {
               >
                 {theme === "dark" ? "??" : "??"}
               </Button>
-              {supabaseReady ? (
-                <Link href="/auth/signup">
-                  <Button size="sm">Sign Up</Button>
-                </Link>
-              ) : (
-                <Button variant="outline" size="sm" disabled>
-                  Setup
-                </Button>
-              )}
+              <Link href="/auth/signup">
+                <Button size="sm">Sign Up</Button>
+              </Link>
             </div>
           </div>
         </div>
       </header>
 
       {/* Setup Warning Banner */}
-      {!supabaseReady && (
+      {false && (
         <div className="bg-yellow-500/10 border-b border-yellow-500/20">
           <div className="container mx-auto px-4 py-3">
             <p className="text-sm text-center">
@@ -103,23 +84,10 @@ export default function LandingPage() {
           Set, track, and complete your goals with accountability partners. Build streaks, celebrate milestones, and achieve more together.
         </p>
         <div className="flex gap-4 justify-center">
-          {supabaseReady ? (
-            <>
-              <Link href="/auth/signup">
-                <Button size="lg">Get Started Free</Button>
-              </Link>
-              <Button size="lg" variant="outline">Learn More</Button>
-            </>
-          ) : (
-            <>
-              <Button size="lg" disabled>Get Started Free</Button>
-              <Button size="lg" variant="outline" asChild>
-                <a href="https://github.com/supabase/supabase" target="_blank" rel="noopener noreferrer">
-                  Setup Guide
-                </a>
-              </Button>
-            </>
-          )}
+          <Link href="/auth/signup">
+            <Button size="lg">Get Started Free</Button>
+          </Link>
+          <Button size="lg" variant="outline">Learn More</Button>
         </div>
       </section>
 
@@ -369,30 +337,11 @@ export default function LandingPage() {
       <section className="container mx-auto px-4 py-12 sm:py-20 text-center">
         <h2 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4">Ready to Start Your Journey?</h2>
         <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
-          {supabaseReady
-            ? "Join thousands of users who are achieving their goals with Commitly"
-            : "Complete the setup to start tracking your goals with Commitly"
-          }
+          Join thousands of users who are achieving their goals with Commitly
         </p>
-        {supabaseReady ? (
-          <Link href="/auth/signup">
-            <Button size="lg">Create Free Account</Button>
-          </Link>
-        ) : (
-          <div className="space-y-4">
-            <Button size="lg" disabled>Create Free Account</Button>
-            <div className="text-sm text-muted-foreground">
-              <p>To get started:</p>
-              <ol className="list-decimal list-inside mt-2 space-y-1">
-                <li>Create a Supabase project at <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">supabase.com</a></li>
-                <li>Copy your project URL and API keys</li>
-                <li>Update <code className="bg-muted px-2 py-1 rounded">.env.local</code> with your credentials</li>
-                <li>Run <code className="bg-muted px-2 py-1 rounded">node setup.js</code> to create the database</li>
-                <li>Restart the development server</li>
-              </ol>
-            </div>
-          </div>
-        )}
+        <Link href="/auth/signup">
+          <Button size="lg">Create Free Account</Button>
+        </Link>
       </section>
 
       {/* Footer */}

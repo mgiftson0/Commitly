@@ -41,13 +41,25 @@ import {
   User,
   MessageCircle,
   Lock,
-  Globe
+  Globe,
+  AlertTriangle
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
 import * as React from "react"
 
@@ -419,7 +431,7 @@ export default function GoalsPage() {
         const storedGoals = localStorage.getItem('goals')
         const storedPartnerGoals = localStorage.getItem('partnerGoals')
         
-        let allGoals = []
+        let allGoals: any[] = []
         
         if (storedGoals) {
           const goals = JSON.parse(storedGoals)
@@ -512,34 +524,71 @@ export default function GoalsPage() {
     }
   }, [])
 
-  // Convert real goals to display format - show all goals, not limited to 3
+  // Convert real goals to display format with real progress data
   const allGoals = React.useMemo(() => {
-    const convertedGoals = realGoals.map(goal => ({
-      id: goal.isPartnerGoal ? goal.id : parseInt(goal.id),
-      title: goal.title,
-      description: goal.description || '',
-      type: goal.type,
-      status: goal.status || 'active',
-      progress: goal.progress || 0,
-      streak: goal.scheduleType === 'date' ? 0 : (goal.streak !== undefined ? goal.streak : 5),
-      totalCompletions: goal.totalCompletions || 0,
-      visibility: goal.visibility || 'private',
-      createdAt: goal.createdAt,
-      dueDate: goal.dueDate,
-      category: goal.category || 'Personal',
-      priority: goal.priority || 'medium',
-      isForked: false,
-      forkedFrom: null,
-      accountabilityPartners: goal.accountabilityPartners || [],
-      isGroupGoal: goal.isGroupGoal || false,
-      groupMembers: goal.groupMembers || [],
-      recurrencePattern: goal.recurrencePattern,
-      recurrenceDays: goal.recurrenceDays,
-      scheduleType: goal.scheduleType,
-      isPartnerGoal: goal.isPartnerGoal || false,
-      ownerName: goal.ownerName,
-      goalOwner: goal.ownerName ? { id: goal.userId, name: goal.ownerName, avatar: '/placeholder-avatar.jpg' } : undefined
-    }))
+    const convertedGoals = realGoals.map(goal => {
+      // Calculate real progress from activities
+      let realProgress = 0
+      let completedActivities = 0
+      let totalActivities = 0
+      
+      if (goal.activities && Array.isArray(goal.activities)) {
+        if (goal.type === 'multi-activity') {
+          totalActivities = goal.activities.length
+          completedActivities = goal.activities.filter((activity: any) => activity.completed).length
+          realProgress = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0
+        } else if (goal.type === 'single-activity') {
+          // For single activity, check if the single activity is completed
+          const activity = goal.activities[0]
+          realProgress = activity && activity.completed ? 100 : 0
+          completedActivities = realProgress === 100 ? 1 : 0
+          totalActivities = 1
+        }
+      }
+      
+      // Calculate streak starting from 0
+      let calculatedStreak = 0
+      if (goal.scheduleType === 'recurring' && goal.type !== 'single-activity') {
+        // For recurring goals, calculate streak based on completion history
+        const goalAge = Math.floor((Date.now() - new Date(goal.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+        if (goalAge >= 1) {
+          calculatedStreak = goal.streak !== undefined ? goal.streak : Math.min(goalAge, 5)
+        }
+      }
+      
+      // Determine status - if completedAt exists, status should be completed
+      let finalStatus = goal.status || 'active'
+      if (goal.completedAt || realProgress === 100) {
+        finalStatus = 'completed'
+      }
+      
+      return {
+        id: goal.isPartnerGoal ? goal.id : parseInt(goal.id),
+        title: goal.title,
+        description: goal.description || '',
+        type: goal.type,
+        status: finalStatus,
+        progress: finalStatus === 'completed' ? 100 : realProgress,
+        streak: calculatedStreak,
+        totalCompletions: completedActivities,
+        visibility: goal.visibility || 'private',
+        createdAt: goal.createdAt,
+        dueDate: goal.dueDate,
+        category: goal.category || 'Personal',
+        priority: goal.priority || 'medium',
+        isForked: false,
+        forkedFrom: null,
+        accountabilityPartners: goal.accountabilityPartners || [],
+        isGroupGoal: goal.isGroupGoal || false,
+        groupMembers: goal.groupMembers || [],
+        recurrencePattern: goal.recurrencePattern,
+        recurrenceDays: goal.recurrenceDays,
+        scheduleType: goal.scheduleType,
+        isPartnerGoal: goal.isPartnerGoal || false,
+        ownerName: goal.ownerName,
+        goalOwner: goal.ownerName ? { id: goal.userId, name: goal.ownerName, avatar: '/placeholder-avatar.jpg' } : undefined
+      }
+    })
     
     return convertedGoals
   }, [realGoals])
@@ -558,7 +607,7 @@ export default function GoalsPage() {
   // Separate goals into user's goals and partner goals
   const userGoals = filteredGoals.filter(goal => isGoalOwner(goal) && !(goal as any).isPartnerGoal)
   const partnerGoals = filteredGoals
-    .filter(goal => (goal.accountabilityPartners.some(partner => partner.id === 'mock-user-id') && !isGoalOwner(goal)) || (goal as any).isPartnerGoal)
+    .filter(goal => (goal.accountabilityPartners.some((partner: any) => partner.id === 'mock-user-id') && !isGoalOwner(goal)) || (goal as any).isPartnerGoal)
 
   const categories = Array.from(new Set(allGoals.map(g => g.category)))
 
@@ -820,6 +869,7 @@ export default function GoalsPage() {
 }
 
 function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { goals: typeof mockGoals; router: ReturnType<typeof useRouter>; isPartnerView?: boolean; onGoalDeleted?: () => void }) {
+  const [showDeleteDialog, setShowDeleteDialog] = useState<number | null>(null)
   const [partnerInvites, setPartnerInvites] = useState<Record<number, 'pending' | 'accepted' | 'declined'>>(() => {
     const map: Record<number, 'pending' | 'accepted' | 'declined'> = {}
     goals.forEach(g => { map[g.id] = (isPartnerView && g.id % 5 === 0) ? 'pending' : 'accepted' })
@@ -843,27 +893,25 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
     return (Date.now() - created) <= (5 * 60 * 60 * 1000)
   }
   const handleDelete = (goalId: number, goalTitle: string) => {
-    if (confirm(`Are you sure you want to delete "${goalTitle}"?`)) {
-      try {
-        const storedGoals = localStorage.getItem('goals')
-        if (storedGoals) {
-          const goals = JSON.parse(storedGoals)
-          const filteredGoals = goals.filter((g: any) => g.id !== goalId.toString())
-          localStorage.setItem('goals', JSON.stringify(filteredGoals))
-          
-          toast.success(`Goal "${goalTitle}" deleted successfully`)
-          
-          // Dispatch custom event to notify other components
-          window.dispatchEvent(new CustomEvent('goalDeleted', { detail: { goalId } }))
-          
-          // Trigger parent component to reload goals
-          if (onGoalDeleted) {
-            onGoalDeleted()
-          }
+    try {
+      const storedGoals = localStorage.getItem('goals')
+      if (storedGoals) {
+        const goals = JSON.parse(storedGoals)
+        const filteredGoals = goals.filter((g: any) => g.id !== goalId.toString())
+        localStorage.setItem('goals', JSON.stringify(filteredGoals))
+        
+        toast.success(`Goal "${goalTitle}" deleted successfully`)
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('goalDeleted', { detail: { goalId } }))
+        
+        // Trigger parent component to reload goals
+        if (onGoalDeleted) {
+          onGoalDeleted()
         }
-      } catch (error) {
-        toast.error("Failed to delete goal")
       }
+    } catch (error) {
+      toast.error("Failed to delete goal")
     }
   }
 
@@ -871,9 +919,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
     router.push(`/goals/${goalId}`)
   }
 
-  const handleEdit = (goalId: number) => {
-    router.push(`/goals/${goalId}`)
-  }
+
 
   if (goals.length === 0) {
     return (
@@ -929,17 +975,27 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                     <Lock className="h-4 w-4 text-muted-foreground" />
                   </div>
                 )}
-                {/* New messages indicator for owners/members */}
-                {!isPartnerView && (
+                {/* New messages indicator for owners/members - show if has accountability partners or is group goal */}
+                {!isPartnerView && ((goal.accountabilityPartners && goal.accountabilityPartners.length > 0) || goal.isGroupGoal) && (
                   <Dialog>
                     <DialogTrigger asChild>
                       <div className="relative h-8 w-8 flex items-center justify-center cursor-pointer" title="View encouragement notes">
                         <MessageCircle className="h-4 w-4 text-primary" />
-                        {getNewEncouragements(goal, isPartnerView) > 0 && (
-                          <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] bg-primary text-primary-foreground">
-                            {getNewEncouragements(goal, isPartnerView)}
-                          </span>
-                        )}
+                        {(() => {
+                          const messageCount = (() => {
+                            try {
+                              const messages = JSON.parse(localStorage.getItem(`encouragement_${goal.id}`) || '[]')
+                              return messages.filter((msg: any) => !msg.read).length
+                            } catch {
+                              return 0
+                            }
+                          })()
+                          return messageCount > 0 && (
+                            <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] bg-primary text-primary-foreground">
+                              {messageCount}
+                            </span>
+                          )
+                        })()}
                       </div>
                     </DialogTrigger>
                     <DialogContent>
@@ -977,17 +1033,40 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                         <Eye className="mr-2 h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(goal.id)} disabled={goal.status === 'completed' || !!(goal as any).completed_at} className={(goal.status === 'completed' || !!(goal as any).completed_at) ? 'opacity-50 pointer-events-none' : ''}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Goal
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => handleDelete(goal.id, goal.title)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Goal
-                      </DropdownMenuItem>
+                      {goal.status !== 'completed' && (
+                        <DropdownMenuItem onClick={() => router.push(`/goals/${goal.id}/update`)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Update Goal
+                        </DropdownMenuItem>
+                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onSelect={(e) => e.preventDefault()}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Goal
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Goal</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{goal.title}"? This action cannot be undone and all progress will be lost.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDelete(goal.id, goal.title)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete Goal
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -1064,33 +1143,56 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 </div>
               </div>
             ) : (
-              <div className="space-y-2 text-sm">
-                {(() => {
-                  const goalAge = Date.now() - new Date(goal.createdAt).getTime()
-                  const isMoreThanOneMinute = goalAge > 60 * 1000
-                  return !isSingleActivity(goal) && goal.scheduleType !== 'date' && isMoreThanOneMinute && goal.streak !== undefined && (
-                    <div className="flex items-center gap-2">
-                      <Flame className="h-4 w-4 text-orange-500" />
-                      <span className="text-muted-foreground">Streak:</span>
-                      <span className="font-medium">{goal.streak} days</span>
-                    </div>
-                  )
-                })()}
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-muted-foreground">Completed:</span>
-                  <span className="font-medium">{goal.totalCompletions}</span>
-                </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-muted-foreground">Completed:</span>
+                <span className="font-medium">{goal.totalCompletions}</span>
               </div>
             )}
 
-            {/* Due Date */}
-            {goal.dueDate && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <span>Due: {new Date(goal.dueDate).toLocaleDateString()}</span>
-              </div>
-            )}
+            {/* Compact Due Date and Streak */}
+            <div className="flex items-center gap-2 text-xs">
+              {goal.dueDate && (() => {
+                const dueDate = new Date(goal.dueDate)
+                const today = new Date()
+                const diffTime = dueDate.getTime() - today.getTime()
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                
+                const getUrgencyColor = () => {
+                  if (diffDays < 0) return 'text-red-600'
+                  if (diffDays <= 3) return 'text-red-600'
+                  if (diffDays <= 7) return 'text-yellow-600'
+                  return 'text-blue-600'
+                }
+                
+                const getText = () => {
+                  if (diffDays < 0) return 'Overdue'
+                  if (diffDays === 0) return 'Today'
+                  if (diffDays === 1) return '1d'
+                  return `${diffDays}d`
+                }
+                
+                return (
+                  <div className={`flex items-center gap-1 ${getUrgencyColor()}`}>
+                    <Calendar className="h-3 w-3" />
+                    <span className="font-medium">{getText()}</span>
+                  </div>
+                )
+              })()}
+              
+              {(() => {
+                const goalAge = Date.now() - new Date(goal.createdAt).getTime()
+                const isMoreThanOneDay = goalAge > 24 * 60 * 60 * 1000
+                const isSingle = goal.type === 'single' || goal.type === 'single-activity'
+                const showStreak = !isSingle && (goal as any).scheduleType !== 'date' && isMoreThanOneDay && goal.streak !== undefined && !isPartnerView
+                return showStreak && (
+                  <div className="flex items-center gap-1 text-orange-600">
+                    <Flame className="h-3 w-3" />
+                    <span className="font-medium">{goal.streak}</span>
+                  </div>
+                )
+              })()}
+            </div>
 
             {/* Meta info and Actions */}
             <div className="space-y-3">
@@ -1146,29 +1248,32 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 </div>
               ) : (
                 /* Owner/member view - Show full meta info */
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-2">
-                    {goal.category}
-                    {/* Group invite membership indicator */
-                    goal.isGroupGoal && groupInvites[goal.id] && (
-                      <Badge
-                        variant={groupInvites[goal.id] === 'accepted' ? 'default' : (groupInvites[goal.id] === 'pending' ? 'secondary' : 'outline')}
-                        className="text-[10px]"
-                      >
-                        {groupInvites[goal.id] === 'accepted' ? 'Joined' : groupInvites[goal.id] === 'pending' ? 'Invite Sent' : 'Declined'}
-                      </Badge>
-                    )}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {goal.isForked && (
-                      <div className="flex items-center gap-1">
-                        <GitFork className="h-3 w-3 text-blue-600" />
-                        <span className="text-xs text-blue-600">Forked</span>
-                      </div>
-                    )}
-                    <div className={`w-2 h-2 rounded-full ${getStatusColor(goal.status)}`} />
-                    <span className="capitalize">{goal.status}</span>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-2">
+                      {goal.category}
+                      {/* Group invite membership indicator */}
+                      {goal.isGroupGoal && groupInvites[goal.id] && (
+                        <Badge
+                          variant={groupInvites[goal.id] === 'accepted' ? 'default' : (groupInvites[goal.id] === 'pending' ? 'secondary' : 'outline')}
+                          className="text-[10px]"
+                        >
+                          {groupInvites[goal.id] === 'accepted' ? 'Joined' : groupInvites[goal.id] === 'pending' ? 'Invite Sent' : 'Declined'}
+                        </Badge>
+                      )}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {goal.isForked && (
+                        <div className="flex items-center gap-1">
+                          <GitFork className="h-3 w-3 text-blue-600" />
+                          <span className="text-xs text-blue-600">Forked</span>
+                        </div>
+                      )}
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(goal.status)}`} />
+                      <span className="capitalize">{goal.status}</span>
+                    </div>
                   </div>
+
                 </div>
               )}
             </div>

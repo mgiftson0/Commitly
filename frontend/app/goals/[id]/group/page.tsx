@@ -11,10 +11,35 @@ import { Textarea } from "@/components/ui/textarea"
 import { Target, ArrowLeft, Users, Crown, Edit, CheckCircle2, Pause, Play, Trash2, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { getSupabaseClient, type Goal, type Activity } from "@/backend/lib/supabase"
-import { isMockAuthEnabled } from "@/backend/lib/mock-auth"
+
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
+
+type Goal = {
+  id: string
+  user_id: string
+  title: string
+  description: string
+  goal_type: 'single' | 'multi' | 'recurring'
+  visibility: 'public' | 'private' | 'restricted'
+  start_date: string
+  is_suspended: boolean
+  created_at: string
+  updated_at: string
+  completed_at?: string | null
+}
+
+type Activity = {
+  id: string
+  goal_id: string
+  title: string
+  description?: string
+  is_completed: boolean
+  order_index: number
+  created_at: string
+  updated_at: string
+  completed_at?: string
+}
 
 export default function GroupGoalDetailPage() {
   const [personalNote, setPersonalNote] = useState("")
@@ -24,7 +49,6 @@ export default function GroupGoalDetailPage() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const params = useParams()
-  const supabase = getSupabaseClient()
   const goalId = params.id as string
 
   const currentUser = { id: 'mock-user-id', name: 'You' }
@@ -39,11 +63,12 @@ export default function GroupGoalDetailPage() {
   }, [goalId])
 
   const loadGoalData = async () => {
-    if (isMockAuthEnabled()) {
+    try {
       try {
-        const store = require("@/backend/lib/mock-store")
-        const sg = store.getGoals()
-        const stored = sg.find((g: any) => String(g.id) === String(goalId))
+        const storedGoals = localStorage.getItem('goals')
+        if (!storedGoals) throw new Error('No goals found')
+        const goals = JSON.parse(storedGoals)
+        const stored = goals.find((g: any) => String(g.id) === String(goalId))
         if (stored) {
           const mappedGoal: Goal = {
             id: String(stored.id),
@@ -84,15 +109,12 @@ export default function GroupGoalDetailPage() {
             }
           })
           setActivityAssignments(assignments)
-          try {
-            const status = store.getInviteStatus('group', stored.id)
-            if (status) setInviteStatus(status)
-          } catch {}
+
           setLoading(false)
           return
         }
-      } catch {}
-      const mockGoal: Goal = {
+    } catch {}
+    const mockGoal: Goal = {
         id: goalId,
         user_id: '3',
         title: 'Group: Team Fitness Challenge',
@@ -116,29 +138,8 @@ export default function GroupGoalDetailPage() {
       ])
       setActivities(mockActivities)
       setLoading(false)
-      return
-    }
-
-    if (!supabase) return
-    try {
-      const { data: goalData } = await supabase
-        .from("goals")
-        .select("*")
-        .eq("id", goalId)
-        .single()
-      setGoal(goalData)
-
-      if (goalData?.goal_type === "multi" || goalData?.goal_type === "multi-activity") {
-        const { data: activitiesData } = await supabase
-          .from("activities")
-          .select("*")
-          .eq("goal_id", goalId)
-          .order("order_index")
-        setActivities(activitiesData || [])
-      }
-    } catch (_error: unknown) {
+    } catch (error) {
       toast.error("Failed to load goal")
-    } finally {
       setLoading(false)
     }
   }
@@ -216,8 +217,8 @@ export default function GroupGoalDetailPage() {
                 <p className="text-xs text-muted-foreground">Accept to participate and add your own activities.</p>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => { setInviteStatus('accepted'); try { const { setInviteStatus: setInvite, addNotification } = require("@/backend/lib/mock-store"); setInvite('group', goal.id, 'accepted'); addNotification({ title: 'Group Invite Accepted', message: `You joined the group goal: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} }}>Accept</Button>
-                <Button size="sm" variant="outline" onClick={() => { setInviteStatus('declined'); try { const { setInviteStatus: setInvite, addNotification } = require("@/backend/lib/mock-store"); setInvite('group', goal.id, 'declined'); addNotification({ title: 'Group Invite Declined', message: `You declined to join: ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} }}>Decline</Button>
+                <Button size="sm" onClick={() => { setInviteStatus('accepted'); toast.success('Invitation accepted') }}>Accept</Button>
+                <Button size="sm" variant="outline" onClick={() => { setInviteStatus('declined'); toast.success('Invitation declined') }}>Decline</Button>
               </div>
             </CardContent>
           </Card>

@@ -10,11 +10,47 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Target, ArrowLeft, CheckCircle2, Users, Edit } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { getSupabaseClient, type Goal, type Activity, type Streak } from "@/backend/lib/supabase"
-import { isMockAuthEnabled } from "@/backend/lib/mock-auth"
+
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
+
+type Goal = {
+  id: string
+  user_id: string
+  title: string
+  description: string
+  goal_type: 'single' | 'multi' | 'recurring'
+  visibility: 'public' | 'private' | 'restricted'
+  start_date: string
+  is_suspended: boolean
+  created_at: string
+  updated_at: string
+  completed_at?: string | null
+}
+
+type Activity = {
+  id: string
+  goal_id: string
+  title: string
+  description?: string
+  is_completed: boolean
+  order_index: number
+  created_at: string
+  updated_at: string
+  completed_at?: string
+}
+
+type Streak = {
+  id: string
+  goal_id: string
+  user_id: string
+  current_streak: number
+  longest_streak: number
+  total_completions: number
+  created_at: string
+  updated_at: string
+}
 
 export default function PartnerGoalDetailPage() {
   const [goal, setGoal] = useState<Goal | null>(null)
@@ -24,7 +60,6 @@ export default function PartnerGoalDetailPage() {
   const [inviteStatus, setInviteStatus] = useState<'pending' | 'accepted' | 'declined'>('accepted')
   const router = useRouter()
   const params = useParams()
-  const supabase = getSupabaseClient()
   const goalId = params.id as string
 
   useEffect(() => {
@@ -33,7 +68,7 @@ export default function PartnerGoalDetailPage() {
   }, [goalId])
 
   const loadGoalData = async () => {
-    if (isMockAuthEnabled()) {
+    try {
       const mockGoal: Goal = {
         id: goalId,
         user_id: 'owner-id',
@@ -56,35 +91,6 @@ export default function PartnerGoalDetailPage() {
       setGoal(mockGoal)
       setActivities(mockActivities)
       setStreak(mockStreak)
-      setLoading(false)
-      return
-    }
-
-    if (!supabase) return
-    try {
-      const { data: goalData, error: goalError } = await supabase
-        .from("goals")
-        .select("*")
-        .eq("id", goalId)
-        .single()
-      if (goalError) throw goalError
-      setGoal(goalData)
-
-      if (goalData.goal_type === "multi" || goalData.goal_type === "multi-activity") {
-        const { data: activitiesData } = await supabase
-          .from("activities")
-          .select("*")
-          .eq("goal_id", goalId)
-          .order("order_index")
-        setActivities(activitiesData || [])
-      }
-
-      const { data: streakData } = await supabase
-        .from("streaks")
-        .select("*")
-        .eq("goal_id", goalId)
-        .single()
-      setStreak(streakData)
     } catch (error: unknown) {
       toast.error("Failed to load goal")
     } finally {
@@ -144,8 +150,8 @@ export default function PartnerGoalDetailPage() {
                 <p className="text-xs text-muted-foreground">Accept to view details and send encouragement.</p>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => { setInviteStatus('accepted'); try { const { setInviteStatus: setInvite, addNotification } = require("@/backend/lib/mock-store"); setInvite('partner', goal.id, 'accepted'); addNotification({ title: 'Partner Request Accepted', message: `You accepted a partner request for ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Invitation accepted') }}>Accept</Button>
-                <Button size="sm" variant="outline" onClick={() => { setInviteStatus('declined'); try { const { setInviteStatus: setInvite, addNotification } = require("@/backend/lib/mock-store"); setInvite('partner', goal.id, 'declined'); addNotification({ title: 'Partner Request Declined', message: `You declined a partner request for ${goal.title}.`, type: 'partner_update', related_goal_id: goal.id }); } catch {} toast.success('Invitation declined') }}>Decline</Button>
+                <Button size="sm" onClick={() => { setInviteStatus('accepted'); toast.success('Invitation accepted') }}>Accept</Button>
+                <Button size="sm" variant="outline" onClick={() => { setInviteStatus('declined'); toast.success('Invitation declined') }}>Decline</Button>
               </div>
             </CardContent>
           </Card>

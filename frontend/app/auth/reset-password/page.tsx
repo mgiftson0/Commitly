@@ -7,44 +7,23 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Target, Mail, ArrowLeft, CheckCircle } from "lucide-react"
 import Link from "next/link"
-import { getSupabaseClient } from "@/backend/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/backend/lib/mock-auth"
+
 import { toast } from "sonner"
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
-  const supabase = getSupabaseClient()
-
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (isMockAuthEnabled()) {
-      setLoading(true)
-      await mockDelay(800)
-      setEmailSent(true)
-      toast.success("Password reset email sent! (Mock Mode)")
-      setLoading(false)
-      return
-    }
-    
-    if (!supabase) return
-
     setLoading(true)
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
-      })
-
-      if (error) throw error
-
+      await new Promise(resolve => setTimeout(resolve, 800))
       setEmailSent(true)
       toast.success("Password reset email sent!")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to send reset email"
-      toast.error(message)
+      toast.error("Failed to send reset email")
     } finally {
       setLoading(false)
     }

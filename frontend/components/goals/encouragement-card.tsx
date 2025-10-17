@@ -96,27 +96,8 @@ export function EncouragementCard({
     }
   }
 
-  // Mock messages if none provided
-  const displayMessages = (messages && messages.length > 0) ? messages : (storeMessages.length > 0 ? storeMessages : [
-    {
-      id: "1",
-      author: {
-        name: "Sarah Martinez",
-        avatar: "/placeholder-avatar.jpg"
-      },
-      content: "Great progress! You&apos;re crushing this goal! ??",
-      timestamp: "2 hours ago"
-    },
-    {
-      id: "2",
-      author: {
-        name: "Mike Chen",
-        avatar: "/placeholder-avatar.jpg"
-      },
-      content: "Keep up the amazing work! You&apos;re doing fantastic! ??",
-      timestamp: "1 day ago"
-    }
-  ])
+  // Use real messages only
+  const displayMessages = (messages && messages.length > 0) ? messages : storeMessages
 
   if (compact && isPartner) {
     return (

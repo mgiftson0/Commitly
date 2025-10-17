@@ -13,10 +13,18 @@ export class NotificationService {
   async init() {
     if ('serviceWorker' in navigator && 'Notification' in window) {
       try {
-        this.registration = await navigator.serviceWorker.register('/sw.js')
-        await this.requestPermission()
+        // Check if sw.js exists before registering
+        const response = await fetch('/sw.js', { method: 'HEAD' })
+        if (response.ok) {
+          this.registration = await navigator.serviceWorker.register('/sw.js')
+          await this.requestPermission()
+        } else {
+          console.log('Service worker file not found, notifications will work without service worker')
+          await this.requestPermission()
+        }
       } catch (error) {
-        console.error('Service worker registration failed:', error)
+        console.log('Service worker registration skipped:', error.message)
+        await this.requestPermission()
       }
     }
   }
@@ -24,8 +32,13 @@ export class NotificationService {
   async requestPermission(): Promise<boolean> {
     if (!('Notification' in window)) return false
     
-    const permission = await Notification.requestPermission()
-    return permission === 'granted'
+    try {
+      const permission = await Notification.requestPermission()
+      return permission === 'granted'
+    } catch (error) {
+      console.log('Notification permission request failed:', error.message)
+      return false
+    }
   }
 
   async sendNotification(title: string, options: NotificationOptions = {}) {

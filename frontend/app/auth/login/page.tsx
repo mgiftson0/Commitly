@@ -8,8 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Target, Eye, EyeOff, Mail, Lock, Chrome } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient } from "@/backend/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/lib/mock-auth"
+
 import { initializeSampleData } from "@/lib/mock-data"
 import { toast } from "sonner"
 
@@ -19,57 +18,35 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
-  const supabase = getSupabaseClient()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Initialize sample data since we're using mocks only now
     initializeSampleData()
-
     setLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) throw error
-
-      if (data.user) {
-        toast.success("Welcome back!")
-        router.push("/dashboard")
-      }
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      localStorage.setItem('isAuthenticated', 'true')
+      toast.success("Welcome back!")
+      router.push("/dashboard")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to login"
-      toast.error(message)
+      toast.error("Failed to login")
     } finally {
       setLoading(false)
     }
   }
 
   const handleGoogleLogin = async () => {
-    // Initialize sample data
     initializeSampleData()
-    
     setLoading(true)
-    await mockDelay(800)
     
     try {
-      // Use our mock auth for Google login too
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'google@example.com',
-        password: 'mock-password'
-      })
-      
-      if (error) throw error
-      
+      await new Promise(resolve => setTimeout(resolve, 800))
+      localStorage.setItem('isAuthenticated', 'true')
       toast.success("Google login successful!")
       router.push("/dashboard")
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to login with Google"
-      toast.error(message)
+      toast.error("Failed to login with Google")
     } finally {
       setLoading(false)
     }

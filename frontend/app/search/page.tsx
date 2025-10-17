@@ -7,8 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Target, ArrowLeft, Search, UserPlus } from "lucide-react"
 import Link from "next/link"
-import { getSupabaseClient, type User } from "@/backend/lib/supabase"
-import { isMockAuthEnabled, mockDelay } from "@/backend/lib/mock-auth"
+
 import { toast } from "sonner"
 
 export default function SearchPage() {
