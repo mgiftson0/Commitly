@@ -28,6 +28,7 @@ import {
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { GlobalSearch } from "@/components/search/global-search"
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -196,14 +197,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
         {/* Center - Search (hidden on mobile) */}
         <div className="hidden md:flex flex-1 max-w-md mx-4 sm:mx-8">
-          <div className="relative w-full">
-            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search goals, partners..."
-              className="w-full rounded-lg border bg-muted/50 pl-10 pr-4 py-2 text-sm focus-ring"
-            />
-          </div>
+          <GlobalSearch className="w-full" />
         </div>
 
         {/* Right side - Actions */}
@@ -216,15 +210,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               </Button>
             </SheetTrigger>
             <SheetContent side="top" className="p-4">
-              <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  autoFocus
-                  type="search"
-                  placeholder="Search goals, partners..."
-                  className="w-full rounded-lg border bg-muted/50 pl-10 pr-4 py-2 text-sm focus-ring"
-                />
-              </div>
+              <GlobalSearch className="w-full" />
             </SheetContent>
           </Sheet>
 

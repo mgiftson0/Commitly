@@ -56,6 +56,7 @@ import { MainLayout } from "@/components/layout/main-layout"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
 import { notifications } from "@/lib/notifications"
 import { createActivityCompletedActivity, createGoalCompletedActivity } from "@/lib/activity-tracker"
+import { updateGoalStreak, calculateOverallStreak } from "@/lib/streak-system"
 
 type Goal = {
   id: string
@@ -327,6 +328,29 @@ export default function GoalDetailPage() {
       // Add activity to recent activity feed if completed
       if (!isCompleted && goal) {
         createActivityCompletedActivity(activity.title, goal.title, goalId)
+        
+        // Update streaks when activity is completed
+        const updatedGoal = { ...goal, activities: updatedActivities.map(a => ({
+          title: a.title,
+          completed: a.is_completed,
+          completedAt: a.completed_at,
+          assigned_members: activityAssignments[a.id] || []
+        }))}
+        
+        const streakData = updateGoalStreak(updatedGoal, 'mock-user-id')
+        
+        // Update goal with new streak data
+        const goals = JSON.parse(localStorage.getItem('goals') || '[]')
+        const goalIndex = goals.findIndex((g: any) => g.id === goalId)
+        if (goalIndex !== -1) {
+          goals[goalIndex].personalStreak = streakData.personalStreak
+          goals[goalIndex].groupStreak = streakData.groupStreak
+          goals[goalIndex].lastCompletionDate = streakData.lastCompletionDate
+          localStorage.setItem('goals', JSON.stringify(goals))
+        }
+        
+        // Update overall streak
+        calculateOverallStreak(goals, 'mock-user-id')
       }
     } catch (error) {
       toast.error("Failed to update activity")

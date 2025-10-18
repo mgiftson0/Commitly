@@ -396,19 +396,29 @@ export default function DashboardPage() {
         <div className="relative bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/50 dark:to-blue-950/30 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                Welcome back, <span className="text-blue-600 dark:text-blue-400">{(() => {
-                  try {
-                    const kycData = localStorage.getItem('kycData')
-                    if (kycData) {
-                      const profile = JSON.parse(kycData)
-                      return profile.firstName || 'John'
-                    }
-                  } catch {}
-                  return 'John'
-                })()}!</span>
-              </h1>
-              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  Welcome back, <span className="text-blue-600 dark:text-blue-400">{(() => {
+                    try {
+                      const kycData = localStorage.getItem('kycData')
+                      if (kycData) {
+                        const profile = JSON.parse(kycData)
+                        return profile.firstName || 'John'
+                      }
+                    } catch {}
+                    return 'John'
+                  })()}!</span>
+                </h1>
+                <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                  {new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </div>
+              </div>
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300">
                 You're on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! Keep up the great work! 🔥
               </p>
             </div>
@@ -505,7 +515,7 @@ export default function DashboardPage() {
 
         <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-[800px_400px] 2xl:justify-center">
           {/* Active Goals */}
-          <Card className="hover-lift h-[400px] flex flex-col">
+          <Card className="hover-lift h-[400px] w-full flex flex-col">
             <CardHeader className="flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
@@ -542,11 +552,11 @@ export default function DashboardPage() {
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .slice(0, 3)
                     .map((goal) => (
-                    <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer" onClick={() => router.push(`/goals/${goal.id}`)}>
-                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full" onClick={() => router.push(`/goals/${goal.id}`)}>
+                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
                         <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <h4 className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">{goal.title}</h4>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="outline" className="text-xs">
@@ -560,7 +570,7 @@ export default function DashboardPage() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0 flex flex-col justify-center">
                         <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{goal.progress}%</div>
                         <Progress value={goal.progress} className="w-16 h-1.5 mt-1" />
                       </div>
@@ -572,7 +582,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Recent Activity */}
-          <Card className="hover-lift h-[400px] flex flex-col">
+          <Card className="hover-lift h-[400px] w-full flex flex-col">
             <CardHeader className="flex-shrink-0">
               <CardTitle className="flex items-center gap-2">
                 <Bell className={`h-5 w-5 transition-transform duration-200 ${bellShake ? 'animate-bounce' : ''}`} />
@@ -582,44 +592,46 @@ export default function DashboardPage() {
                 Your latest achievements and updates
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
-              {recentActivity.length === 0 ? (
-                <div className="text-center py-8 flex-1">
-                  <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-4">
-                    No recent activity yet. Complete some goals to see your progress here!
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4 flex-1 overflow-y-auto">
-                  {recentActivity.map((activity: any) => {
-                    const Icon = activity.icon
-                    return (
-                      <div
-                        key={activity.id}
-                        className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer min-h-[60px]"
-                        onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
-                      >
-                        <div className={`p-2 rounded-full bg-muted`}>
-                          <Icon className={`h-4 w-4 ${activity.color}`} />
+            <CardContent className="flex-1 flex flex-col p-4">
+              <div className="flex-1 overflow-y-auto mb-4">
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-8 flex-1">
+                    <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-4">
+                      No recent activity yet. Complete some goals to see your progress here!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentActivity.map((activity: any) => {
+                      const Icon = activity.icon
+                      return (
+                        <div
+                          key={activity.id}
+                          className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[70px] w-full"
+                          onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
+                        >
+                          <div className={`p-2 rounded-full bg-muted flex-shrink-0`}>
+                            <Icon className={`h-4 w-4 ${activity.color}`} />
+                          </div>
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <p className="text-sm font-medium truncate">{activity.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {activity.description}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {activity.time}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{activity.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {activity.description}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {activity.time}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
               <Button 
                 variant="ghost" 
-                className="w-full mt-4 text-sm flex-shrink-0"
+                className="w-full text-sm h-10 flex-shrink-0 mb-2 border border-slate-200 dark:border-slate-700"
                 onClick={() => router.push('/notifications')}
               >
                 View All Activity
