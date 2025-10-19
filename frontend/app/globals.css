@@ -296,3 +296,69 @@ nextjs-portal {
     @apply bg-primary text-primary-foreground shadow-sm;
   }
 }
+
+/* Mobile-specific optimizations for profile pages */
+@media (max-width: 600px) {
+  /* Reduce spacing on mobile */
+  .mobile-compact-spacing {
+    @apply space-y-3;
+  }
+
+  /* Smaller text sizes for mobile */
+  .mobile-text-xs {
+    font-size: 0.7rem;
+    line-height: 1rem;
+  }
+
+  .mobile-text-sm {
+    font-size: 0.8rem;
+    line-height: 1.1rem;
+  }
+
+  .mobile-text-base {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  /* Compact buttons for mobile */
+  .mobile-btn-compact {
+    @apply px-2 py-1 text-xs;
+  }
+
+  /* Smaller icons on mobile */
+  .mobile-icon-sm {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .mobile-icon-md {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  /* Compact cards on mobile */
+  .mobile-card-compact {
+    @apply p-2.5;
+  }
+
+  /* Reduce avatar sizes on mobile */
+  .mobile-avatar-sm {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .mobile-avatar-md {
+    width: 4rem;
+    height: 4rem;
+  }
+
+  /* Tighter grid gaps */
+  .mobile-grid-tight {
+    gap: 0.5rem;
+  }
+
+  /* Smaller badge text */
+  .mobile-badge-xs {
+    @apply text-[0.65rem] px-1.5 py-0.5;
+  }
+}
