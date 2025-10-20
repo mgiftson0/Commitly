@@ -288,7 +288,7 @@ export default function PrivacySettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Show Online Status</Label>
-                  <p className="text-sm text-muted-foreground">Let partners see when you're active</p>
+                  <p className="text-sm text-muted-foreground">Let partners see when you are active</p>
                 </div>
                 <Switch
                   checked={settings.showOnlineStatus}

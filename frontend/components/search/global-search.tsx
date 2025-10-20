@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Search, Target, Users, Award, Bell, X, Clock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { ACHIEVEMENTS } from "@/lib/achievements"
 
 interface SearchResult {
   id: string
@@ -20,6 +21,40 @@ interface SearchResult {
   progress?: number
   streak?: number
   onClick: () => void
+}
+
+interface GoalData {
+  id: string
+  title: string
+  description?: string
+  category?: string
+  status?: string
+  progress?: number
+  streak?: number
+}
+
+interface PartnerGoalData extends GoalData {
+  ownerName?: string
+}
+
+interface AchievementData {
+  id: string
+  title: string
+  description: string
+  type: string
+  rarity: string
+}
+
+interface NotificationData {
+  id: string
+  title: string
+  message: string
+}
+
+interface MockUser {
+  id: string
+  name: string
+  avatar: string
 }
 
 interface GlobalSearchProps {
@@ -36,36 +71,75 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
   const router = useRouter()
 
   useEffect(() => {
-    // Load recent searches
-    try {
-      const stored = localStorage.getItem('recentSearches')
-      if (stored) {
-        setRecentSearches(JSON.parse(stored))
+    // Load recent searches with improved error handling
+    const loadRecentSearches = (): void => {
+      try {
+        const stored = localStorage.getItem('recentSearches')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed)) {
+            setRecentSearches(parsed)
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load recent searches:', error)
+        // Clear corrupted data
+        localStorage.removeItem('recentSearches')
       }
-    } catch {}
+    }
+
+    loadRecentSearches()
   }, [])
 
   useEffect(() => {
-    if (query.length > 0) {
-      performSearch(query)
-    } else {
-      setResults([])
-    }
+    const timeoutId = setTimeout(() => {
+      if (query.length > 0) {
+        performSearch(query)
+      } else {
+        setResults([])
+      }
+    }, 300) // Debounce search by 300ms
+
+    return () => clearTimeout(timeoutId)
   }, [query])
 
-  const performSearch = (searchQuery: string) => {
+  const performSearch = (searchQuery: string): void => {
+    // Early return for very short queries
+    if (searchQuery.length < 2) {
+      setResults([])
+      return
+    }
+
     const searchResults: SearchResult[] = []
     const lowerQuery = searchQuery.toLowerCase()
+    const queryWords = lowerQuery.split(' ').filter(word => word.length > 0)
 
-    // Search goals
+    // Helper function to check if text matches query
+    const matchesQuery = (text: string | undefined): boolean => {
+      if (!text) return false
+      const lowerText = text.toLowerCase()
+      return queryWords.some(word => lowerText.includes(word))
+    }
+
+    // Helper function to check if text starts with query (for better relevance)
+    const startsWithQuery = (text: string | undefined): boolean => {
+      if (!text) return false
+      const lowerText = text.toLowerCase()
+      return queryWords.some(word => lowerText.startsWith(word))
+    }
+
+    // Search goals with improved matching
     try {
-      const goals = JSON.parse(localStorage.getItem('goals') || '[]')
-      goals.forEach((goal: any) => {
-        if (
-          goal.title.toLowerCase().includes(lowerQuery) ||
-          goal.description?.toLowerCase().includes(lowerQuery) ||
-          goal.category?.toLowerCase().includes(lowerQuery)
-        ) {
+      const goals = JSON.parse(localStorage.getItem('goals') || '[]') as GoalData[]
+      goals.forEach((goal) => {
+        const titleMatch = matchesQuery(goal.title)
+        const descMatch = matchesQuery(goal.description)
+        const categoryMatch = matchesQuery(goal.category)
+
+        if (titleMatch || descMatch || categoryMatch) {
+          // Prioritize results that start with the query
+          const priority = startsWithQuery(goal.title) ? 2 : startsWithQuery(goal.description) ? 1 : 0
+
           searchResults.push({
             id: goal.id,
             type: 'goal',
@@ -85,13 +159,13 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
       })
 
       // Search partner goals
-      const partnerGoals = JSON.parse(localStorage.getItem('partnerGoals') || '[]')
-      partnerGoals.forEach((goal: any) => {
-        if (
-          goal.title.toLowerCase().includes(lowerQuery) ||
-          goal.description?.toLowerCase().includes(lowerQuery) ||
-          goal.ownerName?.toLowerCase().includes(lowerQuery)
-        ) {
+      const partnerGoals = JSON.parse(localStorage.getItem('partnerGoals') || '[]') as PartnerGoalData[]
+      partnerGoals.forEach((goal) => {
+        const titleMatch = matchesQuery(goal.title)
+        const descMatch = matchesQuery(goal.description)
+        const ownerMatch = matchesQuery(goal.ownerName)
+
+        if (titleMatch || descMatch || ownerMatch) {
           searchResults.push({
             id: goal.id,
             type: 'goal',
@@ -108,17 +182,18 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
           })
         }
       })
-    } catch {}
+    } catch (error) {
+      console.warn('Error searching goals:', error)
+    }
 
     // Search achievements
     try {
-      const { ACHIEVEMENTS } = require('@/lib/achievements')
-      ACHIEVEMENTS.forEach((achievement: any) => {
-        if (
-          achievement.title.toLowerCase().includes(lowerQuery) ||
-          achievement.description.toLowerCase().includes(lowerQuery) ||
-          achievement.type.toLowerCase().includes(lowerQuery)
-        ) {
+      ACHIEVEMENTS.forEach((achievement: AchievementData) => {
+        const titleMatch = matchesQuery(achievement.title)
+        const descMatch = matchesQuery(achievement.description)
+        const typeMatch = matchesQuery(achievement.type)
+
+        if (titleMatch || descMatch || typeMatch) {
           searchResults.push({
             id: achievement.id,
             type: 'achievement',
@@ -133,16 +208,18 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
           })
         }
       })
-    } catch {}
+    } catch (error) {
+      console.warn('Error searching achievements:', error)
+    }
 
     // Search notifications
     try {
-      const notifications = JSON.parse(localStorage.getItem('notifications') || '[]')
-      notifications.slice(0, 20).forEach((notification: any) => {
-        if (
-          notification.title.toLowerCase().includes(lowerQuery) ||
-          notification.message.toLowerCase().includes(lowerQuery)
-        ) {
+      const notifications = JSON.parse(localStorage.getItem('notifications') || '[]') as NotificationData[]
+      notifications.slice(0, 20).forEach((notification) => {
+        const titleMatch = matchesQuery(notification.title)
+        const messageMatch = matchesQuery(notification.message)
+
+        if (titleMatch || messageMatch) {
           searchResults.push({
             id: notification.id,
             type: 'notification',
@@ -156,10 +233,12 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
           })
         }
       })
-    } catch {}
+    } catch (error) {
+      console.warn('Error searching notifications:', error)
+    }
 
     // Mock users search
-    const mockUsers = [
+    const mockUsers: MockUser[] = [
       { id: 'sarah-martinez', name: 'Sarah Martinez', avatar: '/placeholder-avatar.jpg' },
       { id: 'mike-chen', name: 'Mike Chen', avatar: '/placeholder-avatar.jpg' },
       { id: 'alex-johnson', name: 'Alex Johnson', avatar: '/placeholder-avatar.jpg' },
@@ -167,7 +246,7 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
     ]
 
     mockUsers.forEach(user => {
-      if (user.name.toLowerCase().includes(lowerQuery)) {
+      if (matchesQuery(user.name)) {
         searchResults.push({
           id: user.id,
           type: 'user',
@@ -183,7 +262,19 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
       }
     })
 
-    setResults(searchResults.slice(0, 8)) // Limit to 8 results
+    // Sort results by relevance and limit to 8
+    searchResults.sort((a, b) => {
+      // Prioritize goals and users over achievements and notifications
+      if (a.type === 'goal' && b.type !== 'goal') return -1
+      if (a.type !== 'goal' && b.type === 'goal') return 1
+      if (a.type === 'user' && b.type !== 'user') return -1
+      if (a.type !== 'user' && b.type === 'user') return 1
+
+      // Then sort by title length (shorter titles are likely more relevant)
+      return a.title.length - b.title.length
+    })
+
+    setResults(searchResults.slice(0, 8))
   }
 
   const addToRecentSearches = (search: string) => {
@@ -281,9 +372,14 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
             )}
 
             {query.length > 0 && results.length === 0 && (
-              <div className="p-4 text-center text-muted-foreground">
-                <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No results found for "{query}"</p>
+              <div className="p-4 text-center text-muted-foreground" role="status" aria-live="polite">
+                <Search className="h-8 w-8 mx-auto mb-2 opacity-50" aria-hidden="true" />
+                <p className="text-sm mb-2">
+                  No results found for &ldquo;{query}&rdquo;
+                </p>
+                <p className="text-xs text-muted-foreground/80">
+                  Try adjusting your search terms or browse categories
+                </p>
               </div>
             )}
 
