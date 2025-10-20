@@ -1053,7 +1053,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Goal</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to delete "{goal.title}"? This action cannot be undone and all progress will be lost.
+                              Are you sure you want to delete {goal.title} ? This action cannot be undone and all progress will be lost.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

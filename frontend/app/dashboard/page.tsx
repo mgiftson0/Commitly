@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import * as React from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -11,8 +10,6 @@ import {
   Target,
   Plus,
   Bell,
-  User,
-  Search,
   Flame,
   CheckCircle2,
   Clock,
@@ -21,23 +18,72 @@ import {
   Calendar,
   Users,
   BookOpen,
-  Dumbbell,
   Briefcase,
   Heart,
   Star,
   ArrowRight,
-  Play,
-  Pause,
-  MoreHorizontal,
   Zap,
   Trophy
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Celebration } from "@/components/achievements/celebration"
+
+// Types for better type safety
+interface Goal {
+  id: string
+  user_id: string
+  title: string
+  description: string
+  goal_type: string
+  visibility: string
+  start_date: string
+  is_suspended: boolean
+  created_at: string
+  updated_at: string
+  completed_at: string | null
+  progress: number
+  streak: number
+  dueDate?: string
+  priority: string
+}
+
+interface Activity {
+  id: string
+  type: string
+  title: string
+  description: string
+  time: string
+  icon: any
+  color: string
+  goalId?: string
+}
+
+interface CategoryProgress {
+  name: string
+  completed: number
+  total: number
+  progress: number
+  color: string
+  icon: any
+}
+
+interface Deadline {
+  id: string
+  title: string
+  dueDate: string
+  progress: number
+  priority: string
+}
+
+interface TodayStats {
+  completed: number
+  pending: number
+  streak: number
+  longestStreak: number
+}
 
 export default function DashboardPage() {
   const [goals, setGoals] = useState<any[]>([])
@@ -72,7 +118,7 @@ export default function DashboardPage() {
   const todayMotivation = motivations[new Date().getDate() % motivations.length]
 
   // Get upcoming deadlines from real goals
-  const upcomingDeadlines = React.useMemo(() => {
+  const upcomingDeadlines = useMemo(() => {
     try {
       const storedGoals = localStorage.getItem('goals')
       if (!storedGoals) return []
@@ -95,7 +141,7 @@ export default function DashboardPage() {
   }, [])
 
   // Calculate category progress from real goals
-  const categoryProgress = React.useMemo(() => {
+  const categoryProgress = useMemo(() => {
     try {
       const storedGoals = localStorage.getItem('goals')
       if (!storedGoals) return []
@@ -146,7 +192,7 @@ export default function DashboardPage() {
   }, [])
 
   // Get real recent activity from localStorage (only unread)
-  const recentActivity = React.useMemo(() => {
+  const recentActivity = useMemo(() => {
     try {
       const notifications = JSON.parse(localStorage.getItem('notifications') || '[]')
       const activityTypes = ['goal_completed', 'streak_milestone', 'partner_joined', 'goal_created', 'activity_completed', 'encouragement_received']
@@ -361,7 +407,7 @@ export default function DashboardPage() {
               <div className="flex-1">
                 <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-blue-100 dark:border-blue-800">
                   <p className="text-sm text-gray-900 dark:text-gray-100 italic mb-2 leading-relaxed">
-                    "{todayMotivation.quote}"
+                    &ldquo;{todayMotivation.quote}&rdquo;
                   </p>
                   <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                     — {todayMotivation.author}
@@ -419,7 +465,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300">
-                You're on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! Keep up the great work! 🔥
+                You are on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! Keep up the great work! 🔥
               </p>
             </div>
             <div className="flex gap-3">

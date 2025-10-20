@@ -673,7 +673,7 @@ export default function GoalDetailPage() {
                           {isPartnerView && (
                             <div className="text-center py-4">
                               <p className="text-sm text-muted-foreground mb-3">
-                                You're an accountability partner for {goalOwnerName}'s goal
+                                You are an accountability partner for {goalOwnerName} s goal
                               </p>
                               <EncouragementCard 
                                 isPartner={true}
