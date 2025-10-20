@@ -397,24 +397,22 @@ export default function DashboardPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Daily Motivation */}
+        {/* Daily Motivation - Single Container, One Line */}
         {motivationEnabled && showMotivation && (
-          <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-800 rounded-2xl p-6 shadow-lg">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/60 rounded-2xl">
-                <Star className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1">
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-blue-100 dark:border-blue-800">
-                  <p className="text-sm text-gray-900 dark:text-gray-100 italic mb-2 leading-relaxed">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-blue-100 dark:border-blue-800">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <Star className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-gray-900 dark:text-gray-100 italic truncate">
                     &ldquo;{todayMotivation.quote}&rdquo;
                   </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium truncate">
                     — {todayMotivation.author}
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -438,37 +436,27 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Welcome Header */}
-        <div className="relative bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/50 dark:to-blue-950/30 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                  Welcome back, <span className="text-blue-600 dark:text-blue-400">{(() => {
-                    try {
-                      const kycData = localStorage.getItem('kycData')
-                      if (kycData) {
-                        const profile = JSON.parse(kycData)
-                        return profile.firstName || 'John'
-                      }
-                    } catch {}
-                    return 'John'
-                  })()}!</span>
-                </h1>
-                <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                  {new Date().toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </div>
-              </div>
-              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300">
-                You are on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! Keep up the great work! 🔥
+        {/* Welcome Header - 2 Lines Maximum */}
+        <div className="relative bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/50 dark:to-blue-950/30 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-6 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <div className="flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                Welcome back, <span className="text-blue-600 dark:text-blue-400">{(() => {
+                  try {
+                    const kycData = localStorage.getItem('kycData')
+                    if (kycData) {
+                      const profile = JSON.parse(kycData)
+                      return profile.firstName || 'John'
+                    }
+                  } catch {}
+                  return 'John'
+                })()}!</span>
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                You're on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! 🔥
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <Link href="/goals/create">
                 <Button className="shadow-md bg-blue-600 hover:bg-blue-700 text-white" size="sm">
                   <Plus className="h-4 w-4 sm:mr-2" />
@@ -500,63 +488,46 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Today's Summary Cards */}
-        <div className="flex gap-3 sm:gap-4 overflow-x-auto">
-          <Card className="hover-lift min-w-[160px] flex-shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30 w-fit">
-                  <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Completed</p>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{todayStats.completed}</p>
-                </div>
+        {/* Today's Summary Cards - Profile Page Style */}
+        <div className="border rounded-lg p-3 sm:p-4 bg-card">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-green-500/10">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-lift min-w-[160px] flex-shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/30 w-fit">
-                  <Clock className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Pending</p>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{todayStats.pending}</p>
-                </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">{todayStats.completed}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Completed</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-lift min-w-[160px] flex-shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 w-fit">
-                  <Flame className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Streak</p>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{todayStats.streak}</p>
-                </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-orange-500/10">
+                <Clock className="h-4 w-4 text-orange-600" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-lift min-w-[160px] flex-shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 w-fit">
-                  <Award className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Best</p>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{todayStats.longestStreak}</p>
-                </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">{todayStats.pending}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Pending</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-blue-500/10">
+                <Flame className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">{todayStats.streak}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Streak</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-purple-500/10">
+                <Award className="h-4 w-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">{todayStats.longestStreak}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Best</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-[800px_400px] 2xl:justify-center">
@@ -570,7 +541,7 @@ export default function DashboardPage() {
                     Active Goals
                   </CardTitle>
                   <CardDescription>
-                    {activeGoals.length} goals in progress
+                    How you're doing across different areas
                   </CardDescription>
                 </div>
                 <Link href="/goals">
@@ -627,7 +598,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Recent Activity */}
+          {/* Recent Activity - Notification Page Styling */}
           <Card className="hover-lift h-[400px] w-full flex flex-col">
             <CardHeader className="flex-shrink-0">
               <CardTitle className="flex items-center gap-2">
@@ -648,26 +619,48 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {recentActivity.map((activity: any) => {
                       const Icon = activity.icon
+                      const getNotificationColor = (type: string) => {
+                        if (type === 'goal_completed') return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
+                        if (type === 'streak_milestone') return 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950'
+                        if (type === 'partner_joined') return 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950'
+                        if (type === 'goal_created') return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
+                        if (type === 'activity_completed') return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
+                        if (type === 'encouragement_received') return 'border-pink-200 bg-pink-50 dark:border-pink-800 dark:bg-pink-950'
+                        return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
+                      }
                       return (
                         <div
                           key={activity.id}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[70px] w-full"
+                          className={`p-3 rounded-lg border transition-all cursor-pointer hover:bg-accent/50 ${getNotificationColor(activity.type)} ${activity.goalId ? 'hover:border-primary/50' : ''}`}
                           onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
                         >
-                          <div className={`p-2 rounded-full bg-muted flex-shrink-0`}>
-                            <Icon className={`h-4 w-4 ${activity.color}`} />
-                          </div>
-                          <div className="flex-1 min-w-0 flex flex-col justify-center">
-                            <p className="text-sm font-medium truncate">{activity.title}</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {activity.description}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {activity.time}
-                            </p>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 mt-0.5">
+                              <div className="p-1.5 rounded-full bg-background/80">
+                                <Icon className={`h-4 w-4 ${activity.color}`} />
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-medium text-sm">{activity.title}</h3>
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                {activity.description}
+                              </p>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">
+                                  {activity.time}
+                                </span>
+                                {activity.goalId && (
+                                  <span className="text-xs text-primary font-medium">
+                                    View Goal →
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )
@@ -675,8 +668,8 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="w-full text-sm h-10 flex-shrink-0 mb-2 border border-slate-200 dark:border-slate-700"
                 onClick={() => router.push('/notifications')}
               >
@@ -828,18 +821,15 @@ export default function DashboardPage() {
 
         {/* Quick Actions & Partner Requests */}
         <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-[400px_400px] 2xl:justify-center">
-          {/* Quick Actions */}
-          <Card className="hover-lift h-[280px] flex flex-col">
-            <CardHeader className="flex-shrink-0">
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-blue-600" />
+          {/* Quick Actions - 2x2 Grid */}
+          <Card className="hover-lift h-[240px] flex flex-col">
+            <CardHeader className="flex-shrink-0 pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Zap className="h-4 w-4 text-blue-600" />
                 Quick Actions
               </CardTitle>
-              <CardDescription>
-                Jump into your most common tasks
-              </CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-4 gap-3">
+            <CardContent className="grid grid-cols-2 gap-3 flex-1">
               <Link href="/goals/create">
                 <div className="aspect-square p-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all hover:scale-105 cursor-pointer shadow-lg">
                   <div className="h-full flex flex-col items-center justify-center text-center">
@@ -887,38 +877,75 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Partner Requests */}
+          {/* Partner Requests / Close to Unlock - Mobile Conditional */}
           <Card className="hover-lift h-[280px] flex flex-col">
             <CardHeader className="flex-shrink-0">
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Partner Requests
+                <span className="hidden sm:inline">Partner Requests</span>
+                <span className="sm:hidden">Close to Unlock</span>
               </CardTitle>
               <CardDescription>
-                People who want to team up with you
+                <span className="hidden sm:inline">People who want to team up with you</span>
+                <span className="sm:hidden">Achievements you're close to unlocking</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder-avatar.jpg" />
-                    <AvatarFallback>SM</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Sarah Martinez</p>
-                    <p className="text-xs text-muted-foreground">
-                      Wants to be your fitness partner
-                    </p>
+                {/* Desktop: Partner Requests */}
+                <div className="hidden sm:block">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src="/placeholder-avatar.jpg" />
+                      <AvatarFallback>SM</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Sarah Martinez</p>
+                      <p className="text-xs text-muted-foreground">
+                        Wants to be your fitness partner
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline">Decline</Button>
+                      <Button size="sm">Accept</Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="outline">Decline</Button>
-                    <Button size="sm">Accept</Button>
+                </div>
+
+                {/* Mobile: Close to Unlock Achievements */}
+                <div className="sm:hidden space-y-2">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/50 dark:to-orange-950/50 border border-yellow-200 dark:border-yellow-800">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Trophy className="h-4 w-4 text-yellow-600" />
+                      <span className="text-sm font-medium">Consistency Champion</span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-bold">28/30</span>
+                      </div>
+                      <Progress value={93} className="h-1.5 [&>div]:bg-yellow-500" />
+                    </div>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Target className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium">Goal Master</span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-bold">8/10</span>
+                      </div>
+                      <Progress value={80} className="h-1.5 [&>div]:bg-blue-500" />
+                    </div>
                   </div>
                 </div>
               </div>
               <Button variant="ghost" className="w-full mt-3 text-sm">
-                View All Requests
+                <span className="hidden sm:inline">View All Requests</span>
+                <span className="sm:hidden">View All Achievements</span>
               </Button>
             </CardContent>
           </Card>

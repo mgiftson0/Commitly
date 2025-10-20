@@ -142,24 +142,27 @@ export function EncouragementCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Partner View - Send encouragement */}
+        {/* Partner View - Send encouragement - Single Container */}
         {isPartner ? (
           <div className="space-y-3">
-            <Textarea
-              placeholder={`Send an encouraging message to ${goalOwnerName}...`}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={4}
-              className="focus-ring resize-none"
-            />
-            <Button 
-              onClick={handleSendEncouragement}
-              disabled={!note.trim() || isSubmitting} 
-              className="hover-lift w-full"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              {isSubmitting ? "Sending..." : "Send Encouragement"}
-            </Button>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Textarea
+                  placeholder={`Send an encouraging message to ${goalOwnerName}...`}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                  className={`focus-ring resize-none ${isPartner ? 'w-full' : ''}`}
+                />
+              </div>
+              <Button
+                onClick={handleSendEncouragement}
+                disabled={!note.trim() || isSubmitting}
+                className="hover-lift self-end"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground text-center">
               Your message will help motivate {goalOwnerName} to keep going! ??
             </p>

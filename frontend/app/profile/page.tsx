@@ -454,9 +454,9 @@ export default function ProfilePage() {
               <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0 h-full overflow-y-auto">
                 <Tabs defaultValue="recent" className="space-y-3 sm:space-y-4">
                   <TabsList className="grid w-full grid-cols-3 h-auto">
-                    <TabsTrigger value="recent" className="text-[10px] sm:text-xs md:text-sm px-1 sm:px-3 py-1.5 sm:py-2">Recent ({goals.length})</TabsTrigger>
-                    <TabsTrigger value="active" className="text-[10px] sm:text-xs md:text-sm px-1 sm:px-3 py-1.5 sm:py-2">Active ({activeGoals.length})</TabsTrigger>
-                    <TabsTrigger value="completed" className="text-[10px] sm:text-xs md:text-sm px-1 sm:px-3 py-1.5 sm:py-2">Completed ({completedGoals.length})</TabsTrigger>
+                    <TabsTrigger value="recent" className="text-[9px] sm:text-xs md:text-sm px-1 sm:px-3 py-1 sm:py-2">Recent ({goals.length})</TabsTrigger>
+                    <TabsTrigger value="active" className="text-[9px] sm:text-xs md:text-sm px-1 sm:px-3 py-1 sm:py-2">Active ({activeGoals.length})</TabsTrigger>
+                    <TabsTrigger value="completed" className="text-[9px] sm:text-xs md:text-sm px-1 sm:px-3 py-1 sm:py-2">Completed ({completedGoals.length})</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="recent" className="space-y-2 sm:space-y-3">
@@ -633,7 +633,7 @@ export default function ProfilePage() {
 
           {/* Sidebar */}
           <div className="space-y-4 sm:space-y-6">
-            {/* Achievements */}
+            {/* Achievements - Responsive Grid */}
             <Card className="hover-lift h-[28rem]">
               <CardHeader className="px-4 sm:px-6 py-1">
                 <div className="flex items-center justify-between gap-2">
@@ -649,13 +649,13 @@ export default function ProfilePage() {
                 </div>
               </CardHeader>
               <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0 h-full overflow-y-auto">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                   {achievements
                     .filter(a => a.unlocked)
-                    .slice(-6) // Get last 6 unlocked for 3x2 grid
+                    .slice(-6) // Get last 6 unlocked for responsive grid
                     .reverse() // Show most recent first
                     .map((achievement) => (
-                      <div 
+                      <div
                         key={achievement.id}
                         className="cursor-pointer transform transition-transform hover:scale-105"
                         onClick={() => {
@@ -664,9 +664,9 @@ export default function ProfilePage() {
                           setTimeout(() => setShowCelebration(false), 2000)
                         }}
                       >
-                        <AchievementSquare 
+                        <AchievementSquare
                           achievement={achievement}
-                          size="md"
+                          size="sm"
                         />
                       </div>
                     ))

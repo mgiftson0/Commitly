@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Target,
   Home,
@@ -221,7 +222,7 @@ export function Sidebar({ className }: SidebarProps) {
       collapsed ? "w-14" : "w-56 md:w-72",
       className
     )}>
-      {/* Header */}
+      {/* Header - Enhanced Mobile Profile Info */}
       <div className="flex h-14 md:h-16 items-center justify-between px-3 sm:px-4 border-b">
         {!collapsed && (
           <div className="flex items-center gap-2">
@@ -238,6 +239,55 @@ export function Sidebar({ className }: SidebarProps) {
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
+
+      {/* Mobile Profile Section - Only visible when collapsed on mobile */}
+      {collapsed && (
+        <div className="p-3 border-b md:hidden">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src="/placeholder-avatar.jpg" />
+              <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+                {(() => {
+                  try {
+                    const kycData = localStorage.getItem('kycData')
+                    if (kycData) {
+                      const profile = JSON.parse(kycData)
+                      return `${profile.firstName?.[0] || 'J'}${profile.lastName?.[0] || 'D'}`
+                    }
+                  } catch {}
+                  return 'JD'
+                })()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {(() => {
+                  try {
+                    const kycData = localStorage.getItem('kycData')
+                    if (kycData) {
+                      const profile = JSON.parse(kycData)
+                      return `${profile.firstName || 'John'} ${profile.lastName || 'Doe'}`
+                    }
+                  } catch {}
+                  return 'John Doe'
+                })()}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                @{(() => {
+                  try {
+                    const kycData = localStorage.getItem('kycData')
+                    if (kycData) {
+                      const profile = JSON.parse(kycData)
+                      return profile.username || 'johndoe'
+                    }
+                  } catch {}
+                  return 'johndoe'
+                })()}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {/* Navigation */}
