@@ -252,21 +252,66 @@ export default function ProfilePage() {
             {goals.length > 0 ? (
               <div className="grid gap-4">
                 {goals.map(goal => (
-                  <Card key={goal.id} className="hover:bg-accent/50 transition-colors">
+                  <Card key={goal.id} className="hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => router.push(`/goals/${goal.id}`)}>
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium">{goal.title}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {goal.visibility}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">Active</Badge>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium truncate">{goal.title}</h3>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <Badge variant="outline" className="text-xs">
+                                {goal.visibility}
+                              </Badge>
+                              <Badge variant="outline" className={cn(
+                                "text-xs",
+                                goal.status === "active" && "bg-green-500/10 text-green-600 border-green-500/20",
+                                goal.status === "paused" && "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+                                goal.status === "completed" && "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                              )}>
+                                {goal.status}
+                              </Badge>
+                              {goal.streak > 0 && (
+                                <div className="flex items-center gap-1 text-xs text-orange-500">
+                                  <Flame className="h-3 w-3" />
+                                  <span>{goal.streak}d</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium">{goal.progress}%</div>
+                            <Progress 
+                              value={goal.progress} 
+                              className={cn(
+                                "w-20 h-1.5 mt-1",
+                                goal.progress < 30 && "text-red-500",
+                                goal.progress >= 30 && goal.progress < 70 && "text-yellow-500",
+                                goal.progress >= 70 && "text-green-500"
+                              )} 
+                            />
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{goal.progress}%</div>
-                          <Progress value={goal.progress} className="w-16 h-1.5 mt-1" />
+                        {goal.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">{goal.description}</p>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(goal.created_at).toLocaleDateString()}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {goal.accountabilityPartners?.length > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Users2 className="h-3 w-3" />
+                                {goal.accountabilityPartners.length}
+                              </div>
+                            )}
+                            {goal.type && (
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                                {goal.type}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </CardContent>

@@ -53,6 +53,13 @@ import { ACHIEVEMENTS, checkAchievements } from "@/lib/achievements"
 // Mock auth helper
 const isMockAuthEnabled = () => true
 
+// Progress-based color utility
+const getProgressColor = (progress: number) => {
+  if (progress < 30) return 'bg-red-500'
+  if (progress <= 70) return 'bg-yellow-500'
+  return 'bg-green-500'
+}
+
 export default function ProfilePage() {
   const [goals, setGoals] = useState<any[]>([])
   const [followers, setFollowers] = useState(125)
@@ -460,127 +467,91 @@ export default function ProfilePage() {
                   </TabsList>
 
                   <TabsContent value="recent" className="space-y-2 sm:space-y-3">
-                    {goals.slice(0, 9).map((goal) => (
-                      <Link key={goal.id} href={`/goals/${goal.id}`}>
-                        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                          <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
-                            <Target className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-xs sm:text-sm truncate">{goal.title}</h4>
-                            <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
-                              <Badge variant="outline" className="text-[10px] sm:text-xs">
-                                {goal.goal_type}
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px] sm:text-xs">
-                                {goal.visibility}
-                              </Badge>
-                              {isMockAuthEnabled() && (() => {
-                                try {
-                                  const s = myStoreGoals.find((g: any) => String(g.id) === String(goal.id))
-                                  if (!s) return null
-                                  return (
-                                    <>
-                                      {s.dueDate && (
-                                        <Badge variant="outline" className="text-[10px] sm:text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
-                                      )}
-                                      {s.recurrencePattern && (
-                                        <Badge variant="outline" className="text-[10px] sm:text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
-                                      )}
-                                    </>
-                                  )
-                                } catch { return null }
-                              })()}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                      {goals.slice(0, 6).map((goal) => (
+                        <Link key={goal.id} href={`/goals/${goal.id}`}>
+                          <div className="aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors bg-card group cursor-pointer">
+                            <div className="h-full flex flex-col">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="p-1.5 rounded-lg bg-primary/10">
+                                  <Target className="h-3 w-3 text-primary" />
+                                </div>
+                                {goal.completed_at ? (
+                                  <Badge className="bg-green-600 text-[10px]">Done</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-[10px]">Active</Badge>
+                                )}
+                              </div>
+                              <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
+                              <div className="mt-auto pt-2">
+                                <div className="w-full bg-muted rounded-full h-1.5">
+                                  <div
+                                    className={`h-1.5 rounded-full transition-all ${goal.completed_at ? 'bg-green-500' : 'bg-blue-500'}`}
+                                    style={{ width: `${goal.completed_at ? 100 : Math.min(goal.progress || 0, 100)}%` }}
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </div>
-                          {goal.completed_at ? (
-                            <Badge className="bg-green-600 text-[10px] sm:text-xs flex-shrink-0">Completed</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0">Active</Badge>
-                          )}
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      ))}
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="active" className="space-y-2 sm:space-y-3">
-                    {activeGoals.slice(0, 9).map((goal) => (
-                      <Link key={goal.id} href={`/goals/${goal.id}`}>
-                        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                          <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
-                            <Target className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-xs sm:text-sm truncate">{goal.title}</h4>
-                            <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
-                              <Badge variant="outline" className="text-[10px] sm:text-xs">
-                                {goal.goal_type}
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px] sm:text-xs">
-                                {goal.visibility}
-                              </Badge>
-                              {isMockAuthEnabled() && (() => {
-                                try {
-                                  const s = myStoreGoals.find((g: any) => String(g.id) === String(goal.id))
-                                  if (!s) return null
-                                  return (
-                                    <>
-                                      {s.dueDate && (
-                                        <Badge variant="outline" className="text-[10px] sm:text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
-                                      )}
-                                      {s.recurrencePattern && (
-                                        <Badge variant="outline" className="text-[10px] sm:text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
-                                      )}
-                                    </>
-                                  )
-                                } catch { return null }
-                              })()}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                      {activeGoals.slice(0, 6).map((goal) => (
+                        <Link key={goal.id} href={`/goals/${goal.id}`}>
+                          <div className="aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors bg-card group cursor-pointer">
+                            <div className="h-full flex flex-col">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="p-1.5 rounded-lg bg-primary/10">
+                                  <Target className="h-3 w-3 text-primary" />
+                                </div>
+                                <Badge variant="outline" className="text-[10px]">Active</Badge>
+                              </div>
+                              <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
+                              <div className="mt-auto pt-2">
+                                <div className="w-full bg-muted rounded-full h-1.5">
+                                  <div
+                                    className="h-1.5 rounded-full transition-all bg-blue-500"
+                                    style={{ width: `${Math.min(goal.progress || 0, 100)}%` }}
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </div>
-                          <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0">Active</Badge>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      ))}
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="completed" className="space-y-2 sm:space-y-3">
-                    {completedGoals.slice(0, 9).map((goal) => (
-                      <Link key={goal.id} href={`/goals/${goal.id}`}>
-                        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                          <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10 flex-shrink-0">
-                            <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-xs sm:text-sm truncate">{goal.title}</h4>
-                            <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
-                              <Badge variant="outline" className="text-[10px] sm:text-xs">
-                                {goal.goal_type}
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px] sm:text-xs">
-                                {goal.visibility}
-                              </Badge>
-                              {isMockAuthEnabled() && (() => {
-                                try {
-                                  const s = myStoreGoals.find((g: any) => String(g.id) === String(goal.id))
-                                  if (!s) return null
-                                  return (
-                                    <>
-                                      {s.dueDate && (
-                                        <Badge variant="outline" className="text-[10px] sm:text-xs">Due: {new Date(s.dueDate).toLocaleDateString()}</Badge>
-                                      )}
-                                      {s.recurrencePattern && (
-                                        <Badge variant="outline" className="text-[10px] sm:text-xs">{s.recurrencePattern === 'custom' ? 'Custom' : (s.recurrencePattern.charAt(0).toUpperCase() + s.recurrencePattern.slice(1))}</Badge>
-                                      )}
-                                    </>
-                                  )
-                                } catch { return null }
-                              })()}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                      {completedGoals.slice(0, 6).map((goal) => (
+                        <Link key={goal.id} href={`/goals/${goal.id}`}>
+                          <div className="aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors bg-card group cursor-pointer">
+                            <div className="h-full flex flex-col">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="p-1.5 rounded-lg bg-green-500/10">
+                                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                </div>
+                                <Badge className="bg-green-600 text-[10px]">Done</Badge>
+                              </div>
+                              <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
+                              <div className="mt-auto pt-2">
+                                <div className="w-full bg-muted rounded-full h-1.5">
+                                  <div
+                                    className="h-1.5 rounded-full bg-green-500"
+                                    style={{ width: '100%' }}
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </div>
-                          <Badge className="bg-green-600 text-[10px] sm:text-xs flex-shrink-0">Completed</Badge>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      ))}
+                    </div>
                   </TabsContent>
                 </Tabs>
               </CardContent>
@@ -722,7 +693,7 @@ export default function ProfilePage() {
                           {category.completed}/{category.total}
                         </span>
                       </div>
-                      <Progress value={percentage} className="h-1.5 sm:h-2" />
+                                <Progress value={percentage} className={`h-1.5 sm:h-2 ${getProgressColor(percentage)}`} />
                     </div>
                   )
                 })}

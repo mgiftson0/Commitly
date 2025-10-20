@@ -347,6 +347,12 @@ const getStatusColor = (status: string) => {
   }
 }
 
+const getProgressColor = (progress: number) => {
+  if (progress < 30) return 'bg-red-500'
+  if (progress <= 70) return 'bg-yellow-500'
+  return 'bg-green-500'
+}
+
 const getTypeIcon = (type: string) => {
   switch (type) {
     case "recurring": return <Flame className="h-4 w-4" />
@@ -923,8 +929,8 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {goals.map((goal) => (
-        <Card key={goal.id} className={`hover-lift group ${getGoalCardStyle(goal)}`}>
+      {goals.map((goal, index) => (
+        <Card key={`${goal.id}-${index}-${goal.title.replace(/\s+/g, '-').toLowerCase()}`} className={`hover-lift group ${getGoalCardStyle(goal)}`}>
           <CardHeader className="pb-3">
             {/* Requests handled in Notifications. Status shown below. */}
             <div className="flex items-start justify-between">
@@ -1108,7 +1114,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 <span className="text-muted-foreground">Progress</span>
                 <span className="font-medium">{goal.progress}%</span>
               </div>
-              <Progress value={goal.progress} className="h-2" />
+              <Progress value={goal.progress} className={`h-2 ${getProgressColor(goal.progress)}`} />
             </div>
 
             {/* Stats - Different for partner goals */}
