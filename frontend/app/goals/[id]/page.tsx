@@ -658,7 +658,7 @@ export default function GoalDetailPage() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Complete Goal</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to mark this goal as complete? This action cannot be undone and you won't be able to edit the goal anymore.
+                                    Are you sure you want to mark this goal as complete? This action cannot be undone and you will not be able to edit the goal anymore.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
