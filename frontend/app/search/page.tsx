@@ -1,131 +1,148 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Target, ArrowLeft, Search, UserPlus } from "lucide-react"
-import Link from "next/link"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Target, ArrowLeft, Search, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { MainLayout } from "@/components/layout/main-layout";
 
-import { toast } from "sonner"
+interface User {
+  id: string;
+  name: string;
+  username: string;
+  avatar?: string;
+  bio?: string;
+}
 
 export default function SearchPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<User[]>([])
-  const [loading, setLoading] = useState(false)
-  const supabase = getSupabaseClient()
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Mock users for demonstration
+  const mockUsers: User[] = [
+    {
+      id: "1",
+      name: "Alex Chen",
+      username: "alex_chen",
+      bio: "Fitness enthusiast and productivity coach",
+    },
+    {
+      id: "2",
+      name: "Sarah Martinez",
+      username: "sarah_m",
+      bio: "Marathon runner and wellness advocate",
+    },
+    {
+      id: "3",
+      name: "Emily Rodriguez",
+      username: "emily_r",
+      bio: "Software engineer focused on healthy habits",
+    },
+    {
+      id: "4",
+      name: "John Doe",
+      username: "john_d",
+      bio: "Goal achievement specialist",
+    },
+    {
+      id: "5",
+      name: "Jane Smith",
+      username: "jane_s",
+      bio: "Mindfulness and meditation practitioner",
+    },
+  ];
 
   const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!searchQuery.trim()) return
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
 
-    if (isMockAuthEnabled()) {
-      setLoading(true)
-      await mockDelay(500)
-      toast.info("Search disabled in mock mode")
-      setSearchResults([])
-      setLoading(false)
-      return
-    }
-    
-    if (!supabase) return
+    setLoading(true);
 
-    setLoading(true)
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Filter mock users based on search query
+    const filteredUsers = mockUsers.filter(
+      (user) =>
+        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.bio?.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+
+    setSearchResults(filteredUsers);
+    setLoading(false);
+  };
+
+  const sendPartnerRequest = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%,phone_number.ilike.%${searchQuery}%`)
-        .limit(20)
-
-      if (error) throw error
-      setSearchResults(data || [])
-    } catch (_error: unknown) {
-      toast.error("Search failed")
-    } finally {
-      setLoading(false)
+      // In a real app, this would send a request to the backend
+      toast.success("Partner request sent!");
+    } catch (error) {
+      toast.error("Failed to send partner request");
     }
-  }
-
-  const sendAccountabilityRequest = async (partnerId: string) => {
-    if (isMockAuthEnabled()) {
-      await mockDelay(500)
-      toast.info("Feature disabled in mock mode")
-      return
-    }
-    
-    if (!supabase) return
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
-
-      const { error } = await supabase
-        .from("accountability_partners")
-        .insert({
-          requester_id: user.id,
-          partner_id: partnerId,
-          status: "pending",
-        })
-
-      if (error) throw error
-
-      // Create notification for partner
-      await supabase.from("notifications").insert({
-        user_id: partnerId,
-        title: "Accountability Request",
-        message: "Someone wants to be your accountability partner!",
-        notification_type: "accountability_request",
-        related_user_id: user.id,
-      })
-
-      toast.success("Request sent!")
-    } catch (error: unknown) {
-      const err = error as { code?: string }
-      if (err.code === "23505") {
-        toast.error("Request already sent")
-      } else {
-        toast.error("Failed to send request")
-      }
-    }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <Target className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold">Search Users</h1>
+    <MainLayout>
+      <div className="container mx-auto p-6 max-w-4xl">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="icon" className="hover-lift">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Find Partners</h1>
+            <p className="text-muted-foreground">
+              Discover accountability partners to support your goals
+            </p>
           </div>
         </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
         {/* Search Form */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Find Accountability Partners</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Search Users
+            </CardTitle>
             <CardDescription>
-              Search by username, display name, or phone number
+              Find potential accountability partners by name, username, or
+              interests
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSearch} className="flex gap-2">
+            <form onSubmit={handleSearch} className="flex gap-3">
               <Input
-                placeholder="Search users..."
+                placeholder="Search by name, username, or bio..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1"
               />
-              <Button type="submit" disabled={loading}>
-                <Search className="h-4 w-4 mr-2" />
-                {loading ? "Searching..." : "Search"}
+              <Button type="submit" disabled={loading} className="hover-lift">
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    Searching...
+                  </div>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4 mr-2" />
+                    Search
+                  </>
+                )}
               </Button>
             </form>
           </CardContent>
@@ -133,59 +150,101 @@ export default function SearchPage() {
 
         {/* Search Results */}
         {searchResults.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-xl font-bold mb-4">
-              {searchResults.length} {searchResults.length === 1 ? "result" : "results"} found
-            </h2>
-            {searchResults.map((user) => (
-              <Card key={user.id}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={user.profile_picture_url} />
-                        <AvatarFallback>
-                          {user.display_name?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-semibold">{user.display_name}</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          @{user.username}
-                        </p>
-                        {user.bio && (
-                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-1">
-                            {user.bio}
-                          </p>
-                        )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Search Results ({searchResults.length})</CardTitle>
+              <CardDescription>
+                Connect with these users to become accountability partners
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {searchResults.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarImage src={user.avatar} />
+                      <AvatarFallback>
+                        {user.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">{user.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        @{user.username}
                       </div>
+                      {user.bio && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {user.bio}
+                        </div>
+                      )}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => sendAccountabilityRequest(user.id)}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Add Partner
-                    </Button>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  <Button
+                    onClick={() => sendPartnerRequest(user.id)}
+                    size="sm"
+                    className="hover-lift"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Send Request
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         )}
 
+        {/* Empty State */}
         {searchQuery && searchResults.length === 0 && !loading && (
           <Card>
             <CardContent className="py-12 text-center">
-              <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600 dark:text-slate-400">
-                No users found matching &quot;{searchQuery}&quot;
+              <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No users found</h3>
+              <p className="text-muted-foreground mb-4">
+                Try searching with different keywords or check your spelling
               </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchResults([]);
+                }}
+              >
+                Clear Search
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Initial State */}
+        {!searchQuery && searchResults.length === 0 && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                Find Your Accountability Partners
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Use the search above to discover users who share similar goals
+                and interests
+              </p>
+              <div className="text-sm text-muted-foreground">
+                <p>Tips for finding great partners:</p>
+                <ul className="mt-2 space-y-1">
+                  <li>• Search for users with similar fitness goals</li>
+                  <li>• Look for people with complementary skills</li>
+                  <li>• Connect with users in your area or timezone</li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
         )}
       </div>
-    </div>
-  )
+    </MainLayout>
+  );
 }

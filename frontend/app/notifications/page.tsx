@@ -1,12 +1,24 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Target,
   ArrowLeft,
@@ -23,148 +35,155 @@ import {
   Check,
   X,
   MoreHorizontal,
-  Trash2
-} from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import { MainLayout } from "@/components/layout/main-layout"
+  Heart,
+  Trash2,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { MainLayout } from "@/components/layout/main-layout";
 
 type Notification = {
-  id: string
-  title: string
-  message: string
-  type: string
-  is_read: boolean
-  created_at: string
-  related_goal_id?: string
-}
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+  related_goal_id?: string;
+};
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    loadNotifications()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    loadNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadNotifications = async () => {
     try {
-      const stored = localStorage.getItem('notifications')
+      const stored = localStorage.getItem("notifications");
       if (stored) {
-        setNotifications(JSON.parse(stored))
+        setNotifications(JSON.parse(stored));
       }
     } catch (error) {
-      toast.error("Failed to load notifications")
+      toast.error("Failed to load notifications");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const stored = localStorage.getItem('notifications')
+      const stored = localStorage.getItem("notifications");
       if (stored) {
-        const notifications = JSON.parse(stored)
-        const updated = notifications.map((n: any) => 
-          n.id === notificationId ? { ...n, is_read: true } : n
-        )
-        localStorage.setItem('notifications', JSON.stringify(updated))
-        await loadNotifications()
+        const notifications = JSON.parse(stored);
+        const updated = notifications.map((n: any) =>
+          n.id === notificationId ? { ...n, is_read: true } : n,
+        );
+        localStorage.setItem("notifications", JSON.stringify(updated));
+        await loadNotifications();
         // Trigger header bell update
-        window.dispatchEvent(new CustomEvent('storage'))
+        window.dispatchEvent(new CustomEvent("storage"));
       }
     } catch (error) {
-      toast.error("Failed to mark as read")
+      toast.error("Failed to mark as read");
     }
-  }
+  };
 
   const handleNotificationClick = (notification: any) => {
     // Mark as read
-    markAsRead(notification.id)
-    
+    markAsRead(notification.id);
+
     // Navigate if has related goal
     if (notification.related_goal_id) {
-      router.push(`/goals/${notification.related_goal_id}`)
+      router.push(`/goals/${notification.related_goal_id}`);
     }
-  }
+  };
 
   const markAllAsRead = async () => {
     try {
-      const stored = localStorage.getItem('notifications')
+      const stored = localStorage.getItem("notifications");
       if (stored) {
-        const notifications = JSON.parse(stored)
-        const updated = notifications.map((n: any) => ({ ...n, is_read: true }))
-        localStorage.setItem('notifications', JSON.stringify(updated))
-        await loadNotifications()
-        toast.success("All notifications marked as read")
+        const notifications = JSON.parse(stored);
+        const updated = notifications.map((n: any) => ({
+          ...n,
+          is_read: true,
+        }));
+        localStorage.setItem("notifications", JSON.stringify(updated));
+        await loadNotifications();
+        toast.success("All notifications marked as read");
       }
     } catch (error) {
-      toast.error("Failed to mark all as read")
+      toast.error("Failed to mark all as read");
     }
-  }
+  };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "goal_created":
-        return <Target className="h-5 w-5 text-blue-600" />
+        return <Target className="h-5 w-5 text-blue-600" />;
       case "goal_completed":
-        return <CheckCircle2 className="h-5 w-5 text-green-600" />
+        return <CheckCircle2 className="h-5 w-5 text-green-600" />;
       case "goal_missed":
-        return <AlertCircle className="h-5 w-5 text-red-600" />
+        return <AlertCircle className="h-5 w-5 text-red-600" />;
       case "accountability_request":
-        return <Users className="h-5 w-5 text-purple-600" />
+        return <Users className="h-5 w-5 text-purple-600" />;
       case "reminder":
-        return <Clock className="h-5 w-5 text-orange-600" />
+        return <Clock className="h-5 w-5 text-orange-600" />;
       case "partner_update":
-        return <Bell className="h-5 w-5 text-blue-600" />
+        return <Bell className="h-5 w-5 text-blue-600" />;
       default:
-        return <Bell className="h-5 w-5 text-slate-600" />
+        return <Bell className="h-5 w-5 text-slate-600" />;
     }
-  }
+  };
 
   // Mock data for rich notifications experience
   const mockSeedNotifications = [
     {
       id: 1,
       title: "Goal Completed! ??",
-      message: "Congratulations! You completed your 'Morning Workout' goal for today.",
+      message:
+        "Congratulations! You completed your 'Morning Workout' goal for today.",
       type: "goal_completed",
       is_read: false,
       created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
       related_goal_id: "1",
       user: {
         name: "You",
-        avatar: null
-      }
+        avatar: null,
+      },
     },
     {
       id: 2,
       title: "Streak Milestone! ??",
-      message: "Amazing! You've maintained a 15-day reading streak. Keep it up!",
+      message:
+        "Amazing! You've maintained a 15-day reading streak. Keep it up!",
       type: "streak_milestone",
       is_read: false,
       created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
       related_goal_id: "2",
       user: {
         name: "You",
-        avatar: null
-      }
+        avatar: null,
+      },
     },
     {
       id: 3,
       title: "Partner Request",
-      message: "Sarah Martinez wants to be your accountability partner for fitness goals.",
+      message:
+        "Sarah Martinez wants to be your accountability partner for fitness goals.",
       type: "accountability_request",
       is_read: true,
       created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
       related_goal_id: null,
       user: {
         name: "Sarah Martinez",
-        avatar: "/placeholder-avatar.jpg"
-      }
+        avatar: "/placeholder-avatar.jpg",
+      },
     },
     {
       id: 4,
@@ -176,33 +195,38 @@ export default function NotificationsPage() {
       related_goal_id: "3",
       user: {
         name: "System",
-        avatar: null
-      }
+        avatar: null,
+      },
     },
     {
       id: 5,
       title: "New Achievement",
-      message: "You've earned the 'Consistency Champion' badge for 30 days of goal completion!",
+      message:
+        "You've earned the 'Consistency Champion' badge for 30 days of goal completion!",
       type: "achievement",
       is_read: true,
       created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       related_goal_id: null,
       user: {
         name: "System",
-        avatar: null
-      }
-    }
-  ]
+        avatar: null,
+      },
+    },
+  ];
 
   const mockNotifications = [
-    ...notifications.map(n => ({ ...n, related_goal_id: n.related_goal_id || null, user: { name: 'System', avatar: null } })),
-    ...mockSeedNotifications
-  ]
+    ...notifications.map((n) => ({
+      ...n,
+      related_goal_id: n.related_goal_id || null,
+      user: { name: "System", avatar: null },
+    })),
+    ...mockSeedNotifications,
+  ];
 
-  const unreadCount = mockNotifications.filter(n => !n.is_read).length
-  const todayNotifications = mockNotifications.filter(n =>
-    new Date(n.created_at).toDateString() === new Date().toDateString()
-  )
+  const unreadCount = mockNotifications.filter((n) => !n.is_read).length;
+  const todayNotifications = mockNotifications.filter(
+    (n) => new Date(n.created_at).toDateString() === new Date().toDateString(),
+  );
 
   if (loading) {
     return (
@@ -214,7 +238,7 @@ export default function NotificationsPage() {
           </div>
         </div>
       </MainLayout>
-    )
+    );
   }
 
   return (
@@ -223,14 +247,20 @@ export default function NotificationsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Notifications</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Notifications
+            </h1>
             <p className="text-sm sm:text-base text-muted-foreground">
               Stay updated with your goal progress and achievements
             </p>
           </div>
           <div className="flex gap-2">
             {unreadCount > 0 && (
-              <Button variant="outline" onClick={markAllAsRead} className="hover-lift">
+              <Button
+                variant="outline"
+                onClick={markAllAsRead}
+                className="hover-lift"
+              >
                 <Check className="h-4 w-4 mr-2" />
                 Mark All Read ({unreadCount})
               </Button>
@@ -259,7 +289,9 @@ export default function NotificationsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold">{mockNotifications.length}</p>
+                  <p className="text-2xl font-bold">
+                    {mockNotifications.length}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -285,7 +317,9 @@ export default function NotificationsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Today</p>
-                  <p className="text-2xl font-bold">{todayNotifications.length}</p>
+                  <p className="text-2xl font-bold">
+                    {todayNotifications.length}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -308,126 +342,165 @@ export default function NotificationsPage() {
         {/* Notifications Tabs */}
         <Tabs defaultValue="all" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="all">All ({mockNotifications.length})</TabsTrigger>
+            <TabsTrigger value="all">
+              All ({mockNotifications.length})
+            </TabsTrigger>
             <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
             <TabsTrigger value="achievements">Achievements (3)</TabsTrigger>
             <TabsTrigger value="social">Social (2)</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
-            <NotificationsList notifications={mockNotifications} onNotificationClick={handleNotificationClick} />
+            <NotificationsList
+              notifications={mockNotifications}
+              onNotificationClick={handleNotificationClick}
+            />
           </TabsContent>
 
           <TabsContent value="unread" className="space-y-4">
-            <NotificationsList notifications={mockNotifications.filter(n => !n.is_read)} onNotificationClick={handleNotificationClick} />
+            <NotificationsList
+              notifications={mockNotifications.filter((n) => !n.is_read)}
+              onNotificationClick={handleNotificationClick}
+            />
           </TabsContent>
 
           <TabsContent value="achievements" className="space-y-4">
-            <NotificationsList notifications={mockNotifications.filter(n => n.type === 'achievement' || n.type === 'streak_milestone')} onNotificationClick={handleNotificationClick} />
+            <NotificationsList
+              notifications={mockNotifications.filter(
+                (n) =>
+                  n.type === "achievement" || n.type === "streak_milestone",
+              )}
+              onNotificationClick={handleNotificationClick}
+            />
           </TabsContent>
 
           <TabsContent value="social" className="space-y-4">
-            <NotificationsList notifications={mockNotifications.filter(n => n.type === 'accountability_request' || n.type === 'partner_update')} onNotificationClick={handleNotificationClick} />
+            <NotificationsList
+              notifications={mockNotifications.filter(
+                (n) =>
+                  n.type === "accountability_request" ||
+                  n.type === "partner_update",
+              )}
+              onNotificationClick={handleNotificationClick}
+            />
           </TabsContent>
         </Tabs>
       </div>
     </MainLayout>
-  )
+  );
 }
 
 interface NotificationItem {
-  id: number | string
-  title: string
-  message: string
-  type: string
-  is_read: boolean
-  created_at: string
-  related_goal_id: string | null
+  id: number | string;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+  related_goal_id: string | null;
   user: {
-    name: string
-    avatar: string | null
-  }
+    name: string;
+    avatar: string | null;
+  };
 }
 
-function NotificationsList({ notifications, onNotificationClick }: { notifications: NotificationItem[], onNotificationClick: (notification: NotificationItem) => void }) {
+function NotificationsList({
+  notifications,
+  onNotificationClick,
+}: {
+  notifications: NotificationItem[];
+  onNotificationClick: (notification: NotificationItem) => void;
+}) {
   if (notifications.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
           <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground mb-4">No notifications in this category</p>
+          <p className="text-muted-foreground mb-4">
+            No notifications in this category
+          </p>
           <Button variant="outline">View All Notifications</Button>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
     <div className="space-y-2">
       {notifications.map((notification) => (
-        <NotificationCard key={notification.id} notification={notification} onNotificationClick={onNotificationClick} />
+        <NotificationCard
+          key={notification.id}
+          notification={notification}
+          onNotificationClick={onNotificationClick}
+        />
       ))}
     </div>
-  )
+  );
 }
 
-function NotificationCard({ notification, onNotificationClick }: { notification: NotificationItem, onNotificationClick: (notification: NotificationItem) => void }) {
+function NotificationCard({
+  notification,
+  onNotificationClick,
+}: {
+  notification: NotificationItem;
+  onNotificationClick: (notification: NotificationItem) => void;
+}) {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "goal_completed":
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
       case "streak_milestone":
-        return <Flame className="h-4 w-4 text-orange-600" />
+        return <Flame className="h-4 w-4 text-orange-600" />;
       case "accountability_request":
-        return <Users className="h-4 w-4 text-purple-600" />
+        return <Users className="h-4 w-4 text-purple-600" />;
       case "reminder":
-        return <Clock className="h-4 w-4 text-blue-600" />
+        return <Clock className="h-4 w-4 text-blue-600" />;
       case "achievement":
-        return <Trophy className="h-4 w-4 text-yellow-600" />
+        return <Trophy className="h-4 w-4 text-yellow-600" />;
       case "goal_created":
-        return <Target className="h-4 w-4 text-blue-600" />
+        return <Target className="h-4 w-4 text-blue-600" />;
       case "activity_completed":
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
       case "encouragement_received":
-        return <Heart className="h-4 w-4 text-pink-600" />
+        return <Heart className="h-4 w-4 text-pink-600" />;
       default:
-        return <Bell className="h-4 w-4 text-slate-600" />
+        return <Bell className="h-4 w-4 text-slate-600" />;
     }
-  }
+  };
 
   const getNotificationColor = (type: string) => {
-    if (notification.is_read) return ""
+    if (notification.is_read) return "";
     switch (type) {
       case "goal_completed":
-        return "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
+        return "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950";
       case "streak_milestone":
-        return "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950"
+        return "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950";
       case "accountability_request":
-        return "border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950"
+        return "border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950";
       case "reminder":
-        return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950"
+        return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950";
       case "achievement":
-        return "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950"
+        return "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950";
       default:
-        return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950"
+        return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950";
     }
-  }
+  };
 
   const timeAgo = (date: string) => {
-    const diff = Date.now() - new Date(date).getTime()
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
-    
-    if (days > 0) return `${days}d ago`
-    if (hours > 0) return `${hours}h ago`
-    if (minutes > 0) return `${minutes}m ago`
-    return 'Just now'
-  }
+    const diff = Date.now() - new Date(date).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return "Just now";
+  };
 
   return (
-    <div 
-      className={`p-3 rounded-lg border transition-all cursor-pointer hover:bg-accent/50 ${getNotificationColor(notification.type)} ${notification.related_goal_id ? 'hover:border-primary/50' : ''}`}
+    <div
+      className={`p-3 rounded-lg border transition-all cursor-pointer hover:bg-accent/50 ${getNotificationColor(notification.type)} ${notification.related_goal_id ? "hover:border-primary/50" : ""}`}
       onClick={() => onNotificationClick(notification)}
     >
       <div className="flex items-start gap-3">
@@ -451,11 +524,13 @@ function NotificationCard({ notification, onNotificationClick }: { notification:
               {timeAgo(notification.created_at)}
             </span>
             {notification.related_goal_id && (
-              <span className="text-xs text-primary font-medium">View Goal →</span>
+              <span className="text-xs text-primary font-medium">
+                View Goal →
+              </span>
             )}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
