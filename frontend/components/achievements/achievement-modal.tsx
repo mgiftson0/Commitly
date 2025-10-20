@@ -72,32 +72,30 @@ export function AchievementModal({ achievement, open, onOpenChange }: Achievemen
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md mx-4 overflow-hidden ${rarityConfig.bg} ${rarityConfig.border} ${rarityConfig.glow} shadow-2xl`}>
-        <DialogHeader className="pb-4">
-          <DialogTitle className="text-xl sm:text-2xl font-bold text-center flex items-center justify-center gap-2">
-            <Trophy className={`h-6 w-6 ${rarityConfig.icon}`} />
+  <DialogContent className={`max-w-xs sm:max-w-md mx-2 sm:mx-4 overflow-hidden p-2 sm:p-6 ${rarityConfig.bg} ${rarityConfig.border} ${rarityConfig.glow} shadow-2xl`}>
+        <DialogHeader className="pb-2 sm:pb-4">
+          <DialogTitle className="text-lg sm:text-2xl font-bold text-center flex items-center justify-center gap-2">
+            <Trophy className={`h-5 sm:h-6 w-5 sm:w-6 ${rarityConfig.icon}`} />
             Achievement Unlocked!
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+  <div className="space-y-4 sm:space-y-6">
           {/* Enhanced Achievement Display */}
           <div className="flex justify-center">
             <div className="relative">
-              {/* Glow effect for unlocked achievements */}
               {achievement.unlocked && (
-                <div className={`absolute inset-0 rounded-full blur-xl opacity-30 ${rarityConfig.bg}`} />
+                <div className={`absolute inset-0 rounded-full blur-xl opacity-20 sm:opacity-30 ${rarityConfig.bg}`} />
               )}
-              <div className="relative w-24 h-24 sm:w-28 sm:h-28">
+              <div className="relative w-16 h-16 sm:w-24 sm:h-24">
                 <AchievementSquare
                   achievement={achievement}
-                  size="lg"
+                  size="md"
                 />
               </div>
-              {/* Sparkle effects for unlocked achievements */}
               {achievement.unlocked && (
-                <div className="absolute -top-2 -right-2">
-                  <Sparkles className={`h-4 w-4 ${rarityConfig.icon}`} />
+                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2">
+                  <Sparkles className={`h-3 w-3 sm:h-4 sm:w-4 ${rarityConfig.icon}`} />
                 </div>
               )}
             </div>
@@ -105,22 +103,22 @@ export function AchievementModal({ achievement, open, onOpenChange }: Achievemen
 
           {/* Achievement Info Card */}
           <Card className={`border-2 ${rarityConfig.border} ${rarityConfig.bg} shadow-lg`}>
-            <CardContent className="p-6 space-y-4">
-              <div className="text-center space-y-3">
-                <h3 className="text-xl sm:text-2xl font-bold text-foreground">
+            <CardContent className="p-3 sm:p-6 space-y-2 sm:space-y-4">
+              <div className="text-center space-y-1 sm:space-y-3">
+                <h3 className="text-base sm:text-xl font-bold text-foreground">
                   {achievement.title}
                 </h3>
-                <Badge className={`text-sm px-3 py-1 ${rarityConfig.badge} border-0`}>
+                <Badge className={`text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 ${rarityConfig.badge} border-0`}>
                   {achievement.rarity.toUpperCase()} ACHIEVEMENT
                 </Badge>
               </div>
 
-              <p className="text-sm sm:text-base text-muted-foreground text-center leading-relaxed">
+              <p className="text-xs sm:text-sm text-muted-foreground text-center leading-relaxed">
                 {achievement.description}
               </p>
 
-              {/* Enhanced Progress Section */}
-              <div className="space-y-4 p-4 bg-background/50 rounded-lg border">
+              {/* Enhanced Progress Section - Compact */}
+              <div className="space-y-2 p-3 bg-background/50 rounded-lg border">
                 <div className="flex items-center justify-between text-sm font-medium">
                   <span className="flex items-center gap-2">
                     <Star className={`h-4 w-4 ${rarityConfig.icon}`} />
@@ -132,35 +130,11 @@ export function AchievementModal({ achievement, open, onOpenChange }: Achievemen
                 </div>
                 <Progress
                   value={achievement.progressPercentage}
-                  className="h-3 bg-background/30"
+                  className={`h-2 bg-background/30 ${getProgressColor(achievement.progressPercentage)}`}
                 />
-                <div className="text-center">
-                  <span className={`text-sm font-semibold ${rarityConfig.icon}`}>
-                    {achievement.progressPercentage}% Complete
-                  </span>
-                </div>
               </div>
 
-              {/* Success Message */}
-              {achievement.unlocked && (
-                <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950/50 rounded-lg border border-green-200 dark:border-green-800">
-                  <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-                  <div>
-                    <div className="font-semibold text-green-800 dark:text-green-200 text-sm">
-                      Achievement Unlocked!
-                    </div>
-                    <div className="text-xs text-green-600 dark:text-green-400">
-                      Congratulations on your accomplishment! 🎉
-                    </div>
-                  </div>
-                </div>
-              )}
 
-              {/* Category Info */}
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border/50">
-                <Calendar className="h-4 w-4" />
-                <span>Category: {achievement.type}</span>
-              </div>
             </CardContent>
           </Card>
         </div>

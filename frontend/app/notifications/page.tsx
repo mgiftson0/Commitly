@@ -279,64 +279,46 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="flex gap-3 sm:gap-4 overflow-x-auto">
-          <Card className="hover-lift min-w-[160px] flex-shrink-0">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                  <Bell className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold">
-                    {mockNotifications.length}
-                  </p>
-                </div>
+        {/* Stats Cards - Dashboard Style */}
+        <div className="border rounded-lg p-3 sm:p-4 bg-card">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-blue-500/10">
+                <Bell className="h-4 w-4 text-blue-600" />
               </div>
-            </CardContent>
-          </Card>
-          <Card className="hover-lift min-w-[160px] flex-shrink-0">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-500/10">
-                  <Clock className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Unread</p>
-                  <p className="text-2xl font-bold">{unreadCount}</p>
-                </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">{mockNotifications.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
               </div>
-            </CardContent>
-          </Card>
-          <Card className="hover-lift min-w-[160px] flex-shrink-0">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Today</p>
-                  <p className="text-2xl font-bold">
-                    {todayNotifications.length}
-                  </p>
-                </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-orange-500/10">
+                <Clock className="h-4 w-4 text-orange-600" />
               </div>
-            </CardContent>
-          </Card>
-          <Card className="hover-lift min-w-[160px] flex-shrink-0">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/10">
-                  <Trophy className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Achievements</p>
-                  <p className="text-2xl font-bold">3</p>
-                </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">{unreadCount}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Unread</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-green-500/10">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">{todayNotifications.length}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Today</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-purple-500/10">
+                <Trophy className="h-4 w-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">3</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Achievements</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Notifications Tabs */}
