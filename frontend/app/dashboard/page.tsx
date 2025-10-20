@@ -50,6 +50,19 @@ interface Goal {
   priority: string
 }
 
+// Progress-based color utilities
+const getProgressColor = (progress: number) => {
+  if (progress < 30) return 'bg-red-500'
+  if (progress <= 70) return 'bg-yellow-500'
+  return 'bg-green-500'
+}
+
+const getProgressBgColor = (progress: number) => {
+  if (progress < 30) return 'bg-red-50 border-red-200 dark:bg-red-950/50 dark:border-red-800/50'
+  if (progress <= 70) return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/50 dark:border-yellow-800/50'
+  return 'bg-green-50 border-green-200 dark:bg-green-950/50 dark:border-green-800/50'
+}
+
 interface Activity {
   id: string
   type: string
@@ -453,7 +466,7 @@ export default function DashboardPage() {
                 })()}!</span>
               </h1>
               <p className="text-sm text-slate-600 dark:text-slate-300">
-                You're on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! 🔥
+                You are on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! 🔥
               </p>
             </div>
             <div className="flex gap-2 sm:gap-3">
@@ -541,7 +554,7 @@ export default function DashboardPage() {
                     Active Goals
                   </CardTitle>
                   <CardDescription>
-                    How you're doing across different areas
+                    How you are doing across different areas
                   </CardDescription>
                 </div>
                 <Link href="/goals">
@@ -589,7 +602,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right flex-shrink-0 flex flex-col justify-center">
                         <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{goal.progress}%</div>
-                        <Progress value={goal.progress} className="w-16 h-1.5 mt-1" />
+                        <Progress value={goal.progress} className={`w-16 h-1.5 mt-1 ${getProgressColor(goal.progress)}`} />
                       </div>
                     </div>
                   ))}
@@ -726,7 +739,7 @@ export default function DashboardPage() {
                           <p className="text-xs text-muted-foreground">
                             {getDueDateText()}
                           </p>
-                          <Progress value={goal.progress} className="w-full h-1.5 mt-2" />
+                          <Progress value={goal.progress} className={`w-full h-1.5 mt-2 ${getProgressColor(goal.progress)}`} />
                         </div>
                         <Badge variant={goal.priority === 'high' ? 'destructive' : goal.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
                           {goal.priority}
@@ -778,7 +791,7 @@ export default function DashboardPage() {
                                     {category.completed || 0}/{category.total || 0}
                                   </span>
                                 </div>
-                                <Progress value={category.progress} className="h-2" />
+                                <Progress value={category.progress} className={`h-2 ${getProgressColor(category.progress)}`} />
                               </div>
                             </div>
                           )
@@ -808,7 +821,7 @@ export default function DashboardPage() {
                               {category.completed || 0}/{category.total || 0}
                             </span>
                           </div>
-                          <Progress value={category.progress} className="h-2" />
+                                <Progress value={category.progress} className={`h-2 ${getProgressColor(category.progress)}`} />
                         </div>
                       </div>
                     )
@@ -887,7 +900,7 @@ export default function DashboardPage() {
               </CardTitle>
               <CardDescription>
                 <span className="hidden sm:inline">People who want to team up with you</span>
-                <span className="sm:hidden">Achievements you're close to unlocking</span>
+                <span className="sm:hidden">Achievements you are close to unlocking</span>
               </CardDescription>
             </CardHeader>
             <CardContent>

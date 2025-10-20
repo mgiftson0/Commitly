@@ -7,6 +7,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Trophy, Calendar, CheckCircle, Star, Sparkles } from "lucide-react"
 import { AchievementSquare } from "@/components/achievements/achievement-square"
 
+// Progress-based color utility
+const getProgressColor = (progress: number) => {
+  if (progress < 30) return 'bg-red-500'
+  if (progress <= 70) return 'bg-yellow-500'
+  return 'bg-green-500'
+}
+
 interface AchievementModalProps {
   achievement: any
   open: boolean
