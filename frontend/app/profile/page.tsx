@@ -49,6 +49,7 @@ import { AchievementModal } from "@/components/achievements/achievement-modal"
 import { Celebration } from "@/components/achievements/celebration"
 import { CategoryProgressModal } from "@/components/category-progress-modal"
 import { ACHIEVEMENTS, checkAchievements } from "@/lib/achievements"
+import { getProgressColor } from "@/lib/utils/progress-colors"
 
 // Mock auth helper
 const isMockAuthEnabled = () => true

@@ -62,6 +62,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
 import * as React from "react"
+import { getProgressColor } from "@/lib/utils/progress-colors"
 
 // Mock data for goals with enhanced features
 const mockGoals = [

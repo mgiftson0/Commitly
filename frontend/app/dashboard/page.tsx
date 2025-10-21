@@ -1,6 +1,9 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
+import { MainLayout } from "@/components/layout/main-layout"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -23,80 +26,30 @@ import {
   Star,
   ArrowRight,
   Zap,
-  Trophy
+  Trophy,
+  Settings,
+  Edit,
+  MapPin,
+  Link as LinkIcon
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { MainLayout } from "@/components/layout/main-layout"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Celebration } from "@/components/achievements/celebration"
 
-// Types for better type safety
-interface Goal {
-  id: string
-  user_id: string
-  title: string
-  description: string
-  goal_type: string
-  visibility: string
-  start_date: string
-  is_suspended: boolean
-  created_at: string
-  updated_at: string
-  completed_at: string | null
-  progress: number
-  streak: number
-  dueDate?: string
-  priority: string
-}
+// Import new components
+import { DashboardStats } from "@/components/dashboard/dashboard-stats"
+import { MotivationCard } from "@/components/dashboard/motivation-card"
+import { WelcomeHeader } from "@/components/dashboard/welcome-header"
+import { ActiveGoals } from "@/components/dashboard/active-goals"
+import { RecentActivity } from "@/components/dashboard/recent-activity"
+import { QuickActions } from "@/components/dashboard/quick-actions"
+import { PartnerRequests } from "@/components/dashboard/partner-requests"
+import { CloseToUnlock } from "@/components/dashboard/close-to-unlock"
 
-// Progress-based color utilities
-const getProgressColor = (progress: number) => {
-  if (progress < 30) return 'bg-red-500'
-  if (progress <= 70) return 'bg-yellow-500'
-  return 'bg-green-500'
-}
-
-const getProgressBgColor = (progress: number) => {
-  if (progress < 30) return 'bg-red-50 border-red-200 dark:bg-red-950/50 dark:border-red-800/50'
-  if (progress <= 70) return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/50 dark:border-yellow-800/50'
-  return 'bg-green-50 border-green-200 dark:bg-green-950/50 dark:border-green-800/50'
-}
-
-interface Activity {
-  id: string
-  type: string
-  title: string
-  description: string
-  time: string
-  icon: any
-  color: string
-  goalId?: string
-}
-
-interface CategoryProgress {
-  name: string
-  completed: number
-  total: number
-  progress: number
-  color: string
-  icon: any
-}
-
-interface Deadline {
-  id: string
-  title: string
-  dueDate: string
-  progress: number
-  priority: string
-}
-
-interface TodayStats {
-  completed: number
-  pending: number
-  streak: number
-  longestStreak: number
-}
+// Import hooks and utilities
+import { useGoals } from "@/hooks/use-goals"
+import { useNotifications } from "@/hooks/use-notifications"
+import { getProgressColor } from "@/lib/utils/progress-colors"
+import { CATEGORIES, CATEGORY_MAP } from "@/lib/constants/categories"
 
 export default function DashboardPage() {
   const [goals, setGoals] = useState<any[]>([])

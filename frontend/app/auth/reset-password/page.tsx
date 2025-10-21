@@ -1,33 +1,77 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import { Target, Mail, ArrowLeft, CheckCircle } from "lucide-react"
-import Link from "next/link"
-
-import { toast } from "sonner"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Target,
+  Mail,
+  ArrowLeft,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { authHelpers, hasSupabase } from "@/lib/supabase";
 
 export default function ResetPasswordPage() {
-  const [email, setEmail] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [useSupabase, setUseSupabase] = useState(false);
+
+  // Check if Supabase is configured on mount
+  useEffect(() => {
+    setUseSupabase(hasSupabase());
+  }, []);
+
+  const handleSupabaseReset = async () => {
+    try {
+      await authHelpers.resetPassword(email);
+      setEmailSent(true);
+      toast.success("Password reset email sent!");
+    } catch (error: any) {
+      console.error("Supabase reset password error:", error);
+      throw error;
+    }
+  };
+
+  const handleMockReset = async () => {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    setEmailSent(true);
+    toast.success("Password reset email sent!");
+  };
+
   const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 800))
-      setEmailSent(true)
-      toast.success("Password reset email sent!")
-    } catch (error) {
-      toast.error("Failed to send reset email")
+      if (useSupabase) {
+        await handleSupabaseReset();
+      } else {
+        await handleMockReset();
+      }
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+
+      // Show specific error messages
+      if (error.message?.includes("not found")) {
+        toast.error("No account found with this email address");
+      } else if (error.message?.includes("Invalid email")) {
+        toast.error("Please enter a valid email address");
+      } else if (error.message?.includes("not configured")) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to send reset email. Please try again.");
+      }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (emailSent) {
     return (
@@ -41,10 +85,18 @@ export default function ResetPasswordPage() {
               <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Check Your Email</h1>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                Check Your Email
+              </h1>
               <p className="text-gray-600">
-                We&apos;ve sent a password reset link to <strong>{email}</strong>
+                We&apos;ve sent a password reset link to{" "}
+                <strong>{email}</strong>
               </p>
+              {!useSupabase && (
+                <p className="text-sm text-amber-600 mt-2">
+                  (Demo mode: No actual email sent)
+                </p>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -68,7 +120,7 @@ export default function ResetPasswordPage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -87,8 +139,20 @@ export default function ResetPasswordPage() {
               </div>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Reset Password</h1>
-          <p className="text-gray-600">Enter your email to receive a reset link</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Reset Password
+          </h1>
+          <p className="text-gray-600">
+            Enter your email to receive a reset link
+          </p>
+
+          {/* Show mode indicator */}
+          {!useSupabase && (
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs text-amber-700">
+              <AlertCircle className="h-3 w-3" />
+              Demo Mode - Using local storage
+            </div>
+          )}
         </div>
 
         {/* Reset Card */}
@@ -97,7 +161,10 @@ export default function ResetPasswordPage() {
             <form onSubmit={handleResetPassword} className="space-y-6">
               {/* Email Field */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="email"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Email Address
                 </Label>
                 <div className="relative">
@@ -112,6 +179,9 @@ export default function ResetPasswordPage() {
                     required
                   />
                 </div>
+                <p className="text-xs text-gray-500">
+                  We&apos;ll send you instructions to reset your password
+                </p>
               </div>
 
               {/* Reset Button */}
@@ -146,13 +216,17 @@ export default function ResetPasswordPage() {
 
         {/* Help Text */}
         <div className="text-center text-sm text-gray-500">
-          <p>Remember your password?{" "}
-            <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-medium">
+          <p>
+            Remember your password?{" "}
+            <Link
+              href="/auth/login"
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
               Sign in here
             </Link>
           </p>
         </div>
       </div>
     </div>
-  )
+  );
 }
