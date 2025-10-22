@@ -1,6 +1,6 @@
 'use client';
 
-import { createClient } from "@supabase/supabase-js";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type { Database } from "@/types/supabase";
 import type { UserProfile, AuthError, UsernameCheck, EmailCheck } from "@/types/auth";
 
@@ -11,11 +11,24 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 // Username validation regex
 const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
-// Create Supabase client
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// Create Supabase client (Next.js Auth Helpers uses cookies for SSR compatibility)
+export const supabase = createClientComponentClient<Database>();
 
 // Auth helper functions
 export const authHelpers = {
+  signUp: async (email: string, password: string, metadata?: Record<string, any>) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: metadata,
+        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
+      },
+    });
+    if (error) throw error;
+    return data;
+  },
+
   signIn: async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -73,5 +86,11 @@ export const authHelpers = {
       console.error('Error checking KYC status:', err);
       return false;
     }
+  },
+
+  isGoogleOAuthAvailable: async (): Promise<boolean> => {
+    // Client-side capability check. We can't query provider settings from the browser.
+    // Treat Google OAuth as available if Supabase env vars are configured.
+    return Boolean(supabaseUrl && supabaseAnonKey);
   }
 };

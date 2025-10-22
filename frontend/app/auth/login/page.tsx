@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { authHelpers, supabase } from "@/lib/supabase-client";
+import { initializeSampleData } from "@/lib/mock-data";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -52,6 +53,12 @@ export default function LoginPage() {
     checkGoogleOAuth();
   }, []);
 
+  // Enable Supabase mode when env variables are present
+  useEffect(() => {
+    const hasEnv = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    setUseSupabase(hasEnv);
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -63,6 +70,21 @@ export default function LoginPage() {
         throw new Error("Failed to establish session");
       }
 
+      // Ensure middleware-detected cookies are set server-side
+      try {
+        await fetch('/api/auth/set-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          }),
+          credentials: 'include',
+        });
+      } catch (e) {
+        console.warn('Failed to set server session cookie', e);
+      }
+
       // Check if user has completed KYC
       const { data: profile } = await supabase
         .from('profiles')
@@ -71,6 +93,8 @@ export default function LoginPage() {
         .single();
 
       toast.success("Welcome back!");
+      // Ensure client picks up new cookies/session state
+      try { (router as any).refresh?.(); } catch {}
       
       // Redirect based on KYC completion
       if (profile?.has_completed_kyc) {

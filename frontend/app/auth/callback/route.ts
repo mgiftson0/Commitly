@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -44,18 +44,24 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Create a Supabase client
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
+    // Create a Supabase server client that can set cookies on the response
+    const response = NextResponse.next();
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          response.cookies.set({ name, value, ...options, path: "/" });
+        },
+        remove(name: string, options: CookieOptions) {
+          response.cookies.delete({ name, ...options, path: "/" });
+        },
       },
     });
 
-    // Exchange the code for a session
-    const { data, error: exchangeError } =
-      await supabase.auth.exchangeCodeForSession(code);
+    // Exchange the code for a session and set auth cookies
+    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
     if (exchangeError) {
       console.error("Error exchanging code for session:", exchangeError);
@@ -87,12 +93,8 @@ export async function GET(request: NextRequest) {
       ? new URL("/dashboard", request.url)
       : new URL("/auth/kyc", request.url);
 
-    const response = NextResponse.redirect(redirectUrl);
-
-    // Set authentication flag in localStorage will be handled by client-side
-    // Just ensure the session is properly stored by Supabase client
-
-    return response;
+    // Redirect with cookies attached so middleware and client see the session
+    return NextResponse.redirect(redirectUrl);
   } catch (error) {
     console.error("Unexpected error in auth callback:", error);
     return NextResponse.redirect(

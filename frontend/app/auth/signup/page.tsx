@@ -31,6 +31,7 @@ export default function SignUpPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [googleOAuthAvailable, setGoogleOAuthAvailable] = useState(false);
+  const [useSupabase, setUseSupabase] = useState(false);
   const router = useRouter();
 
   // Check if Google OAuth is configured on mount
@@ -46,6 +47,12 @@ export default function SignUpPage() {
     };
 
     checkGoogleOAuth();
+  }, []);
+
+  // Enable Supabase mode when env variables are present
+  useEffect(() => {
+    const hasEnv = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    setUseSupabase(hasEnv);
   }, []);
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -125,31 +132,6 @@ export default function SignUpPage() {
       console.error("Google signup error:", error);
       toast.error("Failed to sign up with Google. Please try again.");
     } finally {
-      setLoading(false);
-    }
-  };
-
-    try {
-      await handleGoogleSignUp();
-    } catch (error: Error | any) {
-      console.error("Google signup error:", error);
-      if (error.message?.includes("not configured")) {
-        toast.error(error.message);
-      } else if (
-        error.message?.includes("provider is not enabled") ||
-        error.message?.includes("Unsupported provider") ||
-        error.message?.includes("Google OAuth is not enabled")
-      ) {
-        toast.error(
-          "Google Sign-In is not configured. Please use email/password signup instead.",
-          {
-            description:
-              "Contact the administrator to enable Google OAuth in Supabase settings.",
-          },
-        );
-      } else {
-        toast.error("Failed to sign up with Google");
-      }
       setLoading(false);
     }
   };
@@ -371,7 +353,7 @@ export default function SignUpPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={handleGoogleLogin}
+                    onClick={handleGoogleSignUp}
                     className="w-full h-12 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
                     disabled={loading}
                   >
