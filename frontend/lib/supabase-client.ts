@@ -2,10 +2,14 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
+import type { UserProfile, AuthError, UsernameCheck, EmailCheck } from "@/types/auth";
 
 // Supabase URL and Key from environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+// Username validation regex
+const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
 // Create Supabase client
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);

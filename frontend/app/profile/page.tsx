@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import * as React from "react"
+import { Profile, Goal, Notification, Achievement, CategoryStat } from "@/types/profile"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -41,7 +42,6 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-// Removed backend dependencies - using localStorage only
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { AchievementSquare } from "@/components/achievements/achievement-square"
@@ -50,186 +50,188 @@ import { Celebration } from "@/components/achievements/celebration"
 import { CategoryProgressModal } from "@/components/category-progress-modal"
 import { ACHIEVEMENTS, checkAchievements } from "@/lib/achievements"
 import { getProgressColor } from "@/lib/utils/progress-colors"
-
-// Mock auth helper
-const isMockAuthEnabled = () => true
-
-// Progress-based color utility
-const getProgressColor = (progress: number) => {
-  if (progress < 30) return 'bg-red-500'
-  if (progress <= 70) return 'bg-yellow-500'
-  return 'bg-green-500'
-}
+import { authHelpers, supabase } from "@/lib/supabase-client"
 
 export default function ProfilePage() {
-  const [goals, setGoals] = useState<any[]>([])
-  const [followers, setFollowers] = useState(125)
-  const [following, setFollowing] = useState(89)
+  const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
-  const [myStoreGoals, setMyStoreGoals] = useState<any[]>([])
-  const [partnerStoreGoals, setPartnerStoreGoals] = useState<any[]>([])
-  const [userProfile, setUserProfile] = useState<any>(null)
-  const [achievements, setAchievements] = useState<any[]>([])
-  const [selectedAchievement, setSelectedAchievement] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null)
   const [showCelebration, setShowCelebration] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const router = useRouter()
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const session = await authHelpers.getSession();
+        if (!session) {
+          router.push('/auth/login');
+          return;
+        }
+
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        if (profileData) {
+          setProfile(profileData);
+        }
+
+        const { data: goalsData, error: goalsError } = await supabase
+          .from('goals')
+          .select('*')
+          .eq('user_id', session.user.id);
+
+        if (goalsError) throw goalsError;
+        if (goalsData) {
+          setGoals(goalsData);
+        }
+
+        const { data: achievementsData, error: achievementsError } = await supabase
+          .from('user_achievements')
+          .select('*, achievements(*)')
+          .eq('user_id', session.user.id);
+
+        if (achievementsError) throw achievementsError;
+        if (achievementsData) {
+          setAchievements(achievementsData.map(ua => ({
+            ...ua.achievements,
+            unlocked_at: ua.unlocked_at
+          })));
+        }
+
+      } catch (error: any) {
+        console.error('Error loading profile:', error);
+        toast.error('Failed to load profile data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [router]);
+
   // Calculate category stats from real goals
-  const categoryStats = React.useMemo(() => {
-    try {
-      const categories = ['Health & Fitness', 'Learning', 'Career', 'Personal']
-      const categoryMap = {
-        'health-fitness': 'Health & Fitness',
-        'learning': 'Learning', 
-        'career': 'Career',
-        'personal': 'Personal'
-      }
+  const categoryStats = useMemo<CategoryStat[]>(() => {
+    const categories = ['Health & Fitness', 'Learning', 'Career', 'Personal'];
+    const categoryMap = {
+      'health-fitness': 'Health & Fitness',
+      'learning': 'Learning', 
+      'career': 'Career',
+      'personal': 'Personal'
+    };
+    
+    const iconMap = {
+      'Health & Fitness': Heart,
+      'Learning': BookOpen,
+      'Career': Briefcase,
+      'Personal': Star
+    };
+    
+    const colorMap = {
+      'Health & Fitness': 'bg-green-500',
+      'Learning': 'bg-blue-500', 
+      'Career': 'bg-purple-500',
+      'Personal': 'bg-orange-500'
+    };
+
+    return categories.map(category => {
+      const categoryGoals = goals.filter(goal => {
+        const mappedCategory = categoryMap[goal.category as keyof typeof categoryMap] || goal.category;
+        return mappedCategory === category;
+      });
+
+      const completed = categoryGoals.filter(goal => goal.completed_at).length;
+      const total = categoryGoals.length;
       
-      return categories.map(category => {
-        const categoryGoals = myStoreGoals.filter((g: any) => {
-          const mappedCategory = categoryMap[g.category as keyof typeof categoryMap] || g.category
-          return mappedCategory === category
-        })
-        const completed = categoryGoals.filter((g: any) => g.completedAt).length
-        const total = categoryGoals.length
-        
-        const iconMap = {
-          'Health & Fitness': Heart,
-          'Learning': BookOpen,
-          'Career': Briefcase,
-          'Personal': Star
-        }
-        const colorMap = {
-          'Health & Fitness': 'bg-green-500',
-          'Learning': 'bg-blue-500', 
-          'Career': 'bg-purple-500',
-          'Personal': 'bg-orange-500'
-        }
-        
-        return {
-          name: category,
-          completed,
-          total,
-          color: colorMap[category as keyof typeof colorMap],
-          icon: iconMap[category as keyof typeof iconMap]
-        }
-      }).filter(c => c.total > 0)
-    } catch {
-      return []
-    }
-  }, [myStoreGoals])
+      return {
+        name: category,
+        completed,
+        total,
+        color: colorMap[category as keyof typeof colorMap],
+        icon: iconMap[category as keyof typeof iconMap]
+      };
+    }).filter(c => c.total > 0);
+  }, [goals]);
 
-  // Get real recent activity from localStorage (same as dashboard)
-  const recentActivity = React.useMemo(() => {
-    try {
-      const notifications = JSON.parse(localStorage.getItem('notifications') || '[]')
-      const activityTypes = ['goal_completed', 'streak_milestone', 'partner_joined', 'goal_created', 'activity_completed', 'encouragement_received', 'achievement_unlocked']
-      
-      return notifications
-        .filter((n: any) => activityTypes.includes(n.type) && !n.is_read)
-        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 3)
-        .map((n: any) => {
-          const iconMap = {
-            goal_completed: CheckCircle2,
-            streak_milestone: Flame,
-            partner_joined: Users,
-            goal_created: Target,
-            activity_completed: CheckCircle2,
-            encouragement_received: Heart,
-            achievement_unlocked: Trophy
-          }
-          const colorMap = {
-            goal_completed: 'text-green-600',
-            streak_milestone: 'text-orange-600',
-            partner_joined: 'text-purple-600',
-            goal_created: 'text-blue-600',
-            activity_completed: 'text-green-600',
-            encouragement_received: 'text-pink-600',
-            achievement_unlocked: 'text-yellow-600'
-          }
-          
-          const timeAgo = (date: string) => {
-            const diff = Date.now() - new Date(date).getTime()
-            const minutes = Math.floor(diff / 60000)
-            const hours = Math.floor(diff / 3600000)
-            const days = Math.floor(diff / 86400000)
-            
-            if (days > 0) return `${days}d ago`
-            if (hours > 0) return `${hours}h ago`
-            if (minutes > 0) return `${minutes}m ago`
-            return 'Just now'
-          }
-          
-          return {
-            id: n.id,
-            type: n.type,
-            title: n.title,
-            description: n.message,
-            time: timeAgo(n.createdAt),
-            icon: iconMap[n.type as keyof typeof iconMap] || Bell,
-            color: colorMap[n.type as keyof typeof colorMap] || 'text-gray-600',
-            goalId: n.related_goal_id
-          }
-        })
-    } catch {
-      return []
-    }
-  }, [myStoreGoals])
-
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  
   useEffect(() => {
-    loadGoals()
-    loadUserProfile()
-  }, [])
+    const loadNotifications = async () => {
+      try {
+        const session = await authHelpers.getSession();
+        if (!session) return;
 
-  // Load achievements when goals change
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .is('read_at', null)
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        if (error) throw error;
+        setNotifications(data || []);
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      }
+    };
+
+    loadNotifications();
+  }, []);
+
+  const recentActivity = useMemo(() => {
+    const iconMap = {
+      goal_completed: CheckCircle2,
+      streak_milestone: Flame,
+      partner_joined: Users,
+      goal_created: Target,
+      activity_completed: CheckCircle2,
+      encouragement_received: Heart,
+      achievement_unlocked: Trophy
+    } as const;
+
+    const colorMap = {
+      goal_completed: 'text-green-600',
+      streak_milestone: 'text-orange-600',
+      partner_joined: 'text-purple-600',
+      goal_created: 'text-blue-600',
+      activity_completed: 'text-green-600',
+      encouragement_received: 'text-pink-600',
+      achievement_unlocked: 'text-yellow-600'
+    } as const;
+
+    return notifications.map(notification => ({
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      description: notification.message,
+      time: new Date(notification.created_at).toLocaleString(),
+      icon: iconMap[notification.type] || Bell,
+      color: colorMap[notification.type] || 'text-gray-600',
+      data: notification.data
+    }));
+  }, [notifications]);
+          
+  // Handle celebration effect
   useEffect(() => {
-    if (myStoreGoals.length > 0) {
-      const userStats = {
-        encouragementsSent: parseInt(localStorage.getItem('encouragementsSent') || '0')
-      }
-      const checkedAchievements = checkAchievements(myStoreGoals, userStats)
-      setAchievements(checkedAchievements)
+    if (showCelebration) {
+      const timer = setTimeout(() => {
+        setShowCelebration(false);
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-  }, [myStoreGoals])
+  }, [showCelebration]);
 
-  const loadUserProfile = () => {
-    try {
-      const kycData = localStorage.getItem('kycData')
-      if (kycData) {
-        setUserProfile(JSON.parse(kycData))
-      } else {
-        // Default profile if no KYC data
-        setUserProfile({
-          firstName: 'John',
-          lastName: 'Doe',
-          username: 'johndoe',
-          email: 'john@example.com',
-          phone: '+1 (555) 123-4567',
-          location: 'San Francisco, CA',
-          website: 'johndoe.com',
-          bio: 'Goal-oriented individual passionate about personal growth and helping others achieve their dreams.'
-        })
-      }
-    } catch {
-      setUserProfile({
-        firstName: 'John',
-        lastName: 'Doe',
-        username: 'johndoe',
-        email: 'john@example.com',
-        phone: '+1 (555) 123-4567',
-        location: 'San Francisco, CA',
-        website: 'johndoe.com',
-        bio: 'Goal-oriented individual passionate about personal growth and helping others achieve their dreams.'
-      })
-    }
-  }
-
-  const loadGoals = () => {
-    try {
-      const storedGoals = localStorage.getItem('goals')
-      const storedPartnerGoals = localStorage.getItem('partnerGoals')
+  // Handle achievement click
+  const handleAchievementClick = (achievement: Achievement) => {
+    setSelectedAchievement(achievement);
+  };
       
       if (storedGoals) {
         const goals = JSON.parse(storedGoals)
@@ -268,21 +270,23 @@ export default function ProfilePage() {
     setLoading(false)
   }
 
-  // Live update when localStorage changes
+  // Subscribe to real-time updates
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', loadGoals)
-      window.addEventListener('goalUpdated', loadGoals)
-      window.addEventListener('goalDeleted', loadGoals)
-    }
+    const channel = supabase
+      .channel('public:goals')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'goals' 
+      }, () => {
+        loadProfile();
+      })
+      .subscribe();
+
     return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', loadGoals)
-        window.removeEventListener('goalUpdated', loadGoals)
-        window.removeEventListener('goalDeleted', loadGoals)
-      }
-    }
-  }, [])
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -419,8 +423,8 @@ export default function ProfilePage() {
               </div>
               <div>
                 <p className="text-base sm:text-lg md:text-xl font-bold">{(() => {
-                  const maxStreak = Math.max(...myStoreGoals.map(g => g.streak || 0), 0)
-                  return maxStreak
+                  const maxStreak = goals.reduce((max, goal) => Math.max(max, goal.progress || 0), 0);
+                  return Math.floor(maxStreak);
                 })()}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Streak</p>
               </div>
@@ -431,8 +435,8 @@ export default function ProfilePage() {
               </div>
               <div>
                 <p className="text-base sm:text-lg md:text-xl font-bold">{(() => {
-                  const total = myStoreGoals.length
-                  const completed = myStoreGoals.filter(g => g.completedAt).length
+                  const total = goals.length;
+                  const completed = goals.filter(g => g.completed_at).length;
                   return total > 0 ? Math.round((completed / total) * 100) : 0
                 })()}%</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Success</p>
@@ -559,7 +563,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Partner Goals */}
-            {partnerStoreGoals.length > 0 && (
+            {goals.some(g => g.partner_id) && (
               <Card className="hover-lift mt-6 h-80">
                 <CardHeader className="px-4 sm:px-6 py-1">
                   <div className="flex items-center justify-between gap-2">
@@ -568,7 +572,7 @@ export default function ProfilePage() {
                       Partner Goals
                     </CardTitle>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px]">{partnerStoreGoals.length}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{goals.filter(g => g.partner_id).length}</Badge>
                       <Link href="/partners">
                         <Button variant="outline" size="sm" className="text-xs border bg-background">
                           View All
@@ -578,7 +582,7 @@ export default function ProfilePage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2 sm:space-y-3 px-4 sm:px-6 pb-4 sm:pb-6 pt-0 h-full overflow-y-auto">
-                  {partnerStoreGoals.slice(0, 9).map((g: any) => (
+                  {goals.filter(g => g.partner_id).slice(0, 9).map(g => (
                     <Link key={g.id} href={`/goals/${g.id}/partner`}>
                       <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-colors">
                         <div className="p-1.5 sm:p-2 rounded-lg bg-muted flex-shrink-0">

@@ -17,8 +17,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { authHelpers } from "@/lib/supabase-client";
-import { initializeSampleData } from "@/lib/mock-data";
+import { authHelpers, supabase } from "@/lib/supabase-client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -38,21 +37,25 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  // Check if Supabase is configured on mount
+  // Check if Google OAuth is configured on mount
   useEffect(() => {
-    const checkSupabase = async () => {
-      const isConfigured = Boolean(
-        process.env.NEXT_PUBLIC_SUPABASE_URL &&
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      );
-      setUseSupabase(isConfigured);
-      setGoogleOAuthAvailable(isConfigured); // We'll assume Google OAuth is available if Supabase is configured
+    const checkGoogleOAuth = async () => {
+      try {
+        const available = await authHelpers.isGoogleOAuthAvailable();
+        setGoogleOAuthAvailable(available);
+      } catch (error) {
+        console.error('Error checking Google OAuth:', error);
+        setGoogleOAuthAvailable(false);
+      }
     };
 
-    checkSupabase();
+    checkGoogleOAuth();
   }, []);
 
-  const handleSupabaseLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
     try {
       const { user, session } = await authHelpers.signIn(email, password);
 
@@ -60,66 +63,20 @@ export default function LoginPage() {
         throw new Error("Failed to establish session");
       }
 
-      // Store minimal user info in localStorage
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem(
-        "currentUser",
-        JSON.stringify({
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0],
-          avatar: session.user.user_metadata?.avatar_url,
-        })
-      );
-
       // Check if user has completed KYC
-      const hasCompletedKyc = await authHelpers.getKycStatus();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('has_completed_kyc')
+        .eq('id', session.user.id)
+        .single();
 
       toast.success("Welcome back!");
       
       // Redirect based on KYC completion
-      if (hasCompletedKyc) {
+      if (profile?.has_completed_kyc) {
         router.push("/dashboard");
       } else {
         router.push("/auth/kyc");
-      }
-    } catch (error: any) {
-      console.error("Supabase login error:", error);
-      throw error;
-    }
-  };
-
-  const handleMockLogin = async () => {
-    // Initialize sample data for mock mode
-    initializeSampleData();
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    localStorage.setItem("isAuthenticated", "true");
-
-    // Store mock user info
-    localStorage.setItem(
-      "currentUser",
-      JSON.stringify({
-        id: "mock-user-id",
-        email: email || "demo@commitly.com",
-        name: email ? email.split("@")[0] : "Demo User",
-        avatar: null,
-      }),
-    );
-
-    toast.success("Welcome back!");
-    router.push("/dashboard");
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (useSupabase) {
-        await handleSupabaseLogin();
-      } else {
-        await handleMockLogin();
       }
     } catch (error: any) {
       console.error("Login error:", error);
@@ -129,8 +86,6 @@ export default function LoginPage() {
         toast.error("Invalid email or password");
       } else if (error.message?.includes("Email not confirmed")) {
         toast.error("Please verify your email address before logging in");
-      } else if (error.message?.includes("not configured")) {
-        toast.error(error.message);
       } else {
         toast.error("Failed to login. Please try again.");
       }

@@ -33,6 +33,7 @@ import { useRouter } from "next/navigation"
 
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
+import { authHelpers, supabase } from "@/lib/supabase-client"
 
 export default function KYCPage() {
   const [username, setUsername] = useState("")
@@ -45,7 +46,7 @@ export default function KYCPage() {
   useEffect(() => {
     const checkKycStatus = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const session = await authHelpers.getSession();
         if (!session) {
           router.push("/auth/login");
           return;
@@ -57,7 +58,7 @@ export default function KYCPage() {
           .eq('id', session.user.id)
           .single();
 
-        if (profile && profile.username) {
+        if (profile?.has_completed_kyc) {
           toast.info("Profile already exists");
           router.push("/dashboard");
         }
@@ -67,22 +68,21 @@ export default function KYCPage() {
     };
 
     checkKycStatus();
-    }
-  }, [router])
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      // Get current user session
-      const session = await authHelpers.getSession()
+      const session = await authHelpers.getSession();
       if (!session) {
-        throw new Error('No authenticated session')
+        toast.error("No active session");
+        router.push("/auth/login");
+        return;
       }
 
-      // Get user's email from session
-      const userEmail = session.user.email
+      const userEmail = session.user.email;
       
       // Save KYC data to Supabase
       const { error: updateError } = await supabase
@@ -102,27 +102,19 @@ export default function KYCPage() {
           profile_picture_url: profilePicture,
           has_completed_kyc: true,
           updated_at: new Date().toISOString()
-        })
+        });
 
-      if (updateError) throw updateError
-      
-      // Save minimal data to localStorage for UI
-      localStorage.setItem('currentUser', JSON.stringify({
-        id: session.user.id,
-        email: userEmail,
-        name: displayName,
-        avatar: profilePicture
-      }))
+      if (updateError) throw updateError;
 
-      toast.success("Profile created successfully!")
-      router.push("/dashboard")
+      toast.success("Profile created successfully!");
+      router.push("/dashboard");
     } catch (error) {
-      console.error("KYC error:", error)
-      toast.error("Failed to create profile. Please try again.")
+      console.error("KYC error:", error);
+      toast.error("Failed to create profile. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Additional state for enhanced KYC
   const [location, setLocation] = useState("")

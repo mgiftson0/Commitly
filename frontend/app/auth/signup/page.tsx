@@ -19,8 +19,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { authHelpers } from "@/lib/supabase-client";
-import { initializeSampleData } from "@/lib/mock-data";
+import { authHelpers, supabase } from "@/lib/supabase-client";
 
 export default function SignUpPage() {
   const [fullName, setFullName] = useState("");
@@ -31,105 +30,23 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [useSupabase, setUseSupabase] = useState(false);
   const [googleOAuthAvailable, setGoogleOAuthAvailable] = useState(false);
   const router = useRouter();
 
-  // Check if Supabase is configured on mount
+  // Check if Google OAuth is configured on mount
   useEffect(() => {
-    const checkSupabase = async () => {
-      const isConfigured = hasSupabase();
-      setUseSupabase(isConfigured);
-
-      // Only check Google OAuth if Supabase is configured
-      if (isConfigured) {
-        try {
-          const available = await authHelpers.isGoogleOAuthAvailable();
-          setGoogleOAuthAvailable(available);
-        } catch (error) {
-          setGoogleOAuthAvailable(false);
-        }
+    const checkGoogleOAuth = async () => {
+      try {
+        const available = await authHelpers.isGoogleOAuthAvailable();
+        setGoogleOAuthAvailable(available);
+      } catch (error) {
+        console.error('Error checking Google OAuth:', error);
+        setGoogleOAuthAvailable(false);
       }
     };
 
-    checkSupabase();
+    checkGoogleOAuth();
   }, []);
-
-  const handleSupabaseSignUp = async () => {
-    try {
-      console.log('Starting Supabase signup process...');
-      console.log('Checking Supabase configuration...');
-      
-      if (!hasSupabase()) {
-        console.error('Supabase is not properly configured');
-        throw new Error('Authentication service is not properly configured');
-      }
-
-      console.log('Attempting to create account...');
-      const { user, session } = await authHelpers.signUp(email, password, {
-        full_name: fullName,
-      });
-
-      console.log('Signup response received:', { user: !!user, session: !!session });
-
-      if (!user) {
-        console.error('No user returned from signup');
-        throw new Error("Failed to create account");
-      }
-
-      console.log('Account created successfully');
-      // Set authentication flag
-      localStorage.setItem("isAuthenticated", "true");
-
-      // Store user info in localStorage for app use
-      localStorage.setItem(
-        "currentUser",
-        JSON.stringify({
-          id: user.id,
-          email: user.email,
-          name: fullName || user.email?.split("@")[0],
-          avatar: null,
-        }),
-      );
-
-      // Check if email confirmation is required
-      if (session) {
-        toast.success("Account created successfully!");
-        router.push("/auth/kyc");
-      } else {
-        // Email confirmation required
-        toast.success(
-          "Account created! Please check your email to verify your account.",
-        );
-        // Still redirect to KYC, but they'll need to verify email
-        router.push("/auth/kyc");
-      }
-    } catch (error: any) {
-      console.error("Supabase signup error:", error);
-      throw error;
-    }
-  };
-
-  const handleMockSignUp = async () => {
-    // Initialize sample data for mock mode
-    initializeSampleData();
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Create mock user
-    const mockUser = {
-      id: `user_${Date.now()}`,
-      email: email,
-      name: fullName || email.split("@")[0],
-      avatar: null,
-    };
-
-    localStorage.setItem("isAuthenticated", "true");
-    localStorage.setItem("currentUser", JSON.stringify(mockUser));
-
-    toast.success("Account created!");
-    router.push("/auth/kyc");
-  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,92 +70,68 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      if (useSupabase) {
-        await handleSupabaseSignUp();
-      } else {
-        await handleMockSignUp();
-      }
-    } catch (error: any) {
-      console.error("Signup error details:", {
-        message: error.message,
-        name: error.name,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-        status: error?.status,
-        statusCode: error?.statusCode,
-        response: error?.response,
-        cause: error?.cause,
-        stack: error?.stack,
+      const { user, session } = await authHelpers.signUp(email, password, {
+        full_name: fullName,
       });
 
-      if (error?.message?.includes('Database error saving new user')) {
-        console.error("Database configuration issue detected. Please check Supabase setup.");
-        toast.error("Unable to create account. Please contact support.");
-        return;
+      if (!user) {
+        throw new Error("Failed to create account");
       }
 
-      if (error.message?.includes('Failed to fetch')) {
-        toast.error('Unable to connect to the authentication service. Please check your internet connection and try again.');
+      // Create initial profile
+      if (session) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            first_name: fullName.split(' ')[0],
+            last_name: fullName.split(' ').slice(1).join(' '),
+            username: email.split('@')[0].toLowerCase(),
+            has_completed_kyc: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (profileError) throw profileError;
+        
+        toast.success("Account created successfully!");
+        router.push("/auth/kyc");
       } else {
-        toast.error(error.message || 'Failed to create account. Please try again.');
+        toast.success("Account created! Please check your email to verify your account.");
+        router.push("/auth/login");
       }
+    } catch (error: any) {
+      console.error("Signup error:", error);
 
-      // Show specific error messages
-      if (error.message?.includes("already registered")) {
+      if (error.message?.includes("User already registered")) {
         toast.error("An account with this email already exists");
-      } else if (error.message?.includes("Invalid email")) {
-        toast.error("Please enter a valid email address");
-      } else if (error.message?.includes("Password should be")) {
-        toast.error("Password does not meet requirements");
-      } else if (error.message?.includes("not configured")) {
-        toast.error(error.message);
+      } else if (error.message?.toLowerCase().includes("weak password")) {
+        toast.error("Password is too weak. Please choose a stronger password");
       } else {
-        toast.error(error.message || "Failed to create account");
+        toast.error("Failed to create account. Please try again.");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSupabaseGoogleSignUp = async () => {
+  const handleGoogleSignUp = async () => {
     try {
+      setLoading(true);
       await authHelpers.signInWithGoogle();
       // User will be redirected to Google, then back to /auth/callback
-    } catch (error: any) {
+    } catch (error) {
       console.error("Google signup error:", error);
-      throw error;
+      toast.error("Failed to sign up with Google. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleMockGoogleSignUp = async () => {
-    initializeSampleData();
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const mockUser = {
-      id: "google_" + Date.now(),
-      email: "google.user@gmail.com",
-      name: "Google User",
-      avatar: null,
-    };
-
-    localStorage.setItem("isAuthenticated", "true");
-    localStorage.setItem("currentUser", JSON.stringify(mockUser));
-
-    toast.success("Google signup successful!");
-    router.push("/auth/kyc");
-  };
-
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-
     try {
-      if (useSupabase) {
-        await handleSupabaseGoogleSignUp();
-      } else {
-        await handleMockGoogleSignUp();
-      }
-    } catch (error: any) {
+      await handleGoogleSignUp();
+    } catch (error: Error | any) {
       console.error("Google signup error:", error);
       if (error.message?.includes("not configured")) {
         toast.error(error.message);
