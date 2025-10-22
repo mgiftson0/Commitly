@@ -1,0 +1,104 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=gyygnbjffgmhxmmmirbf"
+    }
+  },
+  "enabledMcpServers": ["supabase"],
+  "supabaseConfig": {
+    "projectId": "gyygnbjffgmhxmmmirbf",
+    "tables": {
+      "profiles": {
+        "name": "profiles",
+        "schema": "public",
+        "columns": {
+          "id": {
+            "type": "uuid",
+            "primaryKey": true,
+            "references": "auth.users(id)"
+          },
+          "username": {
+            "type": "text",
+            "unique": true
+          },
+          "first_name": {
+            "type": "text"
+          },
+          "last_name": {
+            "type": "text"
+          },
+          "phone_number": {
+            "type": "text"
+          },
+          "email": {
+            "type": "text"
+          },
+          "bio": {
+            "type": "text"
+          },
+          "location": {
+            "type": "text"
+          },
+          "website": {
+            "type": "text"
+          },
+          "interests": {
+            "type": "text[]"
+          },
+          "goal_categories": {
+            "type": "text[]"
+          },
+          "profile_picture_url": {
+            "type": "text"
+          },
+          "has_completed_kyc": {
+            "type": "boolean",
+            "default": false
+          },
+          "created_at": {
+            "type": "timestamptz",
+            "default": "now()"
+          },
+          "updated_at": {
+            "type": "timestamptz",
+            "default": "now()"
+          }
+        }
+      }
+    },
+    "policies": {
+      "profiles": {
+        "select": {
+          "name": "Users can view their own profile",
+          "using": "auth.uid() = id"
+        },
+        "update": {
+          "name": "Users can update their own profile",
+          "using": "auth.uid() = id"
+        },
+        "insert": {
+          "name": "Users can insert their own profile",
+          "check": "auth.uid() = id"
+        }
+      }
+    },
+    "functions": {
+      "handle_new_user": {
+        "returns": "trigger",
+        "language": "plpgsql",
+        "security": "definer",
+        "body": "BEGIN INSERT INTO public.profiles (id, email) VALUES (new.id, new.email); RETURN new; END;"
+      }
+    },
+    "triggers": {
+      "on_auth_user_created": {
+        "table": "auth.users",
+        "when": "after",
+        "event": "insert",
+        "forEach": "row",
+        "function": "handle_new_user"
+      }
+    }
+  }
+}

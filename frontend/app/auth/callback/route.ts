@@ -76,15 +76,16 @@ export async function GET(request: NextRequest) {
 
     // Check if this is a new user (check user metadata or created_at timestamp)
     const user = data.user;
-    const isNewUser =
-      user &&
-      // User created in the last 5 minutes
-      new Date(user.created_at!).getTime() > Date.now() - 5 * 60 * 1000;
+    
+    // Get KYC data from localStorage to check if profile is complete
+    const cookies = request.cookies;
+    const kycData = cookies.get('kycData');
+    const hasCompletedKyc = kycData !== undefined;
 
     // Create response with redirect
-    const redirectUrl = isNewUser
-      ? new URL("/auth/kyc", request.url)
-      : new URL("/dashboard", request.url);
+    const redirectUrl = hasCompletedKyc
+      ? new URL("/dashboard", request.url)
+      : new URL("/auth/kyc", request.url);
 
     const response = NextResponse.redirect(redirectUrl);
 

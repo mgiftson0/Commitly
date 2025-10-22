@@ -19,7 +19,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { authHelpers, hasSupabase } from "@/lib/supabase";
+import { authHelpers } from "@/lib/supabase-client";
 import { initializeSampleData } from "@/lib/mock-data";
 
 export default function SignUpPage() {
@@ -57,14 +57,27 @@ export default function SignUpPage() {
 
   const handleSupabaseSignUp = async () => {
     try {
+      console.log('Starting Supabase signup process...');
+      console.log('Checking Supabase configuration...');
+      
+      if (!hasSupabase()) {
+        console.error('Supabase is not properly configured');
+        throw new Error('Authentication service is not properly configured');
+      }
+
+      console.log('Attempting to create account...');
       const { user, session } = await authHelpers.signUp(email, password, {
         full_name: fullName,
       });
 
+      console.log('Signup response received:', { user: !!user, session: !!session });
+
       if (!user) {
+        console.error('No user returned from signup');
         throw new Error("Failed to create account");
       }
 
+      console.log('Account created successfully');
       // Set authentication flag
       localStorage.setItem("isAuthenticated", "true");
 
@@ -146,7 +159,30 @@ export default function SignUpPage() {
         await handleMockSignUp();
       }
     } catch (error: any) {
-      console.error("Signup error:", error);
+      console.error("Signup error details:", {
+        message: error.message,
+        name: error.name,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        status: error?.status,
+        statusCode: error?.statusCode,
+        response: error?.response,
+        cause: error?.cause,
+        stack: error?.stack,
+      });
+
+      if (error?.message?.includes('Database error saving new user')) {
+        console.error("Database configuration issue detected. Please check Supabase setup.");
+        toast.error("Unable to create account. Please contact support.");
+        return;
+      }
+
+      if (error.message?.includes('Failed to fetch')) {
+        toast.error('Unable to connect to the authentication service. Please check your internet connection and try again.');
+      } else {
+        toast.error(error.message || 'Failed to create account. Please try again.');
+      }
 
       // Show specific error messages
       if (error.message?.includes("already registered")) {

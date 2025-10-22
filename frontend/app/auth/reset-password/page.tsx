@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { authHelpers, hasSupabase } from "@/lib/supabase";
+import { authHelpers } from "@/lib/supabase-client";
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");

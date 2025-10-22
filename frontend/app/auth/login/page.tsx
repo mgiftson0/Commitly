@@ -17,7 +17,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { authHelpers, hasSupabase } from "@/lib/supabase";
+import { authHelpers } from "@/lib/supabase-client";
 import { initializeSampleData } from "@/lib/mock-data";
 
 export default function LoginPage() {
@@ -41,18 +41,12 @@ export default function LoginPage() {
   // Check if Supabase is configured on mount
   useEffect(() => {
     const checkSupabase = async () => {
-      const isConfigured = hasSupabase();
+      const isConfigured = Boolean(
+        process.env.NEXT_PUBLIC_SUPABASE_URL &&
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      );
       setUseSupabase(isConfigured);
-
-      // Only check Google OAuth if Supabase is configured
-      if (isConfigured) {
-        try {
-          const available = await authHelpers.isGoogleOAuthAvailable();
-          setGoogleOAuthAvailable(available);
-        } catch (error) {
-          setGoogleOAuthAvailable(false);
-        }
-      }
+      setGoogleOAuthAvailable(isConfigured); // We'll assume Google OAuth is available if Supabase is configured
     };
 
     checkSupabase();
@@ -66,24 +60,29 @@ export default function LoginPage() {
         throw new Error("Failed to establish session");
       }
 
-      // Set authentication flag
+      // Store minimal user info in localStorage
       localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem(
+        "currentUser",
+        JSON.stringify({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0],
+          avatar: session.user.user_metadata?.avatar_url,
+        })
+      );
 
-      // Store user info in localStorage for app use
-      if (user) {
-        localStorage.setItem(
-          "currentUser",
-          JSON.stringify({
-            id: user.id,
-            email: user.email,
-            name: user.user_metadata?.full_name || user.email?.split("@")[0],
-            avatar: user.user_metadata?.avatar_url,
-          }),
-        );
-      }
+      // Check if user has completed KYC
+      const hasCompletedKyc = await authHelpers.getKycStatus();
 
       toast.success("Welcome back!");
-      router.push("/dashboard");
+      
+      // Redirect based on KYC completion
+      if (hasCompletedKyc) {
+        router.push("/dashboard");
+      } else {
+        router.push("/auth/kyc");
+      }
     } catch (error: any) {
       console.error("Supabase login error:", error);
       throw error;

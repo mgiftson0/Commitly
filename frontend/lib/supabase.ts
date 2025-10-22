@@ -1,36 +1,84 @@
 import { createClient } from "@supabase/supabase-js";
-import { isGoogleOAuthEnabled } from "./config";
+import type { Database } from "@/types/supabase";
 
 // Supabase URL and Key from environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-// Check if Supabase is configured
-const isSupabaseConfigured = Boolean(
-  supabaseUrl &&
-    supabaseAnonKey &&
-    supabaseUrl !== "your-project-url-here" &&
-    supabaseAnonKey !== "your-anon-key-here",
-);
+// Initialize Supabase client
+const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
-// Create Supabase client for browser
-let supabaseClient: ReturnType<typeof createClient> | null = null;
+// Export Supabase client instance
+export const supabase = supabaseClient;
 
-if (isSupabaseConfigured) {
-  try {
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-        storage:
-          typeof window !== "undefined" ? window.localStorage : undefined,
-        flowType: "pkce",
+// Auth helpers for consistent authentication handling
+export const authHelpers = {
+  async signIn(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  async signInWithGoogle() {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     });
-  } catch (error) {
-    console.error("Failed to initialize Supabase client:", error);
+    if (error) throw error;
+    return data;
+  },
+
+  async signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  },
+
+  async getSession() {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return session;
+  },
+
+  async getKycStatus() {
+    const session = await this.getSession();
+    if (!session) return false;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('has_completed_kyc')
+      .eq('id', session.user.id)
+      .single();
+
+    if (error || !data) return false;
+    return data.has_completed_kyc;
   }
+};
+
+// Log environment variables and test connection in development
+if (process.env.NODE_ENV === "development") {
+  console.log('Supabase Environment Configuration:', {
+    url: supabaseUrl,
+    hasKey: !!supabaseAnonKey,
+    isDefined: {
+      url: typeof process.env.NEXT_PUBLIC_SUPABASE_URL !== 'undefined',
+      key: typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'undefined'
+    }
+  });
+
+  // Test the connection
+  supabase.auth.getSession()
+    .then(() => console.log('Supabase connection test successful'))
+    .catch(err => console.error('Supabase connection test failed:', err));
+}
 }
 
 // Export the Supabase client
@@ -55,16 +103,14 @@ export const authHelpers = {
       );
     }
 
-    const { data, error } = await supabase!.auth.signUp({
+      const { data, error } = await supabase!.auth.signUp({
       email,
       password,
       options: {
         data: metadata,
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `http://localhost:3003/auth/callback`,
       },
-    });
-
-    if (error) throw error;
+    });    if (error) throw error;
     return data;
   },
 

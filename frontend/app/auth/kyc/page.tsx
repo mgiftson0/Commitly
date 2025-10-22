@@ -43,11 +43,30 @@ export default function KYCPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if KYC already completed
-    const existingKyc = localStorage.getItem('kycData')
-    if (existingKyc) {
-      toast.info("Profile already exists")
-      router.push("/dashboard")
+    const checkKycStatus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.push("/auth/login");
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile && profile.username) {
+          toast.info("Profile already exists");
+          router.push("/dashboard");
+        }
+      } catch (error) {
+        console.error('Error checking profile:', error);
+      }
+    };
+
+    checkKycStatus();
     }
   }, [router])
 
@@ -56,26 +75,45 @@ export default function KYCPage() {
     setLoading(true)
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Save KYC data to localStorage
-      const kycData = {
-        username: username.toLowerCase(),
-        firstName: displayName.split(' ')[0] || displayName,
-        lastName: displayName.split(' ').slice(1).join(' ') || '',
-        phoneNumber,
-        email: 'user@example.com',
-        bio: bio || null,
-        location,
-        website,
-        interests,
-        goalCategories,
-        profilePicture,
-        createdAt: new Date().toISOString()
+      // Get current user session
+      const session = await authHelpers.getSession()
+      if (!session) {
+        throw new Error('No authenticated session')
       }
+
+      // Get user's email from session
+      const userEmail = session.user.email
       
-      localStorage.setItem('kycData', JSON.stringify(kycData))
+      // Save KYC data to Supabase
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: session.user.id,
+          username: username.toLowerCase(),
+          first_name: displayName.split(' ')[0] || displayName,
+          last_name: displayName.split(' ').slice(1).join(' ') || '',
+          phone_number: phoneNumber,
+          email: userEmail,
+          bio: bio || null,
+          location,
+          website,
+          interests,
+          goal_categories: goalCategories,
+          profile_picture_url: profilePicture,
+          has_completed_kyc: true,
+          updated_at: new Date().toISOString()
+        })
+
+      if (updateError) throw updateError
+      
+      // Save minimal data to localStorage for UI
+      localStorage.setItem('currentUser', JSON.stringify({
+        id: session.user.id,
+        email: userEmail,
+        name: displayName,
+        avatar: profilePicture
+      }))
+
       toast.success("Profile created successfully!")
       router.push("/dashboard")
     } catch (error) {
