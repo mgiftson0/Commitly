@@ -69,6 +69,14 @@ export default function GoalDetailPage() {
         }
         setCurrentUser(user)
 
+        // Validate goal ID
+        if (!goalId || goalId === 'undefined' || goalId === 'null' || goalId === 'NaN') {
+          console.error('Invalid goal ID:', goalId)
+          toast.error('Invalid goal ID')
+          router.push('/goals')
+          return
+        }
+
         // Get goal details
         console.log('Loading goal with ID:', goalId)
         console.log('Goal ID type:', typeof goalId)

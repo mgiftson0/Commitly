@@ -87,7 +87,7 @@ export default function DashboardPage() {
 
   // Get upcoming deadlines from real goals
   const upcomingDeadlines = useMemo(() => {
-    return goals
+    const deadlines = goals
       .filter(g => g.target_date && !g.completed_at && !g.is_suspended)
       .map(g => ({
         id: g.id,
@@ -98,6 +98,9 @@ export default function DashboardPage() {
       }))
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
       .slice(0, 3)
+    
+    console.log('Upcoming deadlines:', deadlines)
+    return deadlines
   }, [goals])
 
   // Calculate category progress from real goals
@@ -204,6 +207,7 @@ export default function DashboardPage() {
         
         console.log('Dashboard stats:', stats)
         console.log('Goals data:', goals)
+        console.log('Goal IDs:', goals.map(g => ({ id: g.id, type: typeof g.id, title: g.title })))
       } catch (error) {
         console.error('Error loading dashboard data:', error)
       }
@@ -329,6 +333,7 @@ export default function DashboardPage() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
+      console.log('Raw goals data from DB:', goalsData)
       setGoals(goalsData || [])
     } catch (error) {
       console.error('Error loading goals:', error)
@@ -543,8 +548,13 @@ export default function DashboardPage() {
                     .slice(0, 3)
                     .map((goal) => (
                       <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full" onClick={() => {
-                        console.log('Clicking goal with ID:', goal.id, 'Type:', typeof goal.id)
-                        router.push(`/goals/${goal.id}`)
+                        console.log('Clicking goal:', goal)
+                        console.log('Goal ID:', goal.id, 'Type:', typeof goal.id)
+                        if (goal.id && goal.id !== 'undefined' && goal.id !== 'null' && !isNaN(goal.id)) {
+                          router.push(`/goals/${goal.id}`)
+                        } else {
+                          console.error('Invalid goal ID:', goal.id, 'Full goal object:', goal)
+                        }
                       }}>
                         <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
                           <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -694,7 +704,13 @@ export default function DashboardPage() {
                     }
                     
                     return (
-                      <div key={goal.id} className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${getUrgencyColor()}`} onClick={() => router.push(`/goals/${goal.id}`)}>
+                      <div key={goal.id} className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${getUrgencyColor()}`} onClick={() => {
+                        if (goal.id && goal.id !== 'undefined' && goal.id !== 'null' && !isNaN(goal.id)) {
+                          router.push(`/goals/${goal.id}`)
+                        } else {
+                          console.error('Invalid deadline goal ID:', goal.id)
+                        }
+                      }}>
                         <div className="p-2 rounded-lg bg-background/50">
                           <Target className="h-4 w-4 text-primary" />
                         </div>

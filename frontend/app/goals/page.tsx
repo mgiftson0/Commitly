@@ -556,7 +556,7 @@ export default function GoalsPage() {
       }
       
       return {
-        id: goal.isPartnerGoal ? goal.id : parseInt(goal.id),
+        id: String(goal.id), // Convert to string to support both numeric and UUID IDs
         title: goal.title,
         description: goal.description || '',
         type: goal.type,
@@ -848,15 +848,22 @@ export default function GoalsPage() {
 }
 
 function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { goals: typeof mockGoals; router: ReturnType<typeof useRouter>; isPartnerView?: boolean; onGoalDeleted?: () => void }) {
-  const [showDeleteDialog, setShowDeleteDialog] = useState<number | null>(null)
-  const [partnerInvites, setPartnerInvites] = useState<Record<number, 'pending' | 'accepted' | 'declined'>>(() => {
-    const map: Record<number, 'pending' | 'accepted' | 'declined'> = {}
-    goals.forEach(g => { map[g.id] = (isPartnerView && g.id % 5 === 0) ? 'pending' : 'accepted' })
+  const [showDeleteDialog, setShowDeleteDialog] = useState<string | null>(null)
+  const [partnerInvites, setPartnerInvites] = useState<Record<string, 'pending' | 'accepted' | 'declined'>>(() => {
+    const map: Record<string, 'pending' | 'accepted' | 'declined'> = {}
+    goals.forEach(g => { 
+      // For mock data with numeric IDs or real UUIDs
+      const goalId = String(g.id)
+      map[goalId] = (isPartnerView && goals.indexOf(g) % 5 === 0) ? 'pending' : 'accepted' 
+    })
     return map
   })
-  const [groupInvites, setGroupInvites] = useState<Record<number, 'pending' | 'accepted' | 'declined'>>(() => {
-    const map: Record<number, 'pending' | 'accepted' | 'declined'> = {}
-    goals.forEach(g => { map[g.id] = (g.isGroupGoal && !isPartnerView && g.id % 4 === 0) ? 'pending' : 'accepted' })
+  const [groupInvites, setGroupInvites] = useState<Record<string, 'pending' | 'accepted' | 'declined'>>(() => {
+    const map: Record<string, 'pending' | 'accepted' | 'declined'> = {}
+    goals.forEach(g => { 
+      const goalId = String(g.id)
+      map[goalId] = (g.isGroupGoal && !isPartnerView && goals.indexOf(g) % 4 === 0) ? 'pending' : 'accepted' 
+    })
     return map
   })
 
@@ -900,7 +907,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
     }
   }
 
-  const handleViewDetails = (goalId: number, goal: typeof mockGoals[0]) => {
+  const handleViewDetails = (goalId: string, goal: typeof mockGoals[0]) => {
     router.push(`/goals/${goalId}`)
   }
 
@@ -1238,12 +1245,12 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                     <span className="flex items-center gap-2">
                       {goal.category}
                       {/* Group invite membership indicator */}
-                      {goal.isGroupGoal && groupInvites[goal.id] && (
+                      {goal.isGroupGoal && groupInvites[String(goal.id)] && (
                         <Badge
-                          variant={groupInvites[goal.id] === 'accepted' ? 'default' : (groupInvites[goal.id] === 'pending' ? 'secondary' : 'outline')}
+                          variant={groupInvites[String(goal.id)] === 'accepted' ? 'default' : (groupInvites[String(goal.id)] === 'pending' ? 'secondary' : 'outline')}
                           className="text-[10px]"
                         >
-                          {groupInvites[goal.id] === 'accepted' ? 'Joined' : groupInvites[goal.id] === 'pending' ? 'Invite Sent' : 'Declined'}
+                          {groupInvites[String(goal.id)] === 'accepted' ? 'Joined' : groupInvites[String(goal.id)] === 'pending' ? 'Invite Sent' : 'Declined'}
                         </Badge>
                       )}
                     </span>

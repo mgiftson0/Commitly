@@ -4,7 +4,8 @@
  */
 
 import { supabase, authHelpers } from "./supabase-client";
-import { ACHIEVEMENTS } from "./achievements";
+// Achievement definitions will be fetched from database
+// import { ACHIEVEMENTS } from "./achievements";
 
 /**
  * Check for newly unlocked achievements and save to database
@@ -35,17 +36,38 @@ export async function checkAndUnlockAchievements() {
       encouragementsSent: 0 // TODO: implement encouragement tracking
     };
 
+    // Get achievements from database
+    const { data: achievements, error: achievementsDefError } = await supabase
+      .from('achievements')
+      .select('*');
+
+    if (achievementsDefError) throw achievementsDefError;
+
     // Check each achievement
     const newlyUnlocked = [];
     
-    for (const achievement of ACHIEVEMENTS) {
+    for (const achievement of achievements || []) {
       // Skip if already unlocked
       if (unlockedIds.has(achievement.id)) continue;
 
-      // Check if conditions are met
-      const result = achievement.condition(goals || [], userStats);
+      // Check if conditions are met based on achievement type
+      let shouldUnlock = false;
       
-      if (result.unlocked) {
+      switch (achievement.name) {
+        case 'First Goal':
+          shouldUnlock = (goals?.length || 0) >= 1;
+          break;
+        case 'Goal Achiever':
+          shouldUnlock = (goals?.filter(g => g.status === 'completed').length || 0) >= 1;
+          break;
+        case 'Goal Master':
+          shouldUnlock = (goals?.filter(g => g.status === 'completed').length || 0) >= 10;
+          break;
+        default:
+          shouldUnlock = false;
+      }
+      
+      if (shouldUnlock) {
         // Save to database
         const { error: insertError } = await supabase
           .from('user_achievements')
@@ -134,9 +156,15 @@ export async function getAchievementProgress(achievementId: string) {
     const user = await authHelpers.getCurrentUser();
     if (!user) return null;
 
-    // Find the achievement definition
-    const achievement = ACHIEVEMENTS.find(a => a.id === achievementId);
-    if (!achievement) return null;
+    // Get achievement definition from database
+    const { data: achievements, error: achievementError } = await supabase
+      .from('achievements')
+      .select('*')
+      .eq('id', achievementId)
+      .single();
+
+    if (achievementError || !achievements) return null;
+    const achievement = achievements;
 
     // Get user's goals
     const { data: goals, error } = await supabase
@@ -150,15 +178,31 @@ export async function getAchievementProgress(achievementId: string) {
       encouragementsSent: 0
     };
 
-    // Calculate progress
-    const result = achievement.condition(goals || [], userStats);
+    // Calculate progress based on achievement type
+    let progress = 0;
+    let total = 1;
+    
+    switch (achievement.name) {
+      case 'First Goal':
+        progress = Math.min(goals?.length || 0, 1);
+        total = 1;
+        break;
+      case 'Goal Achiever':
+        progress = Math.min(goals?.filter(g => g.status === 'completed').length || 0, 1);
+        total = 1;
+        break;
+      case 'Goal Master':
+        progress = Math.min(goals?.filter(g => g.status === 'completed').length || 0, 10);
+        total = 10;
+        break;
+    }
     
     return {
       achievement,
-      progress: result.progress,
-      total: result.total,
-      unlocked: result.unlocked,
-      percentage: Math.round((result.progress / result.total) * 100)
+      progress,
+      total,
+      unlocked: progress >= total,
+      percentage: Math.round((progress / total) * 100)
     };
   } catch (error) {
     console.error('Error getting achievement progress:', error);
