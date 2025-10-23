@@ -29,6 +29,7 @@ import { useTheme } from "next-themes"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { GlobalSearch } from "@/components/search/global-search"
+import { authHelpers } from "@/lib/supabase-client"
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -80,8 +81,14 @@ export function Header({ onMenuClick }: HeaderProps) {
     }
   }, [])
 
-  const handleLogout = () => {
-    router.push("/")
+  const handleLogout = async () => {
+    try {
+      await authHelpers.signOut()
+      router.push("/auth/login")
+    } catch (error) {
+      console.error('Logout error:', error)
+      router.push("/auth/login")
+    }
   }
 
   const ThemeToggle = () => {
@@ -173,7 +180,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                       <ThemeToggle />
                     </div>
                   </div>
-                  <Button variant="outline" className="w-full mt-2" onClick={() => router.push('/') }>
+                  <Button variant="outline" className="w-full mt-2" onClick={handleLogout}>
                     <LogOut className="h-4 w-4 mr-2" /> Logout
                   </Button>
                 </div>
@@ -236,7 +243,6 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full hover-lift">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     JD
                   </AvatarFallback>

@@ -56,6 +56,11 @@ export const authHelpers = {
     return user;
   },
 
+  getSession: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session;
+  },
+
   hasCompletedKyc: async () => {
     const user = await authHelpers.getCurrentUser();
     if (!user) return false;

@@ -65,8 +65,8 @@ export default function ProfilePage() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const session = await authHelpers.getSession();
-        if (!session) {
+        const user = await authHelpers.getCurrentUser();
+        if (!user) {
           router.push('/auth/login');
           return;
         }
@@ -74,8 +74,8 @@ export default function ProfilePage() {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
-          .single();
+          .eq('id', user.id)
+          .maybeSingle();
 
         if (profileError) throw profileError;
         if (profileData) {
@@ -85,25 +85,15 @@ export default function ProfilePage() {
         const { data: goalsData, error: goalsError } = await supabase
           .from('goals')
           .select('*')
-          .eq('user_id', session.user.id);
+          .eq('user_id', user.id);
 
         if (goalsError) throw goalsError;
         if (goalsData) {
           setGoals(goalsData);
         }
 
-        const { data: achievementsData, error: achievementsError } = await supabase
-          .from('user_achievements')
-          .select('*, achievements(*)')
-          .eq('user_id', session.user.id);
-
-        if (achievementsError) throw achievementsError;
-        if (achievementsData) {
-          setAchievements(achievementsData.map(ua => ({
-            ...ua.achievements,
-            unlocked_at: ua.unlocked_at
-          })));
-        }
+        // Skip achievements for now since table doesn't exist
+        setAchievements([]);
 
       } catch (error: any) {
         console.error('Error loading profile:', error);
@@ -164,14 +154,14 @@ export default function ProfilePage() {
   useEffect(() => {
     const loadNotifications = async () => {
       try {
-        const session = await authHelpers.getSession();
-        if (!session) return;
+        const user = await authHelpers.getCurrentUser();
+        if (!user) return;
 
         const { data, error } = await supabase
           .from('notifications')
           .select('*')
-          .eq('user_id', session.user.id)
-          .is('read_at', null)
+          .eq('user_id', user.id)
+          .eq('read', false)
           .order('created_at', { ascending: false })
           .limit(3);
 
@@ -232,76 +222,6 @@ export default function ProfilePage() {
   const handleAchievementClick = (achievement: Achievement) => {
     setSelectedAchievement(achievement);
   };
-      
-  
-
-  // Subscribe to real-time updates
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const session = await authHelpers.getSession();
-        if (!session) {
-          router.push('/auth/login');
-          return;
-        }
-
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profileError) throw profileError;
-        if (profileData) {
-          setProfile(profileData);
-        }
-
-        const { data: goalsData, error: goalsError } = await supabase
-          .from('goals')
-          .select('*')
-          .eq('user_id', session.user.id);
-
-        if (goalsError) throw goalsError;
-        if (goalsData) {
-          setGoals(goalsData);
-        }
-
-        const { data: achievementsData, error: achievementsError } = await supabase
-          .from('user_achievements')
-          .select('*, achievements(*)')
-          .eq('user_id', session.user.id);
-
-        if (achievementsError) throw achievementsError;
-        if (achievementsData) {
-          setAchievements(achievementsData.map(ua => ({
-            ...ua.achievements,
-            unlocked_at: ua.unlocked_at
-          })));
-        }
-
-      } catch (error: any) {
-        console.error('Error loading profile:', error);
-        toast.error('Failed to load profile data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const channel = supabase
-      .channel('public:goals')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'goals' 
-      }, () => {
-        loadProfile();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [router]);
 
   if (loading) {
     return (
@@ -311,7 +231,6 @@ export default function ProfilePage() {
     )
   }
 
-  // const publicGoals = goals.filter(g => g.visibility === "public")
   const completedGoals = goals.filter(g => g.completed_at)
   const activeGoals = goals.filter(g => !g.completed_at && !g.is_suspended)
 
@@ -331,7 +250,7 @@ export default function ProfilePage() {
               <div className="relative -mt-12 sm:-mt-16">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-xl" />
                 <Avatar className="relative h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
-                  <AvatarImage src={profile?.profile_picture_url || "/placeholder-avatar.jpg"} />
+                  <AvatarImage src={profile?.profile_picture_url} />
                   <AvatarFallback className="text-xl sm:text-2xl md:text-3xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 text-primary-foreground font-bold">
                     {profile ? `${((profile.first_name || '')[0] ?? 'J')}${((profile.last_name || '')[0] ?? 'D')}` : 'JD'}
                   </AvatarFallback>
@@ -576,50 +495,6 @@ export default function ProfilePage() {
                 </Tabs>
               </CardContent>
             </Card>
-
-            {/* Partner Goals */}
-            {goals.some(g => g.partner_id) && (
-              <Card className="hover-lift mt-6 h-80">
-                <CardHeader className="px-4 sm:px-6 py-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="flex items-center gap-2 text-sm font-medium bg-muted/30 px-2 py-1 rounded-md">
-                      <Users className="h-3 w-3" />
-                      Partner Goals
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px]">{goals.filter(g => g.partner_id).length}</Badge>
-                      <Link href="/partners">
-                        <Button variant="outline" size="sm" className="text-xs border bg-background">
-                          View All
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2 sm:space-y-3 px-4 sm:px-6 pb-4 sm:pb-6 pt-0 h-full overflow-y-auto">
-                  {goals.filter(g => g.partner_id).slice(0, 9).map(g => (
-                    <Link key={g.id} href={`/goals/${g.id}/partner`}>
-                      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                        <div className="p-1.5 sm:p-2 rounded-lg bg-muted flex-shrink-0">
-                          <Target className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-xs sm:text-sm truncate">{g.title}</h4>
-                          <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
-                            <Badge variant="outline" className="text-[10px] sm:text-xs">{g.type}</Badge>
-                            <Badge variant="outline" className="text-[10px] sm:text-xs">{g.visibility}</Badge>
-                            {g.recurrencePattern && (
-                              <Badge variant="outline" className="text-[10px] sm:text-xs">{g.recurrencePattern === 'custom' ? 'Custom' : (g.recurrencePattern.charAt(0).toUpperCase() + g.recurrencePattern.slice(1))}</Badge>
-                            )}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0">Partner</Badge>
-                      </div>
-                    </Link>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* Sidebar */}
@@ -640,37 +515,11 @@ export default function ProfilePage() {
                 </div>
               </CardHeader>
               <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0 h-full overflow-y-auto">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                  {achievements
-                    .filter(a => a.unlocked)
-                    .slice(-6) // Get last 6 unlocked for responsive grid
-                    .reverse() // Show most recent first
-                    .map((achievement) => (
-                      <div
-                        key={achievement.id}
-                        className="cursor-pointer transform transition-transform hover:scale-105"
-                        onClick={() => {
-                          setSelectedAchievement(achievement)
-                          setShowCelebration(true)
-                          setTimeout(() => setShowCelebration(false), 2000)
-                        }}
-                      >
-                        <AchievementSquare
-                          achievement={achievement}
-                          size="sm"
-                        />
-                      </div>
-                    ))
-                  }
+                <div className="text-center py-4 text-gray-500">
+                  <Trophy className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs">No achievements yet</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Complete goals to unlock achievements!</p>
                 </div>
-                
-                {achievements.filter(a => a.unlocked).length === 0 && (
-                  <div className="text-center py-4 text-gray-500">
-                    <Trophy className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-xs">No achievements yet</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">Complete goals to unlock achievements!</p>
-                  </div>
-                )}
                 
                 <Link href="/achievements">
                   <Button variant="outline" className="w-full text-xs sm:text-sm mt-4">
@@ -713,14 +562,12 @@ export default function ProfilePage() {
                           {category.completed}/{category.total}
                         </span>
                       </div>
-                                <Progress value={percentage} className={`h-1.5 sm:h-2 ${getProgressColor(percentage)}`} />
+                      <Progress value={percentage} className={`h-1.5 sm:h-2 ${getProgressColor(percentage)}`} />
                     </div>
                   )
                 })}
               </CardContent>
             </Card>
-
-
 
             {/* Recent Activity */}
             <Card className="hover-lift h-80">

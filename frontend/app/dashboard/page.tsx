@@ -295,8 +295,8 @@ export default function DashboardPage() {
 
   const loadProfile = async () => {
     try {
-      const session = await authHelpers.getSession()
-      if (!session) {
+      const user = await authHelpers.getCurrentUser()
+      if (!user) {
         router.push('/auth/login')
         return
       }
@@ -304,8 +304,8 @@ export default function DashboardPage() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', session.user.id)
-        .single()
+        .eq('id', user.id)
+        .maybeSingle()
 
       if (profileData) {
         setProfile(profileData)
@@ -897,7 +897,6 @@ export default function DashboardPage() {
                 <div className="hidden sm:block">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder-avatar.jpg" />
                       <AvatarFallback>SM</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
