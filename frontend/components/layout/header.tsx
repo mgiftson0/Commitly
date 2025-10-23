@@ -29,7 +29,7 @@ import { useTheme } from "next-themes"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { GlobalSearch } from "@/components/search/global-search"
-import { authHelpers } from "@/lib/supabase-client"
+import { authHelpers, supabase } from "@/lib/supabase-client"
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -41,6 +41,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [bellShake, setBellShake] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [profile, setProfile] = useState<any>(null)
   const router = useRouter()
 
   // Handle hydration
@@ -59,9 +60,31 @@ export function Header({ onMenuClick }: HeaderProps) {
     }
   }
 
+  // Load profile data
+  const loadProfile = async () => {
+    try {
+      const user = await authHelpers.getCurrentUser()
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle()
+        
+        setProfile({
+          ...data,
+          email: user.email // Get email from auth user
+        })
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error)
+    }
+  }
+
   // Listen for new notifications
   useEffect(() => {
     loadUnreadCount()
+    loadProfile()
     
     const handleNewNotification = () => {
       setBellShake(true)
@@ -84,10 +107,16 @@ export function Header({ onMenuClick }: HeaderProps) {
   const handleLogout = async () => {
     try {
       await authHelpers.signOut()
-      router.push("/auth/login")
+      // Clear all local storage
+      localStorage.clear()
+      sessionStorage.clear()
+      // Use replace to prevent back navigation
+      window.location.replace("/auth/login")
     } catch (error) {
       console.error('Logout error:', error)
-      router.push("/auth/login")
+      localStorage.clear()
+      sessionStorage.clear()
+      window.location.replace("/auth/login")
     }
   }
 
@@ -243,8 +272,9 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full hover-lift">
                 <Avatar className="h-10 w-10">
+                  <AvatarImage src={profile?.profile_picture_url} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    JD
+                    {profile ? `${(profile.first_name?.[0] || 'J')}${(profile.last_name?.[0] || 'D')}` : 'JD'}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -252,9 +282,11 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">John Doe</p>
+                  <p className="text-sm font-medium leading-none">
+                    {profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User' : 'User'}
+                  </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    john.doe@example.com
+                    {profile?.email || 'user@example.com'}
                   </p>
                 </div>
               </DropdownMenuLabel>

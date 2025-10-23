@@ -42,6 +42,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/main-layout";
+import { authHelpers, supabase } from "@/lib/supabase-client";
 
 type Notification = {
   id: string;
@@ -65,11 +66,22 @@ export default function NotificationsPage() {
 
   const loadNotifications = async () => {
     try {
-      const stored = localStorage.getItem("notifications");
-      if (stored) {
-        setNotifications(JSON.parse(stored));
+      const user = await authHelpers.getCurrentUser();
+      if (!user) {
+        router.push('/auth/login');
+        return;
       }
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setNotifications(data || []);
     } catch (error) {
+      console.error('Error loading notifications:', error);
       toast.error("Failed to load notifications");
     } finally {
       setLoading(false);

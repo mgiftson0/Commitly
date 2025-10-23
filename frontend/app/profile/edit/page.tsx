@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Save, Camera } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -22,9 +23,11 @@ export default function EditProfilePage() {
     phone_number: '',
     location: '',
     website: '',
-    bio: ''
+    bio: '',
+    profile_picture_url: ''
   })
   const [loading, setLoading] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -54,7 +57,8 @@ export default function EditProfilePage() {
           phone_number: profileData.phone_number || '',
           location: profileData.location || '',
           website: profileData.website || '',
-          bio: profileData.bio || ''
+          bio: profileData.bio || '',
+          profile_picture_url: profileData.profile_picture_url || ''
         })
       }
     } catch (error) {
@@ -63,14 +67,62 @@ export default function EditProfilePage() {
     }
   }
 
+  const handleProfilePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB')
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    setUploadingImage(true)
+    try {
+      const user = await authHelpers.getCurrentUser()
+      if (!user) {
+        toast.error('Authentication error')
+        return
+      }
+
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`
+
+      const { data, error } = await supabase.storage
+        .from('profile-pictures')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        })
+
+      if (error) throw error
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(fileName)
+
+      setProfile({...profile, profile_picture_url: publicUrl})
+      toast.success('Profile picture uploaded successfully!')
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Failed to upload image. Please try again.')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const session = await authHelpers.getSession()
-      if (!session) {
-        toast.error('No active session')
+      const user = await authHelpers.getCurrentUser()
+      if (!user) {
+        toast.error('Please log in again')
         router.push('/auth/login')
         return
       }
@@ -85,9 +137,10 @@ export default function EditProfilePage() {
           location: profile.location,
           website: profile.website,
           bio: profile.bio,
+          profile_picture_url: profile.profile_picture_url,
           updated_at: new Date().toISOString()
         })
-        .eq('id', session.user.id)
+        .eq('id', user.id)
 
       if (error) throw error
 
@@ -127,6 +180,43 @@ export default function EditProfilePage() {
               <CardTitle>Personal Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Profile Picture */}
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  <Avatar className="h-24 w-24 border-4 border-primary/20">
+                    <AvatarImage src={profile.profile_picture_url} />
+                    <AvatarFallback className="text-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+                      {profile.first_name.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full hover-lift shadow-lg"
+                    onClick={() => document.getElementById('profile-picture-input')?.click()}
+                    disabled={uploadingImage}
+                  >
+                    {uploadingImage ? (
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <input
+                    id="profile-picture-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleProfilePictureUpload}
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium">Profile Picture</p>
+                  <p className="text-xs text-muted-foreground">Click the camera icon to change</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>

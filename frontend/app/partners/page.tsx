@@ -1,36 +1,34 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Users,
   Plus,
   Search,
-  Filter,
   UserPlus,
   UserCheck,
   MessageCircle,
-  Calendar,
   Target,
   Award,
   Clock,
   MapPin,
-  Star,
   CheckCircle2,
   X,
   MoreHorizontal,
   Send,
-  Heart,
   Zap
 } from "lucide-react"
 import Link from "next/link"
 import { MainLayout } from "@/components/layout/main-layout"
+import { authHelpers, supabase } from "@/lib/supabase-client"
+import { EncouragementModal } from "@/components/encouragement/encouragement-modal"
+import { contactSync } from "@/lib/contact-sync"
 
 // Mock data for partners
 const mockPartners = [
@@ -148,14 +146,187 @@ const mockDiscover = [
 
 export default function PartnersPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterCategory, setFilterCategory] = useState("all")
+  const [partners, setPartners] = useState<any[]>([])
+  const [requests, setRequests] = useState<any[]>([])
+  const [discover, setDiscover] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [encouragementModal, setEncouragementModal] = useState<{open: boolean, partnerId: string, partnerName: string}>({open: false, partnerId: '', partnerName: ''})
 
-  const filteredPartners = mockPartners.filter(partner =>
+  const handleRequestAction = async (requestId: string, action: 'accept' | 'decline') => {
+    try {
+      const { error } = await supabase
+        .from('accountability_partners')
+        .update({ status: action === 'accept' ? 'accepted' : 'declined' })
+        .eq('id', requestId)
+
+      if (error) throw error
+
+      toast.success(`Request ${action}ed successfully!`)
+      
+      // Reload data
+      const user = await authHelpers.getCurrentUser()
+      if (user) {
+        // Reload requests
+        const { data: requestsData } = await supabase
+          .from('accountability_partners')
+          .select(`
+            *,
+            sender_profile:profiles!accountability_partners_user_id_fkey(*)
+          `)
+          .eq('partner_id', user.id)
+          .eq('status', 'pending')
+
+        const requestsList = (requestsData || []).map(r => ({
+          id: r.id,
+          senderId: r.user_id,
+          name: r.sender_profile ? `${r.sender_profile.first_name || ''} ${r.sender_profile.last_name || ''}`.trim() || 'User' : 'User',
+          username: r.sender_profile?.username || 'user',
+          avatar: r.sender_profile?.profile_picture_url,
+          message: r.message || 'Would like to be accountability partners!',
+          sentAt: new Date(r.created_at).toLocaleDateString(),
+          compatibility: Math.floor(Math.random() * 20) + 80
+        }))
+
+        setRequests(requestsList)
+      }
+    } catch (error: any) {
+      toast.error(error.message || `Failed to ${action} request`)
+    }
+  }
+
+  const handleSyncContacts = async () => {
+    try {
+      setLoading(true)
+      toast.info('Accessing contacts...')
+      
+      const contacts = await contactSync.getContacts()
+      if (contacts.length === 0) {
+        toast.info('No contacts found')
+        return
+      }
+
+      const foundUsers = await contactSync.findUsersByContacts(contacts)
+      if (foundUsers.length === 0) {
+        toast.info('No Commitly users found in your contacts')
+        return
+      }
+
+      // Add found users to discover list
+      const newDiscoverUsers = foundUsers.map(user => ({
+        id: user.id,
+        name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User',
+        username: user.username || 'user',
+        avatar: user.profile_picture_url,
+        bio: `Found in your contacts as ${user.contact?.name}`,
+        location: 'From Contacts',
+        compatibility: 95,
+        isFromContacts: true
+      }))
+
+      setDiscover(prev => [...newDiscoverUsers, ...prev.filter(u => !u.isFromContacts)])
+      toast.success(`Found ${foundUsers.length} Commitly users in your contacts!`)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to sync contacts')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Load real data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const user = await authHelpers.getCurrentUser()
+        if (!user) return
+
+        // Load partners
+        const { data: partnersData } = await supabase
+          .from('accountability_partners')
+          .select(`
+            *,
+            partner_profile:profiles!accountability_partners_partner_id_fkey(*),
+            user_profile:profiles!accountability_partners_user_id_fkey(*)
+          `)
+          .or(`user_id.eq.${user.id},partner_id.eq.${user.id}`)
+          .eq('status', 'accepted')
+
+        const partnersList = (partnersData || []).map(p => {
+          const isUserInitiator = p.user_id === user.id
+          const partnerProfile = isUserInitiator ? p.partner_profile : p.user_profile
+          return {
+            id: isUserInitiator ? p.partner_id : p.user_id,
+            name: partnerProfile ? `${partnerProfile.first_name || ''} ${partnerProfile.last_name || ''}`.trim() || 'Partner' : 'Partner',
+            username: partnerProfile?.username || 'partner',
+            avatar: partnerProfile?.profile_picture_url,
+            bio: partnerProfile?.bio || 'No bio available',
+            location: partnerProfile?.location || 'Unknown',
+            status: 'active',
+            sharedGoals: Math.floor(Math.random() * 5) + 1,
+            successRate: Math.floor(Math.random() * 20) + 80,
+            streak: Math.floor(Math.random() * 30) + 1,
+            lastActive: '2 hours ago',
+            compatibility: Math.floor(Math.random() * 20) + 80
+          }
+        })
+
+        // Load requests (pending incoming)
+        const { data: requestsData } = await supabase
+          .from('accountability_partners')
+          .select(`
+            *,
+            sender_profile:profiles!accountability_partners_user_id_fkey(*)
+          `)
+          .eq('partner_id', user.id)
+          .eq('status', 'pending')
+
+        const requestsList = (requestsData || []).map(r => ({
+          id: r.id,
+          senderId: r.user_id,
+          name: r.sender_profile ? `${r.sender_profile.first_name || ''} ${r.sender_profile.last_name || ''}`.trim() || 'User' : 'User',
+          username: r.sender_profile?.username || 'user',
+          avatar: r.sender_profile?.profile_picture_url,
+          message: r.message || 'Would like to be accountability partners!',
+          sentAt: new Date(r.created_at).toLocaleDateString(),
+          compatibility: Math.floor(Math.random() * 20) + 80
+        }))
+
+        // Load discover (other users not connected)
+        const { data: discoverData } = await supabase
+          .from('profiles')
+          .select('*')
+          .neq('id', user.id)
+          .eq('has_completed_kyc', true)
+          .limit(10)
+
+        const discoverList = (discoverData || []).map(p => ({
+          id: p.id,
+          name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'User',
+          username: p.username || 'user',
+          avatar: p.profile_picture_url,
+          bio: p.bio || 'No bio available',
+          location: p.location || 'Unknown',
+          compatibility: Math.floor(Math.random() * 20) + 70
+        }))
+
+        setPartners(partnersList)
+        setRequests(requestsList)
+        setDiscover(discoverList)
+      } catch (error) {
+        console.error('Error loading partners:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  const filteredPartners = partners.filter(partner =>
     partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     partner.username.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const filteredDiscover = mockDiscover.filter(person =>
+  const filteredDiscover = discover.filter(person =>
     person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     person.bio.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -178,60 +349,63 @@ export default function PartnersPage() {
                 Find Partners
               </Button>
             </Link>
-            <Link href="/partners/invite">
-              <Button variant="outline" className="hover-lift">
-                <Send className="h-4 w-4 mr-2" />
-                Invite Friends
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              className="hover-lift"
+              onClick={handleSyncContacts}
+              disabled={loading}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Sync Contacts
+            </Button>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="flex gap-3 sm:gap-4 overflow-x-auto">
-          <Card className="hover-lift min-w-[160px] flex-shrink-0">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 rounded-lg bg-green-500/10 mr-3">
                   <UserCheck className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Active Partners</p>
-                  <p className="text-2xl font-bold">{mockPartners.filter(p => p.status === 'active').length}</p>
+                  <p className="text-2xl font-bold">{partners.filter(p => p.status === 'active').length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="hover-lift min-w-[160px] flex-shrink-0">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 rounded-lg bg-blue-500/10 mr-3">
                   <Users className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Pending Requests</p>
-                  <p className="text-2xl font-bold">{mockRequests.length}</p>
+                  <p className="text-2xl font-bold">{requests.length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="hover-lift min-w-[160px] flex-shrink-0">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/10">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 rounded-lg bg-purple-500/10 mr-3">
                   <Target className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Shared Goals</p>
-                  <p className="text-2xl font-bold">{mockPartners.reduce((sum, p) => sum + p.sharedGoals, 0)}</p>
+                  <p className="text-2xl font-bold">{partners.reduce((sum, p) => sum + p.sharedGoals, 0)}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="hover-lift min-w-[160px] flex-shrink-0">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-500/10">
+          <Card className="hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <div className="p-2 rounded-lg bg-orange-500/10 mr-3">
                   <Award className="h-5 w-5 text-orange-600" />
                 </div>
                 <div>
@@ -243,31 +417,17 @@ export default function PartnersPage() {
           </Card>
         </div>
 
-        {/* Search and Filter */}
+        {/* Search */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search partners..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="fitness">Fitness & Health</SelectItem>
-                  <SelectItem value="career">Career & Business</SelectItem>
-                  <SelectItem value="learning">Learning & Education</SelectItem>
-                  <SelectItem value="personal">Personal Growth</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search partners by name or username..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
           </CardContent>
         </Card>
@@ -275,29 +435,60 @@ export default function PartnersPage() {
         {/* Partners Tabs */}
         <Tabs defaultValue="partners" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="partners">My Partners ({mockPartners.length})</TabsTrigger>
-            <TabsTrigger value="requests">Requests ({mockRequests.length})</TabsTrigger>
-            <TabsTrigger value="discover">Discover ({mockDiscover.length})</TabsTrigger>
+            <TabsTrigger value="partners">My Partners ({partners.length})</TabsTrigger>
+            <TabsTrigger value="requests">Requests ({requests.length})</TabsTrigger>
+            <TabsTrigger value="discover">Discover ({discover.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="partners" className="space-y-4">
-            <PartnersList partners={filteredPartners} />
+            <PartnersList 
+              partners={filteredPartners} 
+              loading={loading} 
+              onSendEncouragement={(partnerId, partnerName) => 
+                setEncouragementModal({open: true, partnerId, partnerName})
+              }
+            />
           </TabsContent>
 
           <TabsContent value="requests" className="space-y-4">
-            <RequestsList requests={mockRequests} />
+            <RequestsList requests={requests} onRequestAction={handleRequestAction} />
           </TabsContent>
 
           <TabsContent value="discover" className="space-y-4">
             <DiscoverList people={filteredDiscover} />
           </TabsContent>
         </Tabs>
+
+        {/* Encouragement Modal */}
+        <EncouragementModal
+          open={encouragementModal.open}
+          onOpenChange={(open) => setEncouragementModal(prev => ({...prev, open}))}
+          partnerId={encouragementModal.partnerId}
+          partnerName={encouragementModal.partnerName}
+        />
       </div>
     </MainLayout>
   )
 }
 
-function PartnersList({ partners }: { partners: typeof mockPartners }) {
+function PartnersList({ partners, loading, onSendEncouragement }: { 
+  partners: any[], 
+  loading: boolean,
+  onSendEncouragement: (partnerId: string, partnerName: string) => void
+}) {
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {[1,2,3].map(i => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-4">
+              <div className="h-20 bg-muted rounded" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
   if (partners.length === 0) {
     return (
       <Card>
@@ -315,142 +506,130 @@ function PartnersList({ partners }: { partners: typeof mockPartners }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {partners.map((partner) => (
-        <PartnerCard key={partner.id} partner={partner} />
+        <PartnerCard 
+          key={partner.id} 
+          partner={partner} 
+          onSendEncouragement={onSendEncouragement}
+        />
       ))}
     </div>
   )
 }
 
-function PartnerCard({ partner }: { partner: typeof mockPartners[0] }) {
+function PartnerCard({ partner, onSendEncouragement }: { 
+  partner: any,
+  onSendEncouragement: (partnerId: string, partnerName: string) => void
+}) {
   return (
     <Card className="hover-lift group">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={partner.avatar} />
-              <AvatarFallback>{partner.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-lg">{partner.name}</CardTitle>
-              <CardDescription>@{partner.username}</CardDescription>
-            </div>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3 mb-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={partner.avatar} />
+            <AvatarFallback>{partner.name.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-sm truncate">{partner.name}</h3>
+            <p className="text-xs text-muted-foreground">@{partner.username}</p>
           </div>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MessageCircle className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7"
+              onClick={() => onSendEncouragement(partner.id, partner.name)}
+              title="Send encouragement"
+            >
+              <MessageCircle className="h-3 w-3" />
             </Button>
           </div>
         </div>
-      </CardHeader>
 
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground line-clamp-2">
+        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
           {partner.bio}
         </p>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="text-center p-2 rounded-lg bg-muted/50">
-            <div className="font-bold text-primary">{partner.sharedGoals}</div>
-            <div className="text-xs text-muted-foreground">Shared Goals</div>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="text-center p-2 rounded bg-muted/50">
+            <div className="text-sm font-bold text-primary">{partner.sharedGoals}</div>
+            <div className="text-xs text-muted-foreground">Goals</div>
           </div>
-          <div className="text-center p-2 rounded-lg bg-muted/50">
-            <div className="font-bold text-green-600">{partner.successRate}%</div>
-            <div className="text-xs text-muted-foreground">Success Rate</div>
+          <div className="text-center p-2 rounded bg-muted/50">
+            <div className="text-sm font-bold text-green-600">{partner.successRate}%</div>
+            <div className="text-xs text-muted-foreground">Success</div>
           </div>
-        </div>
-
-        {/* Badges */}
-        <div className="flex flex-wrap gap-1">
-          {partner.badges.slice(0, 2).map((badge) => (
-            <Badge key={badge} variant="secondary" className="text-xs">
-              {badge}
-            </Badge>
-          ))}
-          {partner.badges.length > 2 && (
-            <Badge variant="outline" className="text-xs">
-              +{partner.badges.length - 2}
-            </Badge>
-          )}
         </div>
 
         {/* Status */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${partner.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
-            <span className="capitalize">{partner.status}</span>
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1">
+            <div className={`w-1.5 h-1.5 rounded-full ${partner.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+            <span className="text-muted-foreground capitalize">{partner.status}</span>
           </div>
-          <span>{partner.lastActive}</span>
-        </div>
-
-        {/* Compatibility */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Compatibility</span>
-            <span className="font-medium">{partner.compatibility}%</span>
-          </div>
-          <div className="w-full bg-muted rounded-full h-1.5">
-            <div
-              className="bg-gradient-to-r from-primary to-primary/60 h-1.5 rounded-full transition-all duration-300"
-              style={{ width: `${partner.compatibility}%` }}
-            />
-          </div>
+          <span className="text-muted-foreground">{partner.lastActive}</span>
         </div>
       </CardContent>
     </Card>
   )
 }
 
-function RequestsList({ requests }: { requests: typeof mockRequests }) {
+function RequestsList({ requests, onRequestAction }: { requests: any[], onRequestAction: (requestId: string, action: 'accept' | 'decline') => void }) {
+  if (requests.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">No pending requests</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {requests.map((request) => (
         <Card key={request.id} className="hover-lift">
           <CardContent className="p-4">
-            <div className="flex items-start gap-4">
-              <Avatar className="h-12 w-12">
+            <div className="flex items-start gap-3">
+              <Avatar className="h-10 w-10">
                 <AvatarImage src={request.avatar} />
                 <AvatarFallback>{request.name.charAt(0)}</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <h3 className="font-semibold">{request.name}</h3>
-                    <p className="text-sm text-muted-foreground">@{request.username}</p>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-sm truncate">{request.name}</h3>
+                    <p className="text-xs text-muted-foreground">@{request.username}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-right text-sm">
-                      <div className="font-medium">{request.compatibility}% match</div>
-                      <div className="text-muted-foreground">compatibility</div>
-                    </div>
+                  <div className="text-right text-xs">
+                    <div className="font-medium">{request.compatibility}%</div>
+                    <div className="text-muted-foreground">match</div>
                   </div>
                 </div>
 
-                <p className="text-sm mb-3">{request.message}</p>
-
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {request.sharedInterests.map((interest) => (
-                    <Badge key={interest} variant="outline" className="text-xs">
-                      {interest}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-xs mb-3 line-clamp-2">{request.message}</p>
 
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">
-                    Sent {request.sentAt}
+                    {request.sentAt}
                   </span>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline">
-                      <X className="h-4 w-4 mr-1" />
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => onRequestAction(request.id, 'decline')}
+                    >
+                      <X className="h-3 w-3 mr-1" />
                       Decline
                     </Button>
-                    <Button size="sm">
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                    <Button 
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => onRequestAction(request.id, 'accept')}
+                    >
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
                       Accept
                     </Button>
                   </div>
@@ -464,7 +643,7 @@ function RequestsList({ requests }: { requests: typeof mockRequests }) {
   )
 }
 
-function DiscoverList({ people }: { people: typeof mockDiscover }) {
+function DiscoverList({ people }: { people: any[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {people.map((person) => (

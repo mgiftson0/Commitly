@@ -39,6 +39,8 @@ export default function KYCPage() {
   const [username, setUsername] = useState("")
   const [displayName, setDisplayName] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
+  const [gender, setGender] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState("")
   const [bio, setBio] = useState("")
   const [loading, setLoading] = useState(false)
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
@@ -81,7 +83,7 @@ export default function KYCPage() {
     e.preventDefault();
     
     // Validate required fields
-    if (!username || !displayName || !phoneNumber) {
+    if (!username || !displayName || !phoneNumber || !gender || !dateOfBirth) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -135,7 +137,13 @@ export default function KYCPage() {
         first_name: displayName.split(' ')[0] || displayName,
         last_name: displayName.split(' ').slice(1).join(' ') || '',
         phone_number: phoneNumber,
+        gender,
+        date_of_birth: dateOfBirth,
         email: user.email,
+        bio: bio || null,
+        location: location || null,
+        website: website || null,
+        profile_picture_url: profilePicture || null,
         has_completed_kyc: true
       };
       
@@ -235,22 +243,22 @@ export default function KYCPage() {
 
     setUploadingImage(true)
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) {
+      const user = await authHelpers.getCurrentUser()
+      if (!user) {
         toast.error('Authentication error')
         return
       }
 
       // Create unique filename
       const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from('profile-pictures')
         .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true
         })
 
       if (error) throw error
@@ -458,6 +466,41 @@ export default function KYCPage() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="gender" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Gender <span className="text-destructive">*</span>
+                    </Label>
+                    <Select value={gender} onValueChange={setGender}>
+                      <SelectTrigger className="focus-ring">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Date of Birth <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      className="focus-ring"
+                      max={new Date(Date.now() - 13 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Must be at least 13 years old
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="location" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Location
                     </Label>
@@ -553,7 +596,7 @@ export default function KYCPage() {
                   <Button
                     type="submit"
                     className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold hover-lift shadow-lg hover:shadow-xl transition-all duration-200"
-                    disabled={loading || !username || !displayName || !phoneNumber || usernameAvailable === false || checkingUsername}
+                    disabled={loading || !username || !displayName || !phoneNumber || !gender || !dateOfBirth || usernameAvailable === false || checkingUsername}
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
@@ -591,14 +634,19 @@ export default function KYCPage() {
                       {phoneNumber ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border-2 border-current" />}
                       Phone
                     </div>
+                    <div className={`flex items-center gap-1 ${gender && dateOfBirth ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      {gender && dateOfBirth ? <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full border-2 border-current" />}
+                      Details
+                    </div>
                   </div>
                   <Progress
                     value={
-                      (username ? 25 : 0) +
-                      (displayName ? 25 : 0) +
-                      (phoneNumber ? 25 : 0) +
-                      (interests.length > 0 ? 15 : 0) +
-                      (bio ? 10 : 0)
+                      (username ? 20 : 0) +
+                      (displayName ? 20 : 0) +
+                      (phoneNumber ? 20 : 0) +
+                      (gender ? 15 : 0) +
+                      (dateOfBirth ? 15 : 0) +
+                      (interests.length > 0 ? 10 : 0)
                     }
                     className="h-1.5 sm:h-2"
                   />

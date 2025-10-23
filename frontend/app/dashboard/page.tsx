@@ -87,133 +87,117 @@ export default function DashboardPage() {
 
   // Get upcoming deadlines from real goals
   const upcomingDeadlines = useMemo(() => {
-    try {
-      const storedGoals = localStorage.getItem('goals')
-      if (!storedGoals) return []
-      
-      const goals = JSON.parse(storedGoals)
-      return goals
-        .filter((g: any) => g.dueDate && !g.completedAt && g.status === 'active')
-        .map((g: any) => ({
-          id: g.id,
-          title: g.title,
-          dueDate: g.dueDate,
-          progress: g.progress || 0,
-          priority: g.priority || 'medium'
-        }))
-        .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-        .slice(0, 3)
-    } catch {
-      return []
-    }
-  }, [])
+    return goals
+      .filter(g => g.target_date && !g.completed_at && !g.is_suspended)
+      .map(g => ({
+        id: g.id,
+        title: g.title,
+        dueDate: g.target_date,
+        progress: g.progress || 0,
+        priority: g.priority || 'medium'
+      }))
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      .slice(0, 3)
+  }, [goals])
 
   // Calculate category progress from real goals
   const categoryProgress = useMemo(() => {
-    try {
-      const storedGoals = localStorage.getItem('goals')
-      if (!storedGoals) return []
+    const categories = ['Health & Fitness', 'Learning', 'Career', 'Personal']
+    const iconMap = {
+      'Health & Fitness': Heart,
+      'Learning': BookOpen,
+      'Career': Briefcase,
+      'Personal': Star
+    }
+    const colorMap = {
+      'Health & Fitness': 'bg-green-500',
+      'Learning': 'bg-blue-500', 
+      'Career': 'bg-purple-500',
+      'Personal': 'bg-orange-500'
+    }
+    
+    return categories.map(category => {
+      const categoryGoals = goals.filter(g => g.category === category.toLowerCase().replace(' & ', '-').replace(' ', '-'))
+      const completed = categoryGoals.filter(g => g.completed_at).length
+      const total = categoryGoals.length
+      const progress = total > 0 ? Math.round((completed / total) * 100) : 0
       
-      const goals = JSON.parse(storedGoals)
-      const categories = ['Health & Fitness', 'Learning', 'Career', 'Personal']
-      const categoryMap = {
-        'health-fitness': 'Health & Fitness',
-        'learning': 'Learning', 
-        'career': 'Career',
-        'personal': 'Personal'
+      return {
+        name: category,
+        completed,
+        total,
+        progress,
+        color: colorMap[category as keyof typeof colorMap],
+        icon: iconMap[category as keyof typeof iconMap]
       }
-      
-      return categories.map(category => {
-        const categoryGoals = goals.filter((g: any) => {
-          const mappedCategory = categoryMap[g.category as keyof typeof categoryMap] || g.category
-          return mappedCategory === category
-        })
-        const completed = categoryGoals.filter((g: any) => g.completedAt).length
-        const total = categoryGoals.length
-        const progress = total > 0 ? Math.round((completed / total) * 100) : 0
-        
+    }).filter(c => c.total > 0)
+  }, [goals])
+
+  // Get real recent activity from database
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
+  
+  useEffect(() => {
+    const loadRecentActivity = async () => {
+      try {
+        const user = await authHelpers.getCurrentUser()
+        if (!user) return
+
+        const { data: notifications } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('read', false)
+          .order('created_at', { ascending: false })
+          .limit(3)
+
         const iconMap = {
-          'Health & Fitness': Heart,
-          'Learning': BookOpen,
-          'Career': Briefcase,
-          'Personal': Star
+          goal_completed: CheckCircle2,
+          streak_milestone: Flame,
+          partner_joined: Users,
+          goal_created: Target,
+          activity_completed: CheckCircle2,
+          encouragement_received: Heart
         }
         const colorMap = {
-          'Health & Fitness': 'bg-green-500',
-          'Learning': 'bg-blue-500', 
-          'Career': 'bg-purple-500',
-          'Personal': 'bg-orange-500'
+          goal_completed: 'text-green-600',
+          streak_milestone: 'text-orange-600',
+          partner_joined: 'text-purple-600',
+          goal_created: 'text-blue-600',
+          activity_completed: 'text-green-600',
+          encouragement_received: 'text-pink-600'
         }
         
-        return {
-          name: category,
-          completed,
-          total,
-          progress,
-          color: colorMap[category as keyof typeof colorMap],
-          icon: iconMap[category as keyof typeof iconMap]
+        const timeAgo = (date: string) => {
+          const diff = Date.now() - new Date(date).getTime()
+          const minutes = Math.floor(diff / 60000)
+          const hours = Math.floor(diff / 3600000)
+          const days = Math.floor(diff / 86400000)
+          
+          if (days > 0) return `${days}d ago`
+          if (hours > 0) return `${hours}h ago`
+          if (minutes > 0) return `${minutes}m ago`
+          return 'Just now'
         }
-      }).filter(c => c.total > 0)
-    } catch {
-      return []
+        
+        const activities = (notifications || []).map((n: any) => ({
+          id: n.id,
+          type: n.type,
+          title: n.title,
+          description: n.message,
+          time: timeAgo(n.created_at),
+          icon: iconMap[n.type as keyof typeof iconMap] || Bell,
+          color: colorMap[n.type as keyof typeof colorMap] || 'text-gray-600',
+          goalId: n.data?.goal_id
+        }))
+        
+        setRecentActivity(activities)
+      } catch (error) {
+        console.error('Error loading recent activity:', error)
+      }
     }
+    
+    loadRecentActivity()
   }, [])
-
-  // Get real recent activity from localStorage (only unread)
-  const recentActivity = useMemo(() => {
-    try {
-      const notifications = JSON.parse(localStorage.getItem('notifications') || '[]')
-      const activityTypes = ['goal_completed', 'streak_milestone', 'partner_joined', 'goal_created', 'activity_completed', 'encouragement_received']
-      
-      return notifications
-        .filter((n: any) => activityTypes.includes(n.type) && !n.is_read)
-        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 3)
-        .map((n: any) => {
-          const iconMap = {
-            goal_completed: CheckCircle2,
-            streak_milestone: Flame,
-            partner_joined: Users,
-            goal_created: Target,
-            activity_completed: CheckCircle2,
-            encouragement_received: Heart
-          }
-          const colorMap = {
-            goal_completed: 'text-green-600',
-            streak_milestone: 'text-orange-600',
-            partner_joined: 'text-purple-600',
-            goal_created: 'text-blue-600',
-            activity_completed: 'text-green-600',
-            encouragement_received: 'text-pink-600'
-          }
-          
-          const timeAgo = (date: string) => {
-            const diff = Date.now() - new Date(date).getTime()
-            const minutes = Math.floor(diff / 60000)
-            const hours = Math.floor(diff / 3600000)
-            const days = Math.floor(diff / 86400000)
-            
-            if (days > 0) return `${days}d ago`
-            if (hours > 0) return `${hours}h ago`
-            if (minutes > 0) return `${minutes}m ago`
-            return 'Just now'
-          }
-          
-          return {
-            id: n.id,
-            type: n.type,
-            title: n.title,
-            description: n.message,
-            time: timeAgo(n.createdAt),
-            icon: iconMap[n.type as keyof typeof iconMap] || Bell,
-            color: colorMap[n.type as keyof typeof colorMap] || 'text-gray-600',
-            goalId: n.related_goal_id
-          }
-        })
-    } catch {
-      return []
-    }
-  }, [goals])
 
   const toggleMotivation = () => {
     const newValue = !motivationEnabled
@@ -315,54 +299,27 @@ export default function DashboardPage() {
     }
   }
 
-  const loadGoals = () => {
+  const loadGoals = async () => {
     try {
-      const storedGoals = localStorage.getItem('goals')
-      if (storedGoals) {
-        const goals = JSON.parse(storedGoals)
-        const mapped = goals.map((g: any) => {
-          // Calculate real progress
-          let realProgress = 0
-          if (g.activities && Array.isArray(g.activities)) {
-            if (g.type === 'multi-activity') {
-              const completed = g.activities.filter((a: any) => a.completed).length
-              realProgress = g.activities.length > 0 ? Math.round((completed / g.activities.length) * 100) : 0
-            } else if (g.type === 'single-activity') {
-              realProgress = g.activities[0]?.completed ? 100 : 0
-            }
-          }
-          
-          // Calculate streak
-          let streak = 0
-          if (g.scheduleType === 'recurring' && g.type !== 'single-activity') {
-            const goalAge = Math.floor((Date.now() - new Date(g.createdAt).getTime()) / (1000 * 60 * 60 * 24))
-            if (goalAge >= 1) {
-              streak = g.streak !== undefined ? g.streak : 0
-            }
-          }
-          
-          return {
-            id: String(g.id),
-            user_id: 'mock-user-id',
-            title: g.title,
-            description: g.description,
-            goal_type: g.type === 'multi-activity' ? 'multi' : g.type === 'single-activity' ? 'single' : g.type,
-            visibility: g.visibility,
-            start_date: g.createdAt,
-            is_suspended: g.status === 'paused',
-            created_at: g.createdAt,
-            updated_at: g.updatedAt || g.createdAt,
-            completed_at: g.completedAt || null,
-            progress: g.completedAt ? 100 : realProgress,
-            streak: streak,
-            dueDate: g.dueDate,
-            priority: g.priority || 'medium'
-          }
-        })
-        setGoals(mapped as any)
+      const user = await authHelpers.getCurrentUser()
+      if (!user) {
+        router.push('/auth/login')
+        return
       }
-    } catch {}
-    setLoading(false)
+
+      const { data: goalsData, error } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setGoals(goalsData || [])
+    } catch (error) {
+      console.error('Error loading goals:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Live update when localStorage changes

@@ -33,6 +33,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { checkAchievements } from "@/lib/achievements"
+import { authHelpers, supabase } from "@/lib/supabase-client"
 
 interface SidebarProps {
   className?: string
@@ -42,6 +43,7 @@ export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [activeGoalsFilter, setActiveGoalsFilter] = useState("all")
   const [closeAchievements, setCloseAchievements] = useState<any[]>([])
+  const [stats, setStats] = useState({ goals: 0, partners: 0, completed: 0, pending: 0 })
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
 
@@ -57,14 +59,14 @@ export function Sidebar({ className }: SidebarProps) {
       href: "/goals",
       icon: Target,
       current: pathname.startsWith("/goals"),
-      badge: "12"
+      badge: stats.goals.toString()
     },
     {
       name: "Partners",
       href: "/partners",
       icon: Users,
       current: pathname.startsWith("/partners"),
-      badge: "3"
+      badge: stats.partners.toString()
     },
     {
       name: "Analytics",
@@ -158,25 +160,46 @@ export function Sidebar({ className }: SidebarProps) {
 
   const activeGoals = filteredGoals.slice(0, 3) // Show top 3 filtered goals
 
-  // Load close achievements
+  // Load real data from database
   useEffect(() => {
-    try {
-      const storedGoals = localStorage.getItem('goals')
-      const goals = storedGoals ? JSON.parse(storedGoals) : []
-      const userStats = {
-        encouragementsSent: parseInt(localStorage.getItem('encouragementsSent') || '0')
+    const loadStats = async () => {
+      try {
+        const user = await authHelpers.getCurrentUser()
+        if (!user) return
+
+        // Load goals
+        const { data: goals } = await supabase
+          .from('goals')
+          .select('*')
+          .eq('user_id', user.id)
+
+        // Load partners (accountability_partners table)
+        const { data: partners } = await supabase
+          .from('accountability_partners')
+          .select('*')
+          .or(`user_id.eq.${user.id},partner_id.eq.${user.id}`)
+          .eq('status', 'accepted')
+
+        const goalsData = goals || []
+        const partnersData = partners || []
+        const completed = goalsData.filter(g => g.completed_at).length
+        const pending = goalsData.filter(g => !g.completed_at && !g.is_suspended).length
+
+        setStats({
+          goals: goalsData.length,
+          partners: partnersData.length,
+          completed,
+          pending
+        })
+
+        // Mock achievements for now
+        setCloseAchievements([])
+      } catch (error) {
+        console.error('Error loading sidebar stats:', error)
       }
-      
-      const allAchievements = checkAchievements(goals, userStats)
-      const closeToUnlock = allAchievements
-        .filter(a => !a.unlocked && a.progressPercentage >= 50)
-        .sort((a, b) => b.progressPercentage - a.progressPercentage)
-        .slice(0, 3)
-      
-      setCloseAchievements(closeToUnlock)
-    } catch {
-      setCloseAchievements([])
     }
+
+    loadStats()
   }, [])
 
   // Listen for goal updates
@@ -432,11 +455,11 @@ export function Sidebar({ className }: SidebarProps) {
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <div className="text-2xl font-bold text-primary">7</div>
+                  <div className="text-2xl font-bold text-primary">{stats.completed}</div>
                   <div className="text-xs text-muted-foreground">Completed</div>
                 </div>
                 <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <div className="text-2xl font-bold text-accent">3</div>
+                  <div className="text-2xl font-bold text-accent">{stats.pending}</div>
                   <div className="text-xs text-muted-foreground">Pending</div>
                 </div>
               </div>

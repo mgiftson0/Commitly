@@ -53,58 +53,91 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-// Frontend-only mode - no backend dependencies
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/main-layout";
-import { notifications } from "@/lib/notifications";
-import { createGoalCreatedActivity } from "@/lib/activity-tracker";
+import { authHelpers, supabase } from "@/lib/supabase-client";
 
 export default function CreateGoalPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [goalNature, setGoalNature] = useState<"personal" | "group">(
-    "personal",
-  );
-  const [goalType, setGoalType] = useState<
-    "single-activity" | "multi-activity"
-  >("single-activity");
-  const [visibility, setVisibility] = useState<
-    "public" | "private" | "restricted"
-  >("private");
+  const [goalNature, setGoalNature] = useState<"personal" | "group">("personal");
+  const [goalType, setGoalType] = useState<"single-activity" | "multi-activity">("single-activity");
+  const [visibility, setVisibility] = useState<"public" | "private" | "restricted">("private");
   const [activities, setActivities] = useState<string[]>([""]);
   const [recurrencePattern, setRecurrencePattern] = useState("daily");
   const [recurrenceDays, setRecurrenceDays] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPartners, setSelectedPartners] = useState<string[]>([]);
-  const [groupMembers, setGroupMembers] = useState<string[]>([]); // includes owner by default when group
-  const [activityAssignments, setActivityAssignments] = useState<{
-    [key: number]: string[];
-  }>({});
-  // Single-activity personal specific fields
+  const [groupMembers, setGroupMembers] = useState<string[]>([]);
+  const [activityAssignments, setActivityAssignments] = useState<{[key: number]: string[]}>({});
   const [singleActivity, setSingleActivity] = useState("");
-  const [scheduleType, setScheduleType] = useState<"date" | "recurring">(
-    "date",
-  );
+  const [scheduleType, setScheduleType] = useState<"date" | "recurring">("date");
   const [singleDate, setSingleDate] = useState("");
-  const [endCondition, setEndCondition] = useState<
-    "ongoing" | "by-date" | "after-completions"
-  >("by-date");
+  const [endCondition, setEndCondition] = useState<"ongoing" | "by-date" | "after-completions">("by-date");
   const [targetCompletions, setTargetCompletions] = useState("");
-
-  // Mock current user (owner)
-  const currentUser = { id: "mock-user-id", name: "You", username: "you" };
-
-  // Mock partners data
-  const availablePartners = [
-    { id: "1", name: "Sarah Martinez", username: "sarah_m" },
-    { id: "2", name: "Mike Chen", username: "mike_c" },
-    { id: "3", name: "Emily Rodriguez", username: "emily_r" },
-    { id: "4", name: "John Doe", username: "john_d" },
-    { id: "5", name: "Jane Smith", username: "jane_s" },
-  ];
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [availablePartners, setAvailablePartners] = useState<any[]>([])
   const [category, setCategory] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateGoalType, setTemplateGoalType] = useState<"single-activity" | "multi-activity">("single-activity");
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [selectedSingleActivity, setSelectedSingleActivity] = useState<string>("");
   const router = useRouter();
-  // Frontend-only mode
+
+  // Load real user and partners data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const user = await authHelpers.getCurrentUser()
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
+
+        // Get user profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        setCurrentUser({
+          id: user.id,
+          name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'You' : 'You',
+          username: profile?.username || 'you'
+        })
+
+        // Get accountability partners (mutual connections)
+        const { data: partners } = await supabase
+          .from('accountability_partners')
+          .select(`
+            *,
+            partner_profile:profiles!accountability_partners_partner_id_fkey(*),
+            user_profile:profiles!accountability_partners_user_id_fkey(*)
+          `)
+          .or(`user_id.eq.${user.id},partner_id.eq.${user.id}`)
+          .eq('status', 'accepted')
+
+        const partnersList = (partners || []).map(p => {
+          const isUserInitiator = p.user_id === user.id
+          const partnerProfile = isUserInitiator ? p.partner_profile : p.user_profile
+          return {
+            id: isUserInitiator ? p.partner_id : p.user_id,
+            name: partnerProfile ? `${partnerProfile.first_name || ''} ${partnerProfile.last_name || ''}`.trim() || 'Partner' : 'Partner',
+            username: partnerProfile?.username || 'partner'
+          }
+        })
+
+        setAvailablePartners(partnersList)
+      } catch (error) {
+        console.error('Error loading data:', error)
+        router.push('/auth/login')
+      }
+    }
+
+    loadData()
+  }, [router])
 
   const weekDays = [
     "monday",
@@ -116,15 +149,9 @@ export default function CreateGoalPage() {
     "sunday",
   ];
 
-  // All candidates for group membership (owner + partners)
-  const allGroupCandidates = useMemo(
-    () => [currentUser, ...availablePartners],
-    [],
-  );
-
   // Ensure owner is included when group is selected and counts toward max 5
   useEffect(() => {
-    if (goalNature === "group") {
+    if (goalNature === "group" && currentUser) {
       setGroupMembers((prev) => {
         if (prev.includes(currentUser.id)) return prev;
         return [currentUser.id, ...prev].slice(0, 5);
@@ -132,7 +159,26 @@ export default function CreateGoalPage() {
     } else {
       setGroupMembers([]);
     }
-  }, [goalNature]);
+  }, [goalNature, currentUser]);
+
+  // All candidates for group membership (owner + partners)
+  const allGroupCandidates = useMemo(
+    () => currentUser ? [currentUser, ...availablePartners] : [],
+    [currentUser, availablePartners],
+  );
+
+  if (!currentUser) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Target className="h-12 w-12 text-primary animate-pulse mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
 
   const addActivity = () => {
     setActivities([...activities, ""]);
@@ -161,84 +207,62 @@ export default function CreateGoalPage() {
     setLoading(true);
 
     try {
-      // Generate unique ID
-      const goalId = Date.now().toString();
-      const now = new Date().toISOString();
+      if (!currentUser) {
+        toast.error('Please log in to create goals')
+        return
+      }
 
-      // Prepare goal data
-      const newGoal = {
-        id: goalId,
-        userId: "current-user",
+      // Check if user exists in auth.users
+      const { data: userExists } = await supabase.auth.getUser()
+      if (!userExists.user) {
+        toast.error('Authentication required')
+        router.push('/auth/login')
+        return
+      }
+
+      // Show message if no accountability partners available
+      if (goalNature === "personal" && selectedPartners.length === 0 && availablePartners.length === 0) {
+        toast.info('No accountability partners available. You can still create the goal and add partners later.')
+      }
+
+      // Prepare goal data for database
+      const goalData = {
+        user_id: userExists.user.id,
         title: title || "Untitled Goal",
         description,
-        type: goalType,
+        goal_type: goalType,
         visibility,
         status: "active",
         progress: 0,
-        streak: 0,
-        totalCompletions: 0,
-        category: category || "Personal",
+        category: category.replace('-', '_'),
         priority: "medium",
-        createdAt: now,
-        updatedAt: now,
-        completedAt: null,
-        scheduleType,
-        recurrencePattern:
-          scheduleType === "recurring" ? recurrencePattern : null,
-        recurrenceDays:
-          scheduleType === "recurring" && recurrencePattern === "custom"
-            ? recurrenceDays
-            : null,
-        dueDate: endCondition === "by-date" ? singleDate : null,
-        endCondition,
-        targetCompletions:
-          endCondition === "after-completions"
-            ? parseInt(targetCompletions)
-            : null,
-        activities:
-          goalType === "multi-activity"
-            ? activities.filter((a) => a.trim()).map((a) => a.trim())
-            : goalType === "single-activity" && singleActivity.trim()
-              ? [singleActivity.trim()]
-              : [],
-        isGroupGoal: goalNature === "group",
-        groupMembers:
-          goalNature === "group"
-            ? groupMembers.map((id) => {
-                const member = allGroupCandidates.find((p) => p.id === id);
-                return {
-                  id,
-                  name: member?.name || "Member",
-                  status: id === currentUser.id ? "accepted" : "pending", // Owner auto-accepted, others pending
-                };
-              })
-            : [],
-        accountabilityPartners:
-          goalNature === "personal"
-            ? selectedPartners.map((id) => {
-                const partner = availablePartners.find((p) => p.id === id);
-                return {
-                  id,
-                  name: partner?.name || "Partner",
-                  avatar: "/placeholder-avatar.jpg",
-                };
-              })
-            : [],
-      };
+        target_date: endCondition === "by-date" ? singleDate : null,
+        is_suspended: false,
+        completed_at: null
+      }
 
-      // Save to localStorage
-      const existingGoals = JSON.parse(localStorage.getItem("goals") || "[]");
-      existingGoals.push(newGoal);
-      localStorage.setItem("goals", JSON.stringify(existingGoals));
+      // Create goal in database
+      const { data: newGoal, error: goalError } = await supabase
+        .from('goals')
+        .insert([goalData])
+        .select()
+        .single()
 
-      // Dispatch event to notify other components
-      window.dispatchEvent(
-        new CustomEvent("goalUpdated", { detail: { goalId: newGoal.id } }),
-      );
+      if (goalError) throw goalError
+
+      // Create notification
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: currentUser.id,
+          title: 'Goal Created!',
+          message: `You created a new goal: ${title}`,
+          type: 'goal_created',
+          read: false,
+          data: { goal_id: newGoal.id }
+        })
 
       toast.success("Goal created successfully!");
-      await notifications.goalCreated(title);
-      createGoalCreatedActivity(title, goalId);
       router.push("/goals");
     } catch (error: any) {
       toast.error(error.message || "Failed to create goal");
@@ -247,15 +271,7 @@ export default function CreateGoalPage() {
     }
   };
 
-  // Template selection state
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [templateGoalType, setTemplateGoalType] = useState<
-    "single-activity" | "multi-activity"
-  >("single-activity");
-  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-  const [selectedSingleActivity, setSelectedSingleActivity] =
-    useState<string>("");
+
 
   // Activity suggestions by category
   const activitySuggestions = {

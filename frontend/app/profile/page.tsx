@@ -92,8 +92,21 @@ export default function ProfilePage() {
           setGoals(goalsData);
         }
 
-        // Skip achievements for now since table doesn't exist
-        setAchievements([]);
+        // Load achievements from database
+        const { data: achievementsData, error: achievementsError } = await supabase
+          .from('user_achievements')
+          .select('*, achievements(*)')
+          .eq('user_id', user.id);
+
+        if (!achievementsError && achievementsData) {
+          setAchievements(achievementsData.map(ua => ({
+            ...ua.achievements,
+            unlocked: true,
+            unlocked_at: ua.unlocked_at
+          })));
+        } else {
+          setAchievements([]);
+        }
 
       } catch (error: any) {
         console.error('Error loading profile:', error);
@@ -303,7 +316,7 @@ export default function ProfilePage() {
                 )}
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full">
                   <Calendar className="h-4 w-4" />
-                  <span>Joined January 2024</span>
+                  <span>Joined {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently'}</span>
                 </div>
               </div>
 
