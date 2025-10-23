@@ -173,31 +173,31 @@ export function Header({ onMenuClick }: HeaderProps) {
                   <span className="text-base font-bold">Commitly</span>
                 </div>
                 <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-                  <Link href="/dashboard">
-                    <Button variant="ghost" className="w-full justify-start h-9 text-sm">
+                  <Button variant="ghost" className="w-full justify-start h-9 text-sm" asChild>
+                    <Link href="/dashboard">
                       <Target className="h-4 w-4 mr-2" /> Dashboard
-                    </Button>
-                  </Link>
-                  <Link href="/goals">
-                    <Button variant="ghost" className="w-full justify-start h-9 text-sm">
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start h-9 text-sm" asChild>
+                    <Link href="/goals">
                       <Target className="h-4 w-4 mr-2" /> Goals
-                    </Button>
-                  </Link>
-                  <Link href="/partners">
-                    <Button variant="ghost" className="w-full justify-start h-9 text-sm">
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start h-9 text-sm" asChild>
+                    <Link href="/partners">
                       <Users className="h-4 w-4 mr-2" /> Partners
-                    </Button>
-                  </Link>
-                  <Link href="/profile">
-                    <Button variant="ghost" className="w-full justify-start h-9 text-sm">
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start h-9 text-sm" asChild>
+                    <Link href="/profile">
                       <User className="h-4 w-4 mr-2" /> Profile
-                    </Button>
-                  </Link>
-                  <Link href="/settings">
-                    <Button variant="ghost" className="w-full justify-start h-9 text-sm">
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start h-9 text-sm" asChild>
+                    <Link href="/settings">
                       <Settings className="h-4 w-4 mr-2" /> Settings
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </nav>
                 <div className="border-t p-2">
                   {/* Theme toggle at bottom */}
@@ -251,16 +251,16 @@ export function Header({ onMenuClick }: HeaderProps) {
           </Sheet>
 
           {/* Notifications */}
-          <Link href="/notifications">
-            <Button variant="ghost" size="icon" className="hover-lift relative" onClick={loadUnreadCount}>
+          <Button variant="ghost" size="icon" className="hover-lift relative" onClick={loadUnreadCount} asChild>
+            <Link href="/notifications">
               <Bell className={`h-5 w-5 transition-transform duration-200 ${bellShake ? 'animate-bounce' : ''}`} />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
           {/* Theme toggle (desktop) */}
           <div className="hidden md:block">

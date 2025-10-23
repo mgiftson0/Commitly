@@ -251,9 +251,9 @@ export default function CreateGoalPage() {
         // This will be handled by the UI showing the dropdown with empty state
       }
 
-      // Prepare goal data for database
+      // Prepare goal data for database - ensure user_id matches auth.users table
       const goalData = {
-        user_id: authUser.id,
+        user_id: authUser.id, // This should match auth.users(id)
         title: title || "Untitled Goal",
         description,
         goal_type: goalType,
@@ -267,6 +267,9 @@ export default function CreateGoalPage() {
         completed_at: null
       }
 
+      console.log('Creating goal with user_id:', authUser.id)
+      console.log('Profile exists:', profile.id)
+
       // Create goal in database
       const { data: newGoal, error: goalError } = await supabase
         .from('goals')
@@ -274,7 +277,16 @@ export default function CreateGoalPage() {
         .select()
         .single()
 
-      if (goalError) throw goalError
+      if (goalError) {
+        console.error('Goal creation error:', goalError)
+        if (goalError.message?.includes('foreign key constraint')) {
+          toast.error('Profile setup incomplete. Please refresh and try again.')
+          router.push('/auth/kyc')
+        } else {
+          toast.error(goalError.message || 'Failed to create goal')
+        }
+        return
+      }
 
       // Create goal activities for multi-activity goals
       if (goalType === "multi-activity" && activities.length > 0) {
@@ -307,6 +319,10 @@ export default function CreateGoalPage() {
         })
 
       toast.success("Goal created successfully!");
+      
+      // Dispatch event to notify goals page to refresh
+      window.dispatchEvent(new CustomEvent('goalCreated', { detail: { goalId: newGoal.id } }))
+      
       router.push("/goals");
     } catch (error: any) {
       toast.error(error.message || "Failed to create goal");

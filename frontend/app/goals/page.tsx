@@ -63,6 +63,7 @@ import {
 import { EncouragementCard } from "@/components/goals/encouragement-card"
 import * as React from "react"
 import { getProgressColor } from "@/lib/utils/progress-colors"
+import { supabase, authHelpers } from "@/lib/supabase-client"
 
 // Mock data for goals with enhanced features
 const mockGoals = [
@@ -431,83 +432,69 @@ export default function GoalsPage() {
   const [realGoals, setRealGoals] = useState<any[]>([])
   const router = useRouter()
 
-  // Load real goals from localStorage
+  // Load real goals from Supabase database
   useEffect(() => {
-    const loadGoals = () => {
+    const loadGoals = async () => {
       try {
-        const storedGoals = localStorage.getItem('goals')
-        const storedPartnerGoals = localStorage.getItem('partnerGoals')
-        
-        let allGoals: any[] = []
-        
-        if (storedGoals) {
-          const goals = JSON.parse(storedGoals)
-          allGoals = [...goals]
+        const user = await authHelpers.getCurrentUser()
+        if (!user) {
+          console.log('No user logged in')
+          setRealGoals([])
+          return
         }
-        
-        // Initialize partner goals if they don't exist
-        if (!storedPartnerGoals) {
-          const partnerGoals = [
-            {
-              id: 'partner-1',
-              userId: 'sarah-martinez',
-              ownerName: 'Sarah Martinez',
-              title: 'Morning Yoga Practice',
-              description: 'Daily 20-minute yoga session to improve flexibility and mindfulness',
-              type: 'single-activity',
-              visibility: 'restricted',
-              status: 'active',
-              progress: 65,
-              streak: 8,
-              category: 'Health & Fitness',
-              createdAt: '2024-01-20T08:00:00Z',
-              dueDate: '2024-03-20',
-              scheduleType: 'recurring',
-              recurrencePattern: 'daily',
-              activities: ['Complete 20-minute yoga session'],
-              accountabilityPartners: [{ id: 'mock-user-id', name: 'You', avatar: '/placeholder-avatar.jpg' }],
-              isPartnerGoal: true
-            },
-            {
-              id: 'partner-2', 
-              userId: 'mike-chen',
-              ownerName: 'Mike Chen',
-              title: 'Learn Python Programming',
-              description: 'Complete Python course and build 3 projects',
-              type: 'multi-activity',
-              visibility: 'restricted',
-              status: 'active',
-              progress: 40,
-              streak: 0,
-              category: 'Learning',
-              createdAt: '2024-02-01T10:00:00Z',
-              dueDate: '2024-04-01',
-              scheduleType: 'date',
-              activities: [
-                { title: 'Complete Python basics course', completed: true },
-                { title: 'Build calculator app', completed: true },
-                { title: 'Build todo list app', completed: false },
-                { title: 'Build weather app', completed: false },
-                { title: 'Complete final project', completed: false }
-              ],
-              accountabilityPartners: [{ id: 'mock-user-id', name: 'You', avatar: '/placeholder-avatar.jpg' }],
-              isPartnerGoal: true
+
+        // Fetch user's own goals
+        const { data: userGoals, error: userGoalsError } = await supabase
+          .from('goals')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (userGoalsError) {
+          console.error('Error fetching user goals:', userGoalsError)
+        }
+
+        // Fetch goal activities for multi-activity goals
+        const goalsWithActivities = await Promise.all((userGoals || []).map(async (goal) => {
+          if (goal.goal_type === 'multi-activity') {
+            const { data: activities } = await supabase
+              .from('goal_activities')
+              .select('*')
+              .eq('goal_id', goal.id)
+              .order('order_index', { ascending: true })
+
+            return {
+              ...goal,
+              activities: activities || [],
+              type: goal.goal_type,
+              userId: goal.user_id,
+              createdAt: goal.created_at,
+              visibility: goal.visibility,
+              status: goal.status,
+              category: goal.category?.replace('_', ' '),
+              priority: goal.priority,
+              dueDate: goal.target_date,
+              isPartnerGoal: false
             }
-          ]
-          localStorage.setItem('partnerGoals', JSON.stringify(partnerGoals))
-          allGoals = [...allGoals, ...partnerGoals]
-        } else {
-          const partnerGoals = JSON.parse(storedPartnerGoals)
-          // Mark partner goals with special flag
-          const markedPartnerGoals = partnerGoals.map((goal: any) => ({
+          }
+          
+          return {
             ...goal,
-            isPartnerGoal: true
-          }))
-          allGoals = [...allGoals, ...markedPartnerGoals]
-        }
-        
-        console.log('Loaded goals from localStorage:', allGoals)
-        setRealGoals(allGoals)
+            activities: [],
+            type: goal.goal_type,
+            userId: goal.user_id,
+            createdAt: goal.created_at,
+            visibility: goal.visibility,
+            status: goal.status,
+            category: goal.category?.replace('_', ' '),
+            priority: goal.priority,
+            dueDate: goal.target_date,
+            isPartnerGoal: false
+          }
+        }))
+
+        console.log('Loaded goals from database:', goalsWithActivities)
+        setRealGoals(goalsWithActivities)
       } catch (error) {
         console.error('Error loading goals:', error)
         setRealGoals([])
@@ -516,18 +503,17 @@ export default function GoalsPage() {
     
     loadGoals()
     
-    // Listen for storage changes and custom events
-    const handleStorageChange = () => loadGoals()
+    // Listen for custom events
     const handleGoalChange = () => loadGoals()
     
-    window.addEventListener('storage', handleStorageChange)
     window.addEventListener('goalDeleted', handleGoalChange)
     window.addEventListener('goalUpdated', handleGoalChange)
+    window.addEventListener('goalCreated', handleGoalChange)
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('goalDeleted', handleGoalChange)
       window.removeEventListener('goalUpdated', handleGoalChange)
+      window.removeEventListener('goalCreated', handleGoalChange)
     }
   }, [])
 
@@ -885,25 +871,31 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
     const created = new Date(createdAt).getTime()
     return (Date.now() - created) <= (5 * 60 * 60 * 1000)
   }
-  const handleDelete = (goalId: number, goalTitle: string) => {
+  const handleDelete = async (goalId: number | string, goalTitle: string) => {
     try {
-      const storedGoals = localStorage.getItem('goals')
-      if (storedGoals) {
-        const goals = JSON.parse(storedGoals)
-        const filteredGoals = goals.filter((g: any) => g.id !== goalId.toString())
-        localStorage.setItem('goals', JSON.stringify(filteredGoals))
-        
-        toast.success(`Goal "${goalTitle}" deleted successfully`)
-        
-        // Dispatch custom event to notify other components
-        window.dispatchEvent(new CustomEvent('goalDeleted', { detail: { goalId } }))
-        
-        // Trigger parent component to reload goals
-        if (onGoalDeleted) {
-          onGoalDeleted()
-        }
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('goals')
+        .delete()
+        .eq('id', goalId)
+
+      if (error) {
+        console.error('Error deleting goal:', error)
+        toast.error("Failed to delete goal")
+        return
+      }
+      
+      toast.success(`Goal "${goalTitle}" deleted successfully`)
+      
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new CustomEvent('goalDeleted', { detail: { goalId } }))
+      
+      // Trigger parent component to reload goals
+      if (onGoalDeleted) {
+        onGoalDeleted()
       }
     } catch (error) {
+      console.error('Error deleting goal:', error)
       toast.error("Failed to delete goal")
     }
   }

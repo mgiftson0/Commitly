@@ -98,13 +98,12 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
       } else {
         setResults([])
       }
-    }, 300) // Debounce search by 300ms
+    }, 500) // Increased debounce for stability
 
     return () => clearTimeout(timeoutId)
   }, [query])
 
   const performSearch = async (searchQuery: string): Promise<void> => {
-    // Early return for very short queries
     if (searchQuery.length < 2) {
       setResults([])
       return
@@ -114,52 +113,49 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
     const lowerQuery = searchQuery.toLowerCase()
 
     try {
-      // Search users by username, first_name, last_name
-      const { data: users } = await supabase
+      // Search users by username, first name, or last name
+      const { data: users, error: usersError } = await supabase
         .from('profiles')
         .select('id, username, first_name, last_name, profile_picture_url')
         .or(`username.ilike.%${lowerQuery}%,first_name.ilike.%${lowerQuery}%,last_name.ilike.%${lowerQuery}%`)
         .limit(5)
 
-      if (users) {
+      if (!usersError && users) {
         users.forEach(user => {
-          const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username
+          const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'User'
+          const username = user.username || 'no-username'
           searchResults.push({
             id: user.id,
             type: 'user',
             title: fullName,
-            description: `@${user.username}`,
-            avatar: user.profile_picture_url,
+            description: `@${username}`,
+            avatar: user.profile_picture_url || undefined,
             onClick: () => {
-              router.push(`/profile/${user.username}`)
+              router.push(`/profile/${username}`)
               addToRecentSearches(searchQuery)
               setIsOpen(false)
             }
           })
         })
+      } else if (usersError) {
+        console.error('User search error:', usersError)
       }
 
-      // Search goals by title and description
-      const { data: goals } = await supabase
+      // Simple goals search without joins
+      const { data: goals, error: goalsError } = await supabase
         .from('goals')
-        .select(`
-          id, title, description, category, status, progress,
-          profiles!goals_user_id_fkey(username, first_name, last_name)
-        `)
-        .or(`title.ilike.%${lowerQuery}%,description.ilike.%${lowerQuery}%`)
+        .select('id, title, description, category, status, progress')
+        .ilike('title', `%${lowerQuery}%`)
         .eq('visibility', 'public')
         .limit(5)
 
-      if (goals) {
+      if (!goalsError && goals) {
         goals.forEach(goal => {
-          const owner = goal.profiles as any
-          const ownerName = owner ? `${owner.first_name || ''} ${owner.last_name || ''}`.trim() || owner.username : 'Unknown'
-          
           searchResults.push({
             id: goal.id,
             type: 'goal',
             title: goal.title,
-            description: `by ${ownerName}`,
+            description: goal.description || 'Public goal',
             category: goal.category,
             status: goal.status,
             progress: goal.progress,
@@ -171,44 +167,15 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
           })
         })
       }
-
-      // Search notifications for current user
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: notifications } = await supabase
-          .from('notifications')
-          .select('id, title, message')
-          .eq('user_id', user.id)
-          .or(`title.ilike.%${lowerQuery}%,message.ilike.%${lowerQuery}%`)
-          .limit(3)
-
-        if (notifications) {
-          notifications.forEach(notification => {
-            searchResults.push({
-              id: notification.id,
-              type: 'notification',
-              title: notification.title,
-              description: notification.message,
-              onClick: () => {
-                router.push('/notifications')
-                addToRecentSearches(searchQuery)
-                setIsOpen(false)
-              }
-            })
-          })
-        }
-      }
     } catch (error) {
-      console.warn('Error performing search:', error)
+      console.warn('Search error:', error)
     }
 
-    // Sort results by relevance - users first, then goals, then notifications
+    // Sort users first, then goals
     searchResults.sort((a, b) => {
       if (a.type === 'user' && b.type !== 'user') return -1
       if (a.type !== 'user' && b.type === 'user') return 1
-      if (a.type === 'goal' && b.type !== 'goal') return -1
-      if (a.type !== 'goal' && b.type === 'goal') return 1
-      return a.title.length - b.title.length
+      return 0
     })
 
     setResults(searchResults.slice(0, 8))

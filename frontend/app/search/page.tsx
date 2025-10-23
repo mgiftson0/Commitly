@@ -15,6 +15,7 @@ import { Target, ArrowLeft, Search, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/main-layout";
+import { supabase } from "@/lib/supabase-client";
 
 interface User {
   id: string;
@@ -69,19 +70,38 @@ export default function SearchPage() {
 
     setLoading(true);
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const lowerQuery = searchQuery.toLowerCase();
+      
+      // Search users from database
+      const { data: users, error } = await supabase
+        .from('profiles')
+        .select('id, username, first_name, last_name, profile_picture_url, bio')
+        .or(`username.ilike.%${lowerQuery}%,first_name.ilike.%${lowerQuery}%,last_name.ilike.%${lowerQuery}%,bio.ilike.%${lowerQuery}%`)
+        .limit(20);
 
-    // Filter mock users based on search query
-    const filteredUsers = mockUsers.filter(
-      (user) =>
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.bio?.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-
-    setSearchResults(filteredUsers);
-    setLoading(false);
+      if (error) {
+        console.error('Search error:', error);
+        toast.error('Failed to search users');
+        setSearchResults([]);
+      } else {
+        const mappedUsers: User[] = (users || []).map(user => ({
+          id: user.id,
+          name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'User',
+          username: user.username || 'no-username',
+          avatar: user.profile_picture_url || undefined,
+          bio: user.bio || undefined
+        }));
+        
+        setSearchResults(mappedUsers);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      toast.error('An error occurred while searching');
+      setSearchResults([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const sendPartnerRequest = async (userId: string) => {
