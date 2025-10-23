@@ -41,6 +41,8 @@ export default function KYCPage() {
   const [phoneNumber, setPhoneNumber] = useState("")
   const [bio, setBio] = useState("")
   const [loading, setLoading] = useState(false)
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const [checkingUsername, setCheckingUsername] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -48,13 +50,24 @@ export default function KYCPage() {
       try {
         const session = await authHelpers.getSession();
         if (!session) {
+          toast.error("Please log in to continue");
           router.push("/auth/login");
           return;
         }
 
+        // NOTE: Email verification check disabled
+        /*
+        if (!session.user.email_confirmed_at) {
+          toast.error("Please verify your email address first");
+          await authHelpers.signOut();
+          router.push("/auth/login");
+          return;
+        }
+        */
+
         const { data: profile } = await supabase
           .from('profiles')
-          .select('*')
+          .select('has_completed_kyc')
           .eq('id', session.user.id)
           .single();
 
@@ -62,51 +75,158 @@ export default function KYCPage() {
           toast.info("Profile already exists");
           router.push("/dashboard");
         }
+        // If no profile exists, stay on KYC page to create one
       } catch (error) {
         console.error('Error checking profile:', error);
+        toast.error("Session error. Please log in again.");
+        await authHelpers.clearSession();
+        router.push("/auth/login");
       }
     };
 
     checkKycStatus();
   }, [router]);
 
+  // Check username availability with debounce
+  useEffect(() => {
+    if (!username || username.length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setCheckingUsername(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', username.toLowerCase())
+          .single();
+
+        setUsernameAvailable(!data);
+      } catch (error) {
+        // If no data found, username is available
+        setUsernameAvailable(true);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [username]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!username || !displayName || !phoneNumber) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (usernameAvailable === false) {
+      toast.error("Username is not available. Please choose another.");
+      return;
+    }
+
+    if (username.length < 3) {
+      toast.error("Username must be at least 3 characters long");
+      return;
+    }
+
+    if (!/^[a-z0-9_]+$/.test(username)) {
+      toast.error("Username can only contain lowercase letters, numbers, and underscores");
+      return;
+    }
+
+    if (displayName.length < 2) {
+      toast.error("Display name must be at least 2 characters long");
+      return;
+    }
+
+    if (!/^[\+]?[0-9\s\-\(\)]{10,15}$/.test(phoneNumber)) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const session = await authHelpers.getSession();
       if (!session) {
-        toast.error("No active session");
+        toast.error("Session expired. Please log in again.");
+        await authHelpers.clearSession();
         router.push("/auth/login");
         return;
       }
 
+      // NOTE: Email verification check disabled
+      /*
+      if (!session.user.email_confirmed_at) {
+        toast.error("Please verify your email address first");
+        await authHelpers.signOut();
+        router.push("/auth/login");
+        return;
+      }
+      */
+
       const userEmail = session.user.email;
       
-      // Save KYC data to Supabase
-      const { error: updateError } = await supabase
+      // Check if username is already taken by another user
+      if (usernameAvailable === false) {
+        toast.error("Username is not available. Please choose another.");
+        return;
+      }
+      
+      // Prepare profile data
+      const profileData = {
+        id: session.user.id,
+        username: username.toLowerCase(),
+        first_name: displayName.split(' ')[0] || displayName,
+        last_name: displayName.split(' ').slice(1).join(' ') || '',
+        phone_number: phoneNumber,
+        email: userEmail,
+        bio: bio || null,
+        location: location || null,
+        website: website || null,
+        interests: interests.length > 0 ? interests : null,
+        goal_categories: goalCategories.length > 0 ? goalCategories : null,
+        profile_picture_url: profilePicture || null,
+        has_completed_kyc: true,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Use upsert to handle both new profiles and updates
+      const { error: upsertError } = await supabase
         .from('profiles')
-        .upsert({
-          id: session.user.id,
-          username: username.toLowerCase(),
-          first_name: displayName.split(' ')[0] || displayName,
-          last_name: displayName.split(' ').slice(1).join(' ') || '',
-          phone_number: phoneNumber,
-          email: userEmail,
-          bio: bio || null,
-          location,
-          website,
-          interests,
-          goal_categories: goalCategories,
-          profile_picture_url: profilePicture,
-          has_completed_kyc: true,
-          updated_at: new Date().toISOString()
+        .upsert(profileData, {
+          onConflict: 'id',
+          ignoreDuplicates: false
         });
 
-      if (updateError) throw updateError;
+      if (upsertError) {
+        console.error("Profile upsert error:", upsertError);
+        
+        if (upsertError.code === '23505') {
+          // Unique constraint violation
+          if (upsertError.message.includes('username')) {
+            toast.error("Username already exists. Please choose a different username.");
+          } else if (upsertError.message.includes('email')) {
+            toast.error("Email already exists. Please use a different email.");
+          } else {
+            toast.error("This information is already in use. Please check your details.");
+          }
+          return;
+        }
+        
+        throw upsertError;
+      }
 
-      toast.success("Profile created successfully!");
+      toast.success("Profile completed successfully!");
+      
+      // Brief delay to ensure data is committed
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       router.push("/dashboard");
     } catch (error) {
       console.error("KYC error:", error);
@@ -122,6 +242,7 @@ export default function KYCPage() {
   const [interests, setInterests] = useState<string[]>([])
   const [goalCategories, setGoalCategories] = useState<string[]>([])
   const [profilePicture, setProfilePicture] = useState("")
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   // Interest options
   const interestOptions = [
@@ -149,6 +270,59 @@ export default function KYCPage() {
       setGoalCategories(goalCategories.filter(c => c !== category))
     } else {
       setGoalCategories([...goalCategories, category])
+    }
+  }
+
+  const handleProfilePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB')
+      return
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    setUploadingImage(true)
+    try {
+      const session = await authHelpers.getSession()
+      if (!session) {
+        toast.error('No active session')
+        return
+      }
+
+      // Create unique filename
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${session.user.id}-${Date.now()}.${fileExt}`
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('profile-pictures')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (error) throw error
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(fileName)
+
+      setProfilePicture(publicUrl)
+      toast.success('Profile picture uploaded successfully!')
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Failed to upload image. Please try again.')
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -222,9 +396,22 @@ export default function KYCPage() {
                       size="icon"
                       variant="outline"
                       className="absolute -bottom-2 -right-2 h-7 w-7 sm:h-8 sm:w-8 rounded-full hover-lift shadow-lg"
+                      onClick={() => document.getElementById('profile-picture-input')?.click()}
+                      disabled={uploadingImage}
                     >
-                      <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      {uploadingImage ? (
+                        <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      )}
                     </Button>
+                    <input
+                      id="profile-picture-input"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleProfilePictureUpload}
+                    />
                   </div>
                   <div className="text-center">
                     <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">Profile Picture</p>
@@ -240,19 +427,50 @@ export default function KYCPage() {
                     <Label htmlFor="username" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Username <span className="text-destructive">*</span>
                     </Label>
-                    <Input
-                      id="username"
-                      placeholder="johndoe"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                      className="focus-ring"
-                      required
-                      pattern="[a-z0-9_]+"
-                      minLength={3}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Lowercase letters, numbers, and underscores only (min 3 characters)
-                    </p>
+                    <div className="relative">
+                      <Input
+                        id="username"
+                        placeholder="johndoe"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                        className={`focus-ring pr-10 ${
+                          username.length >= 3 && usernameAvailable === false ? 'border-red-500' : 
+                          username.length >= 3 && usernameAvailable === true ? 'border-green-500' : ''
+                        }`}
+                        required
+                        pattern="[a-z0-9_]+"
+                        minLength={3}
+                      />
+                      {username.length >= 3 && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {checkingUsername ? (
+                            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                          ) : usernameAvailable === true ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          ) : usernameAvailable === false ? (
+                            <div className="h-4 w-4 rounded-full bg-red-500 flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">✕</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        Lowercase letters, numbers, and underscores only (min 3 characters)
+                      </p>
+                      {username.length >= 3 && (
+                        <p className={`text-xs font-medium ${
+                          checkingUsername ? 'text-gray-500' :
+                          usernameAvailable === true ? 'text-green-600' :
+                          usernameAvailable === false ? 'text-red-600' : ''
+                        }`}>
+                          {checkingUsername ? 'Checking availability...' :
+                           usernameAvailable === true ? '✓ Username is available' :
+                           usernameAvailable === false ? '✕ Username is already taken' : ''}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -263,11 +481,15 @@ export default function KYCPage() {
                       id="displayName"
                       placeholder="John Doe"
                       value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
+                      onChange={(e) => setDisplayName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                       className="focus-ring"
                       required
                       minLength={2}
+                      maxLength={50}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Letters and spaces only (2-50 characters)
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -277,15 +499,17 @@ export default function KYCPage() {
                     <Input
                       id="phoneNumber"
                       type="tel"
-                      placeholder="+1 (555) 123-4567"
+                      placeholder="+1234567890"
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9+\-\s\(\)]/g, ''))}
                       className="focus-ring"
                       required
                       pattern="[\+]?[0-9\s\-\(\)]{10,15}"
+                      minLength={10}
+                      maxLength={15}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Include country code (e.g., +1234567890)
+                      Include country code (e.g., +1234567890) - 10-15 digits
                     </p>
                   </div>
 
@@ -385,7 +609,7 @@ export default function KYCPage() {
                   <Button
                     type="submit"
                     className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold hover-lift shadow-lg hover:shadow-xl transition-all duration-200"
-                    disabled={loading || !username || !displayName || !phoneNumber}
+                    disabled={loading || !username || !displayName || !phoneNumber || usernameAvailable === false || checkingUsername}
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">

@@ -80,18 +80,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if this is a new user (check user metadata or created_at timestamp)
-    const user = data.user;
+    // Verify user authentication and check KYC status
+    const { data: { user: verifiedUser } } = await supabase.auth.getUser();
     
-    // Get KYC data from localStorage to check if profile is complete
-    const cookies = request.cookies;
-    const kycData = cookies.get('kycData');
-    const hasCompletedKyc = kycData !== undefined;
-
-    // Create response with redirect
-    const redirectUrl = hasCompletedKyc
-      ? new URL("/dashboard", request.url)
-      : new URL("/auth/kyc", request.url);
+    if (!verifiedUser) {
+      return NextResponse.redirect(
+        new URL("/auth/login?error=Authentication failed", request.url)
+      );
+    }
+    
+    let redirectUrl;
+    
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('has_completed_kyc')
+        .eq('id', verifiedUser.id)
+        .single();
+      
+      // If profile exists and KYC is completed, go to dashboard
+      // Otherwise, go to KYC page
+      redirectUrl = profile?.has_completed_kyc
+        ? new URL("/dashboard", request.url)
+        : new URL("/auth/kyc", request.url);
+    } catch (error) {
+      // If no profile exists, redirect to KYC
+      redirectUrl = new URL("/auth/kyc", request.url);
+    }
 
     // Redirect with cookies attached so middleware and client see the session
     return NextResponse.redirect(redirectUrl);

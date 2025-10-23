@@ -233,45 +233,60 @@ export default function ProfilePage() {
     setSelectedAchievement(achievement);
   };
       
-      if (storedGoals) {
-        const goals = JSON.parse(storedGoals)
-        const mapped = goals.map((g: any) => {
-          // Determine final status
-          let finalStatus = g.status || 'active'
-          if (g.completedAt) {
-            finalStatus = 'completed'
-          }
-          
-          return {
-            id: String(g.id),
-            user_id: 'mock-user-id',
-            title: g.title,
-            description: g.description,
-            goal_type: g.type === 'multi-activity' ? 'multi' : g.type === 'single-activity' ? 'single' : g.type,
-            visibility: g.visibility,
-            is_suspended: finalStatus === 'paused',
-            created_at: g.createdAt,
-            updated_at: g.updatedAt || g.createdAt,
-            completed_at: g.completedAt || null,
-            start_date: g.createdAt,
-          }
-        })
-        setGoals(mapped as any)
-        setMyStoreGoals(goals)
-      }
-      
-      if (storedPartnerGoals) {
-        const partnerGoals = JSON.parse(storedPartnerGoals)
-        setPartnerStoreGoals(partnerGoals)
-      }
-      
-
-    } catch {}
-    setLoading(false)
-  }
+  
 
   // Subscribe to real-time updates
   useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const session = await authHelpers.getSession();
+        if (!session) {
+          router.push('/auth/login');
+          return;
+        }
+
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        if (profileData) {
+          setProfile(profileData);
+        }
+
+        const { data: goalsData, error: goalsError } = await supabase
+          .from('goals')
+          .select('*')
+          .eq('user_id', session.user.id);
+
+        if (goalsError) throw goalsError;
+        if (goalsData) {
+          setGoals(goalsData);
+        }
+
+        const { data: achievementsData, error: achievementsError } = await supabase
+          .from('user_achievements')
+          .select('*, achievements(*)')
+          .eq('user_id', session.user.id);
+
+        if (achievementsError) throw achievementsError;
+        if (achievementsData) {
+          setAchievements(achievementsData.map(ua => ({
+            ...ua.achievements,
+            unlocked_at: ua.unlocked_at
+          })));
+        }
+
+      } catch (error: any) {
+        console.error('Error loading profile:', error);
+        toast.error('Failed to load profile data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const channel = supabase
       .channel('public:goals')
       .on('postgres_changes', { 
@@ -286,7 +301,7 @@ export default function ProfilePage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [router]);
 
   if (loading) {
     return (
@@ -316,9 +331,9 @@ export default function ProfilePage() {
               <div className="relative -mt-12 sm:-mt-16">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-xl" />
                 <Avatar className="relative h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 border-4 border-background shadow-lg">
-                  <AvatarImage src="/placeholder-avatar.jpg" />
+                  <AvatarImage src={profile?.profile_picture_url || "/placeholder-avatar.jpg"} />
                   <AvatarFallback className="text-xl sm:text-2xl md:text-3xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 text-primary-foreground font-bold">
-                    {userProfile ? `${userProfile.firstName[0]}${userProfile.lastName[0]}` : 'JD'}
+                    {profile ? `${((profile.first_name || '')[0] ?? 'J')}${((profile.last_name || '')[0] ?? 'D')}` : 'JD'}
                   </AvatarFallback>
                 </Avatar>
               </div>
@@ -342,29 +357,29 @@ export default function ProfilePage() {
             <div className="space-y-3 sm:space-y-4">
               <div>
                 <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'John Doe'}
+                  {profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'John Doe' : 'John Doe'}
                 </h1>
                 <p className="text-sm sm:text-base text-muted-foreground font-medium">
-                  @{userProfile?.username || 'johndoe'}
+                  @{profile?.username || 'johndoe'}
                 </p>
               </div>
 
               <p className="text-sm sm:text-base leading-relaxed text-muted-foreground">
-                {userProfile?.bio || 'Goal-oriented individual passionate about personal growth and helping others achieve their dreams.'}
+                {profile?.bio || 'Goal-oriented individual passionate about personal growth and helping others achieve their dreams.'}
               </p>
 
               {/* Enhanced Location & Links */}
               <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-muted-foreground">
-                {userProfile?.location && (
+                {profile?.location && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full">
                     <MapPin className="h-4 w-4" />
-                    <span>{userProfile.location}</span>
+                    <span>{profile.location}</span>
                   </div>
                 )}
-                {userProfile?.website && (
+                {profile?.website && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full">
                     <LinkIcon className="h-4 w-4" />
-                    <span>{userProfile.website}</span>
+                    <span>{profile.website}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full">
@@ -376,11 +391,11 @@ export default function ProfilePage() {
               {/* Enhanced Stats Row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-3 border-t border-border/50">
                 <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="font-bold text-lg sm:text-xl text-primary">{followers}</div>
+                  <div className="font-bold text-lg sm:text-xl text-primary">0</div>
                   <div className="text-xs sm:text-sm text-muted-foreground">Followers</div>
                 </div>
                 <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="font-bold text-lg sm:text-xl text-primary">{following}</div>
+                  <div className="font-bold text-lg sm:text-xl text-primary">0</div>
                   <div className="text-xs sm:text-sm text-muted-foreground">Following</div>
                 </div>
                 <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">

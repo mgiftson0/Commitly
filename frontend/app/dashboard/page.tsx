@@ -50,6 +50,7 @@ import { useGoals } from "@/hooks/use-goals"
 import { useNotifications } from "@/hooks/use-notifications"
 import { getProgressColor } from "@/lib/utils/progress-colors"
 import { CATEGORIES, CATEGORY_MAP } from "@/lib/constants/categories"
+import { authHelpers, supabase } from "@/lib/supabase-client"
 
 export default function DashboardPage() {
   const [goals, setGoals] = useState<any[]>([])
@@ -59,6 +60,7 @@ export default function DashboardPage() {
   const [bellShake, setBellShake] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [celebrationAchievement, setCelebrationAchievement] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [motivationEnabled, setMotivationEnabled] = useState(() => {
     try {
       return localStorage.getItem('dailyMotivationEnabled') !== 'false'
@@ -269,7 +271,30 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadGoals()
+    loadProfile()
   }, [])
+
+  const loadProfile = async () => {
+    try {
+      const session = await authHelpers.getSession()
+      if (!session) {
+        router.push('/auth/login')
+        return
+      }
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+
+      if (profileData) {
+        setProfile(profileData)
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error)
+    }
+  }
 
   const loadGoals = () => {
     try {
@@ -407,16 +432,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="flex-1">
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                Welcome back, <span className="text-blue-600 dark:text-blue-400">{(() => {
-                  try {
-                    const kycData = localStorage.getItem('kycData')
-                    if (kycData) {
-                      const profile = JSON.parse(kycData)
-                      return profile.firstName || 'John'
-                    }
-                  } catch {}
-                  return 'John'
-                })()}!</span>
+                Welcome back, <span className="text-blue-600 dark:text-blue-400">{profile?.first_name || 'User'}!</span>
               </h1>
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 You are on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! 🔥

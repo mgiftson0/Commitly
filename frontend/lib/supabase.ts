@@ -1,85 +1,23 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
+import { isGoogleOAuthEnabled } from "./config";
 
 // Supabase URL and Key from environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
+// Check if Supabase is properly configured
+export const isSupabaseConfigured = Boolean(
+  supabaseUrl &&
+  supabaseAnonKey &&
+  supabaseUrl !== "your-project-url-here" &&
+  supabaseAnonKey !== "your-anon-key-here"
+);
+
 // Initialize Supabase client
-const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
-
-// Export Supabase client instance
-export const supabase = supabaseClient;
-
-// Auth helpers for consistent authentication handling
-export const authHelpers = {
-  async signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
-    return data;
-  },
-
-  async signInWithGoogle() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
-    });
-    if (error) throw error;
-    return data;
-  },
-
-  async signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  },
-
-  async getSession() {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) throw error;
-    return session;
-  },
-
-  async getKycStatus() {
-    const session = await this.getSession();
-    if (!session) return false;
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('has_completed_kyc')
-      .eq('id', session.user.id)
-      .single();
-
-    if (error || !data) return false;
-    return data.has_completed_kyc;
-  }
-};
-
-// Log environment variables and test connection in development
-if (process.env.NODE_ENV === "development") {
-  console.log('Supabase Environment Configuration:', {
-    url: supabaseUrl,
-    hasKey: !!supabaseAnonKey,
-    isDefined: {
-      url: typeof process.env.NEXT_PUBLIC_SUPABASE_URL !== 'undefined',
-      key: typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'undefined'
-    }
-  });
-
-  // Test the connection
-  supabase.auth.getSession()
-    .then(() => console.log('Supabase connection test successful'))
-    .catch(err => console.error('Supabase connection test failed:', err));
-}
-}
+const supabaseClient = isSupabaseConfigured 
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+  : null;
 
 // Export the Supabase client
 export const supabase = supabaseClient;
@@ -103,14 +41,18 @@ export const authHelpers = {
       );
     }
 
-      const { data, error } = await supabase!.auth.signUp({
+    const { data, error } = await supabase!.auth.signUp({
       email,
       password,
       options: {
         data: metadata,
-        emailRedirectTo: `http://localhost:3003/auth/callback`,
+        emailRedirectTo: typeof window !== 'undefined' 
+          ? `${window.location.origin}/auth/callback` 
+          : undefined,
       },
-    });    if (error) throw error;
+    });
+    
+    if (error) throw error;
     return data;
   },
 
@@ -178,16 +120,12 @@ export const authHelpers = {
     }
   },
 
-  // Check if Google OAuth is available (helper function)
-  // Reads from config.ts to determine if Google OAuth should be shown
-  // To enable: Configure Google OAuth in Supabase dashboard, then set
-  // enableGoogleOAuth to true in frontend/lib/config.ts
-  isGoogleOAuthAvailable: async () => {
+  // Check if Google OAuth is available
+  isGoogleOAuthAvailable: async (): Promise<boolean> => {
     if (!hasSupabase()) {
       return false;
     }
-    // Return the configuration setting
-    // Set to true in config.ts after configuring Google OAuth in Supabase
+    // Return the configuration setting from config.ts
     return isGoogleOAuthEnabled();
   },
 
@@ -203,6 +141,31 @@ export const authHelpers = {
     // Clear local storage authentication state
     if (typeof window !== "undefined") {
       localStorage.removeItem("isAuthenticated");
+      localStorage.removeItem("currentUser");
+    }
+  },
+
+  // Clear session completely
+  clearSession: async () => {
+    try {
+      if (hasSupabase()) {
+        await supabase!.auth.signOut();
+      }
+      
+      // Clear all auth-related storage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("isAuthenticated");
+        localStorage.removeItem("currentUser");
+        
+        // Clear all auth cookies
+        document.cookie.split(";").forEach((c) => {
+          document.cookie = c
+            .replace(/^ +/, "")
+            .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+      }
+    } catch (error) {
+      console.error("Error clearing session:", error);
     }
   },
 
@@ -216,6 +179,7 @@ export const authHelpers = {
       data: { user },
       error,
     } = await supabase!.auth.getUser();
+    
     if (error) {
       console.error("Error getting user:", error);
       return null;
@@ -229,18 +193,50 @@ export const authHelpers = {
       return null;
     }
 
-    const {
-      data: { session },
-      error,
-    } = await supabase!.auth.getSession();
-    if (error) {
-      console.error("Error getting session:", error);
+    try {
+      const {
+        data: { session },
+        error,
+      } = await supabase!.auth.getSession();
+      
+      if (error) {
+        console.error("Error getting session:", error);
+        await authHelpers.clearSession();
+        return null;
+      }
+      return session;
+    } catch (error) {
+      console.error("Failed to get session:", error);
+      await authHelpers.clearSession();
       return null;
     }
-    return session;
   },
 
-  // Reset password
+  // Get KYC status
+  getKycStatus: async () => {
+    try {
+      const session = await authHelpers.getSession();
+      if (!session?.user) return false;
+
+      const { data, error } = await supabase!
+        .from('profiles')
+        .select('has_completed_kyc')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching KYC status:', error);
+        return false;
+      }
+
+      return data?.has_completed_kyc === true;
+    } catch (err) {
+      console.error('Error checking KYC status:', err);
+      return false;
+    }
+  },
+
+  // Reset password - send email with reset link
   resetPassword: async (email: string) => {
     if (!hasSupabase()) {
       throw new Error(
@@ -249,7 +245,7 @@ export const authHelpers = {
     }
 
     const { data, error } = await supabase!.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password/confirm`,
+      redirectTo: `${window.location.origin}/auth/update-password`,
     });
 
     if (error) throw error;
@@ -280,11 +276,28 @@ export const authHelpers = {
   },
 };
 
+// Log environment variables and test connection in development
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  console.log('Supabase Environment Configuration:', {
+    url: supabaseUrl,
+    hasKey: !!supabaseAnonKey,
+    isConfigured: isSupabaseConfigured,
+  });
+
+  // Test the connection
+  if (hasSupabase()) {
+    supabase!.auth.getSession()
+      .then(() => console.log('✓ Supabase connection successful'))
+      .catch(err => console.error('✗ Supabase connection failed:', err));
+  }
+}
+
 // Export types for TypeScript
 export type SupabaseClient = typeof supabaseClient;
 export type User = {
   id: string;
   email?: string;
+  email_confirmed_at?: string;
   user_metadata?: {
     full_name?: string;
     avatar_url?: string;
@@ -303,9 +316,6 @@ export type Session = {
   user: User;
   expires_at?: number;
 };
-
-// Export configuration status
-export { isSupabaseConfigured };
 
 // Default export
 export default supabase;

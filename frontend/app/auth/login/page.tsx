@@ -70,6 +70,16 @@ export default function LoginPage() {
         throw new Error("Failed to establish session");
       }
 
+      // NOTE: Email verification check disabled
+      // Uncomment this block if you want to require email verification:
+      /*
+      if (!user.email_confirmed_at) {
+        await authHelpers.signOut();
+        toast.error("Please verify your email address before logging in. Check your inbox for the verification link.");
+        return;
+      }
+      */
+
       // Ensure middleware-detected cookies are set server-side
       try {
         await fetch('/api/auth/set-session', {
@@ -85,11 +95,12 @@ export default function LoginPage() {
         console.warn('Failed to set server session cookie', e);
       }
 
-      // Check if user has completed KYC
+      // Check KYC status using the user from login
+      // Note: We already have the user from signIn, no need to call getUser() again
       const { data: profile } = await supabase
         .from('profiles')
         .select('has_completed_kyc')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single();
 
       toast.success("Welcome back!");

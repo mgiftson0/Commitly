@@ -11,14 +11,15 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
+import { authHelpers, supabase } from "@/lib/supabase-client"
 
 export default function EditProfilePage() {
   const [profile, setProfile] = useState({
-    firstName: '',
-    lastName: '',
+    first_name: '',
+    last_name: '',
     username: '',
     email: '',
-    phone: '',
+    phone_number: '',
     location: '',
     website: '',
     bio: ''
@@ -30,14 +31,35 @@ export default function EditProfilePage() {
     loadProfile()
   }, [])
 
-  const loadProfile = () => {
+  const loadProfile = async () => {
     try {
-      const kycData = localStorage.getItem('kycData')
-      if (kycData) {
-        setProfile(JSON.parse(kycData))
+      const session = await authHelpers.getSession()
+      if (!session) {
+        router.push('/auth/login')
+        return
       }
-    } catch {
-      // Keep default empty profile
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+
+      if (profileData) {
+        setProfile({
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
+          username: profileData.username || '',
+          email: profileData.email || '',
+          phone_number: profileData.phone_number || '',
+          location: profileData.location || '',
+          website: profileData.website || '',
+          bio: profileData.bio || ''
+        })
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error)
+      toast.error('Failed to load profile')
     }
   }
 
@@ -46,11 +68,38 @@ export default function EditProfilePage() {
     setLoading(true)
 
     try {
-      localStorage.setItem('kycData', JSON.stringify(profile))
+      const session = await authHelpers.getSession()
+      if (!session) {
+        toast.error('No active session')
+        router.push('/auth/login')
+        return
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          username: profile.username,
+          phone_number: profile.phone_number,
+          location: profile.location,
+          website: profile.website,
+          bio: profile.bio,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.user.id)
+
+      if (error) throw error
+
       toast.success('Profile updated successfully!')
       router.push('/profile')
-    } catch (error) {
-      toast.error('Failed to update profile')
+    } catch (error: any) {
+      console.error('Error updating profile:', error)
+      if (error.code === '23505') {
+        toast.error('Username already exists. Please choose a different username.')
+      } else {
+        toast.error('Failed to update profile')
+      }
     } finally {
       setLoading(false)
     }
@@ -83,8 +132,8 @@ export default function EditProfilePage() {
                   <Label htmlFor="firstName">First Name</Label>
                   <Input
                     id="firstName"
-                    value={profile.firstName}
-                    onChange={(e) => setProfile({...profile, firstName: e.target.value})}
+                    value={profile.first_name}
+                    onChange={(e) => setProfile({...profile, first_name: e.target.value})}
                     placeholder="John"
                   />
                 </div>
@@ -92,8 +141,8 @@ export default function EditProfilePage() {
                   <Label htmlFor="lastName">Last Name</Label>
                   <Input
                     id="lastName"
-                    value={profile.lastName}
-                    onChange={(e) => setProfile({...profile, lastName: e.target.value})}
+                    value={profile.last_name}
+                    onChange={(e) => setProfile({...profile, last_name: e.target.value})}
                     placeholder="Doe"
                   />
                 </div>
@@ -124,8 +173,8 @@ export default function EditProfilePage() {
                 <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
-                  value={profile.phone}
-                  onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                  value={profile.phone_number}
+                  onChange={(e) => setProfile({...profile, phone_number: e.target.value})}
                   placeholder="+1 (555) 123-4567"
                 />
               </div>

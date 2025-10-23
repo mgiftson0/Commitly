@@ -59,6 +59,21 @@ export default function SignUpPage() {
     e.preventDefault();
 
     // Validate form fields
+    if (!fullName.trim() || fullName.length < 2) {
+      toast.error("Full name must be at least 2 characters long");
+      return;
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(fullName)) {
+      toast.error("Full name can only contain letters and spaces");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
@@ -66,6 +81,11 @@ export default function SignUpPage() {
 
     if (password.length < 6) {
       toast.error("Password must be at least 6 characters long");
+      return;
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      toast.error("Password must contain at least one uppercase letter, one lowercase letter, and one number");
       return;
     }
 
@@ -77,37 +97,17 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const { user, session } = await authHelpers.signUp(email, password, {
-        full_name: fullName,
+      const { user, session } = await authHelpers.signUp(email.toLowerCase(), password, {
+        full_name: fullName.trim(),
       });
 
       if (!user) {
         throw new Error("Failed to create account");
       }
 
-      // Create initial profile
-      if (session) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            email: user.email,
-            first_name: fullName.split(' ')[0],
-            last_name: fullName.split(' ').slice(1).join(' '),
-            username: email.split('@')[0].toLowerCase(),
-            has_completed_kyc: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-
-        if (profileError) throw profileError;
-        
-        toast.success("Account created successfully!");
-        router.push("/auth/kyc");
-      } else {
-        toast.success("Account created! Please check your email to verify your account.");
-        router.push("/auth/login");
-      }
+      // Always require email verification for new signups
+      toast.success("Account created! Please check your email to verify your account before logging in.");
+      router.push("/auth/login");
     } catch (error: any) {
       console.error("Signup error:", error);
 
@@ -187,9 +187,11 @@ export default function SignUpPage() {
                     type="text"
                     placeholder="Enter your full name"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(e) => setFullName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                     className="pl-10 h-12 bg-gray-50 border-gray-200 focus:bg-white transition-all duration-200"
                     required
+                    minLength={2}
+                    maxLength={50}
                   />
                 </div>
               </div>
@@ -209,9 +211,10 @@ export default function SignUpPage() {
                     type="email"
                     placeholder="Enter your email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => setEmail(e.target.value.toLowerCase().trim())}
                     className="pl-10 h-12 bg-gray-50 border-gray-200 focus:bg-white transition-all duration-200"
                     required
+                    pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
                   />
                 </div>
               </div>

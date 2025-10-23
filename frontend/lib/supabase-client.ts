@@ -58,20 +58,50 @@ export const authHelpers = {
     if (error) throw error;
   },
 
+  clearSession: async () => {
+    try {
+      await supabase.auth.signOut();
+      // Clear all auth-related cookies
+      if (typeof document !== 'undefined') {
+        document.cookie.split(";").forEach(function(c) { 
+          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing session:', error);
+    }
+  },
+
   getSession: async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Session error:', error);
+        await authHelpers.clearSession();
+        return null;
+      }
+      return session;
+    } catch (error) {
+      console.error('Failed to get session:', error);
+      await authHelpers.clearSession();
+      return null;
+    }
+  },
+
+  getUser: async () => {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) throw error;
-    return session;
+    return session?.user || null;
   },
 
   getKycStatus: async () => {
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) return false;
+      if (sessionError || !session?.user) return false;
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('has_completed_kyc')
         .eq('id', session.user.id)
         .single();
 
@@ -80,12 +110,30 @@ export const authHelpers = {
         return false;
       }
 
-      // If we have any profile data, KYC is completed
-      return !!data;
+      // Check specifically if KYC is completed
+      return data?.has_completed_kyc === true;
     } catch (err) {
       console.error('Error checking KYC status:', err);
       return false;
     }
+  },
+
+  resetPassword: async (email: string) => {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: typeof window !== 'undefined' 
+        ? `${window.location.origin}/auth/update-password` 
+        : undefined,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  updatePassword: async (newPassword: string) => {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    if (error) throw error;
+    return data;
   },
 
   isGoogleOAuthAvailable: async (): Promise<boolean> => {
