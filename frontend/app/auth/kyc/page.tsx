@@ -59,18 +59,23 @@ export default function KYCPage() {
     const timeoutId = setTimeout(async () => {
       setCheckingUsername(true);
       try {
-        const { data, error } = await supabase
+        // Check both profiles table and auth.users for comprehensive validation
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('username')
           .eq('username', username.toLowerCase())
-          .maybeSingle(); // Use maybeSingle() instead of single() to avoid 406 error
+          .maybeSingle();
 
-        // If data exists, username is taken; if null, it's available
-        setUsernameAvailable(!data);
+        if (profileError && profileError.code !== 'PGRST116') {
+          throw profileError;
+        }
+
+        // If profile data exists, username is taken
+        setUsernameAvailable(!profileData);
       } catch (error) {
         console.error('Username check error:', error);
-        // On error, assume username might be available (better UX)
-        setUsernameAvailable(true);
+        // On error, assume username might be taken (safer approach)
+        setUsernameAvailable(false);
       } finally {
         setCheckingUsername(false);
       }
@@ -124,21 +129,25 @@ export default function KYCPage() {
         return;
       }
       
-      // Check if username is already taken
-      if (usernameAvailable === false) {
+      // Final username check before submission
+      const { data: finalCheck } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username.toLowerCase())
+        .maybeSingle();
+        
+      if (finalCheck) {
         toast.error("Username is not available. Please choose another.");
         return;
       }
       
-      // Prepare profile data
+      // Prepare profile data (exclude columns that might not exist yet)
       const profileData = {
         id: user.id,
         username: username.toLowerCase(),
         first_name: displayName.split(' ')[0] || displayName,
         last_name: displayName.split(' ').slice(1).join(' ') || '',
         phone_number: phoneNumber,
-        gender,
-        date_of_birth: dateOfBirth,
         email: user.email,
         bio: bio || null,
         location: location || null,
@@ -147,7 +156,11 @@ export default function KYCPage() {
         has_completed_kyc: true
       };
       
-      // Insert into profiles table
+      // Add optional fields if they exist
+      if (gender) profileData.gender = gender;
+      if (dateOfBirth) profileData.date_of_birth = dateOfBirth;
+      
+      // Insert into profiles table with error handling
       const { error: upsertError } = await supabase
         .from('profiles')
         .upsert(profileData, {
@@ -164,6 +177,11 @@ export default function KYCPage() {
           } else {
             toast.error("This information is already in use. Please check your details.");
           }
+          return;
+        }
+        
+        if (upsertError.code === 'PGRST204') {
+          toast.error("Database schema needs to be updated. Please contact support.");
           return;
         }
         
