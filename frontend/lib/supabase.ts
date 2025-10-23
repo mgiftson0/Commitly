@@ -201,13 +201,13 @@ export const authHelpers = {
       
       if (error) {
         console.error("Error getting session:", error);
-        await authHelpers.clearSession();
+        // Don't clear session automatically - let caller decide
         return null;
       }
       return session;
     } catch (error) {
       console.error("Failed to get session:", error);
-      await authHelpers.clearSession();
+      // Don't clear session automatically - let caller decide
       return null;
     }
   },

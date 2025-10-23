@@ -8,22 +8,20 @@ import type { UserProfile, AuthError, UsernameCheck, EmailCheck } from "@/types/
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-// Username validation regex
-const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
+
 
 // Create Supabase client (Next.js Auth Helpers uses cookies for SSR compatibility)
 export const supabase = createClientComponentClient<Database>();
 
-// Auth helper functions
+// Simple auth helpers
 export const authHelpers = {
-  signUp: async (email: string, password: string, metadata?: Record<string, any>) => {
+  signUp: async (email: string, password: string, fullName: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: metadata,
-        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
-      },
+        data: { full_name: fullName }
+      }
     });
     if (error) throw error;
     return data;
@@ -32,113 +30,42 @@ export const authHelpers = {
   signIn: async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
-      password,
-    });
-    if (error) throw error;
-    return data;
-  },
-
-  signInWithGoogle: async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
+      password
     });
     if (error) throw error;
     return data;
   },
 
   signOut: async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    await supabase.auth.signOut();
   },
 
-  clearSession: async () => {
-    try {
-      await supabase.auth.signOut();
-      // Clear all auth-related cookies
-      if (typeof document !== 'undefined') {
-        document.cookie.split(";").forEach(function(c) { 
-          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-        });
+  signInWithGoogle: async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
       }
-    } catch (error) {
-      console.error('Error clearing session:', error);
-    }
-  },
-
-  getSession: async () => {
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Session error:', error);
-        await authHelpers.clearSession();
-        return null;
-      }
-      return session;
-    } catch (error) {
-      console.error('Failed to get session:', error);
-      await authHelpers.clearSession();
-      return null;
-    }
-  },
-
-  getUser: async () => {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) throw error;
-    return session?.user || null;
-  },
-
-  getKycStatus: async () => {
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) return false;
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('has_completed_kyc')
-        .eq('id', session.user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return false;
-      }
-
-      // Check specifically if KYC is completed
-      return data?.has_completed_kyc === true;
-    } catch (err) {
-      console.error('Error checking KYC status:', err);
-      return false;
-    }
-  },
-
-  resetPassword: async (email: string) => {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: typeof window !== 'undefined' 
-        ? `${window.location.origin}/auth/update-password` 
-        : undefined,
     });
     if (error) throw error;
     return data;
   },
 
-  updatePassword: async (newPassword: string) => {
-    const { data, error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-    if (error) throw error;
-    return data;
+  getCurrentUser: async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
   },
 
-  isGoogleOAuthAvailable: async (): Promise<boolean> => {
-    // Client-side capability check. We can't query provider settings from the browser.
-    // Treat Google OAuth as available if Supabase env vars are configured.
-    return Boolean(supabaseUrl && supabaseAnonKey);
+  hasCompletedKyc: async () => {
+    const user = await authHelpers.getCurrentUser();
+    if (!user) return false;
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('has_completed_kyc')
+      .eq('id', user.id)
+      .maybeSingle();
+    
+    return data?.has_completed_kyc === true;
   }
 };

@@ -80,23 +80,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify user authentication and check KYC status
-    const { data: { user: verifiedUser } } = await supabase.auth.getUser();
-    
-    if (!verifiedUser) {
-      return NextResponse.redirect(
-        new URL("/auth/login?error=Authentication failed", request.url)
-      );
-    }
-    
+    // Check KYC status from session
+    const user = data.user;
     let redirectUrl;
     
     try {
       const { data: profile } = await supabase
         .from('profiles')
         .select('has_completed_kyc')
-        .eq('id', verifiedUser.id)
-        .single();
+        .eq('id', user.id)
+        .maybeSingle();
       
       // If profile exists and KYC is completed, go to dashboard
       // Otherwise, go to KYC page
@@ -104,7 +97,8 @@ export async function GET(request: NextRequest) {
         ? new URL("/dashboard", request.url)
         : new URL("/auth/kyc", request.url);
     } catch (error) {
-      // If no profile exists, redirect to KYC
+      console.error('Profile check error in callback:', error);
+      // If error checking profile, redirect to KYC
       redirectUrl = new URL("/auth/kyc", request.url);
     }
 

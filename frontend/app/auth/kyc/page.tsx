@@ -45,47 +45,7 @@ export default function KYCPage() {
   const [checkingUsername, setCheckingUsername] = useState(false)
   const router = useRouter()
 
-  useEffect(() => {
-    const checkKycStatus = async () => {
-      try {
-        const session = await authHelpers.getSession();
-        if (!session) {
-          toast.error("Please log in to continue");
-          router.push("/auth/login");
-          return;
-        }
 
-        // NOTE: Email verification check disabled
-        /*
-        if (!session.user.email_confirmed_at) {
-          toast.error("Please verify your email address first");
-          await authHelpers.signOut();
-          router.push("/auth/login");
-          return;
-        }
-        */
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('has_completed_kyc')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile?.has_completed_kyc) {
-          toast.info("Profile already exists");
-          router.push("/dashboard");
-        }
-        // If no profile exists, stay on KYC page to create one
-      } catch (error) {
-        console.error('Error checking profile:', error);
-        toast.error("Session error. Please log in again.");
-        await authHelpers.clearSession();
-        router.push("/auth/login");
-      }
-    };
-
-    checkKycStatus();
-  }, [router]);
 
   // Check username availability with debounce
   useEffect(() => {
@@ -101,11 +61,13 @@ export default function KYCPage() {
           .from('profiles')
           .select('username')
           .eq('username', username.toLowerCase())
-          .single();
+          .maybeSingle(); // Use maybeSingle() instead of single() to avoid 406 error
 
+        // If data exists, username is taken; if null, it's available
         setUsernameAvailable(!data);
       } catch (error) {
-        // If no data found, username is available
+        console.error('Username check error:', error);
+        // On error, assume username might be available (better UX)
         setUsernameAvailable(true);
       } finally {
         setCheckingUsername(false);
@@ -152,27 +114,15 @@ export default function KYCPage() {
     setLoading(true);
 
     try {
-      const session = await authHelpers.getSession();
-      if (!session) {
-        toast.error("Session expired. Please log in again.");
-        await authHelpers.clearSession();
-        router.push("/auth/login");
-        return;
-      }
-
-      // NOTE: Email verification check disabled
-      /*
-      if (!session.user.email_confirmed_at) {
-        toast.error("Please verify your email address first");
-        await authHelpers.signOut();
-        router.push("/auth/login");
-        return;
-      }
-      */
-
-      const userEmail = session.user.email;
+      const user = await authHelpers.getCurrentUser();
       
-      // Check if username is already taken by another user
+      if (!user) {
+        toast.error("Please log in again.");
+        router.push('/auth/login');
+        return;
+      }
+      
+      // Check if username is already taken
       if (usernameAvailable === false) {
         toast.error("Username is not available. Please choose another.");
         return;
@@ -180,23 +130,16 @@ export default function KYCPage() {
       
       // Prepare profile data
       const profileData = {
-        id: session.user.id,
+        id: user.id,
         username: username.toLowerCase(),
         first_name: displayName.split(' ')[0] || displayName,
         last_name: displayName.split(' ').slice(1).join(' ') || '',
         phone_number: phoneNumber,
-        email: userEmail,
-        bio: bio || null,
-        location: location || null,
-        website: website || null,
-        interests: interests.length > 0 ? interests : null,
-        goal_categories: goalCategories.length > 0 ? goalCategories : null,
-        profile_picture_url: profilePicture || null,
-        has_completed_kyc: true,
-        updated_at: new Date().toISOString()
+        email: user.email,
+        has_completed_kyc: true
       };
       
-      // Use upsert to handle both new profiles and updates
+      // Insert into profiles table
       const { error: upsertError } = await supabase
         .from('profiles')
         .upsert(profileData, {
@@ -208,11 +151,8 @@ export default function KYCPage() {
         console.error("Profile upsert error:", upsertError);
         
         if (upsertError.code === '23505') {
-          // Unique constraint violation
           if (upsertError.message.includes('username')) {
             toast.error("Username already exists. Please choose a different username.");
-          } else if (upsertError.message.includes('email')) {
-            toast.error("Email already exists. Please use a different email.");
           } else {
             toast.error("This information is already in use. Please check your details.");
           }
@@ -222,12 +162,16 @@ export default function KYCPage() {
         throw upsertError;
       }
 
-      toast.success("Profile completed successfully!");
+      toast.success("Profile completed successfully! Welcome to Commitly!");
       
-      // Brief delay to ensure data is committed
+      // Refresh session to ensure cookies are synced before redirect
+      await supabase.auth.refreshSession();
+      
+      // Small delay to ensure session is fully synced
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      router.push("/dashboard");
+      // Use router for client-side navigation
+      router.push('/dashboard');
     } catch (error) {
       console.error("KYC error:", error);
       toast.error("Failed to create profile. Please try again.");
@@ -291,15 +235,15 @@ export default function KYCPage() {
 
     setUploadingImage(true)
     try {
-      const session = await authHelpers.getSession()
-      if (!session) {
-        toast.error('No active session')
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        toast.error('Authentication error')
         return
       }
 
       // Create unique filename
       const fileExt = file.name.split('.').pop()
-      const fileName = `${session.user.id}-${Date.now()}.${fileExt}`
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage

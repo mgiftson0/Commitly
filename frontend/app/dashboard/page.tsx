@@ -270,9 +270,28 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
+    checkAuth()
     loadGoals()
     loadProfile()
   }, [])
+
+  const checkAuth = async () => {
+    try {
+      const user = await authHelpers.getCurrentUser()
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
+      
+      const hasKyc = await authHelpers.hasCompletedKyc()
+      if (!hasKyc) {
+        router.push('/auth/kyc')
+        return
+      }
+    } catch (error) {
+      router.push('/auth/login')
+    }
+  }
 
   const loadProfile = async () => {
     try {

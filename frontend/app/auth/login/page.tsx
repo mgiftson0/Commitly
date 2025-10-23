@@ -38,20 +38,7 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  // Check if Google OAuth is configured on mount
-  useEffect(() => {
-    const checkGoogleOAuth = async () => {
-      try {
-        const available = await authHelpers.isGoogleOAuthAvailable();
-        setGoogleOAuthAvailable(available);
-      } catch (error) {
-        console.error('Error checking Google OAuth:', error);
-        setGoogleOAuthAvailable(false);
-      }
-    };
 
-    checkGoogleOAuth();
-  }, []);
 
   // Enable Supabase mode when env variables are present
   useEffect(() => {
@@ -64,51 +51,23 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { user, session } = await authHelpers.signIn(email, password);
-
-      if (!session) {
-        throw new Error("Failed to establish session");
-      }
-
-      // NOTE: Email verification check disabled
-      // Uncomment this block if you want to require email verification:
-      /*
-      if (!user.email_confirmed_at) {
-        await authHelpers.signOut();
-        toast.error("Please verify your email address before logging in. Check your inbox for the verification link.");
-        return;
-      }
-      */
-
-      // Ensure middleware-detected cookies are set server-side
-      try {
-        await fetch('/api/auth/set-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-          }),
-          credentials: 'include',
-        });
-      } catch (e) {
-        console.warn('Failed to set server session cookie', e);
-      }
-
-      // Check KYC status using the user from login
-      // Note: We already have the user from signIn, no need to call getUser() again
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('has_completed_kyc')
-        .eq('id', user.id)
-        .single();
-
-      toast.success("Welcome back!");
-      // Ensure client picks up new cookies/session state
-      try { (router as any).refresh?.(); } catch {}
+      const { user } = await authHelpers.signIn(email, password);
       
-      // Redirect based on KYC completion
-      if (profile?.has_completed_kyc) {
+      if (!user) {
+        throw new Error("Login failed");
+      }
+
+      const hasKyc = await authHelpers.hasCompletedKyc();
+      
+      toast.success("Welcome back!");
+      
+      // Refresh session to ensure cookies are synced
+      await supabase.auth.refreshSession();
+      
+      // Small delay to ensure session is fully synced
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (hasKyc) {
         router.push("/dashboard");
       } else {
         router.push("/auth/kyc");

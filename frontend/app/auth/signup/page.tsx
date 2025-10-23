@@ -34,20 +34,7 @@ export default function SignUpPage() {
   const [useSupabase, setUseSupabase] = useState(false);
   const router = useRouter();
 
-  // Check if Google OAuth is configured on mount
-  useEffect(() => {
-    const checkGoogleOAuth = async () => {
-      try {
-        const available = await authHelpers.isGoogleOAuthAvailable();
-        setGoogleOAuthAvailable(available);
-      } catch (error) {
-        console.error('Error checking Google OAuth:', error);
-        setGoogleOAuthAvailable(false);
-      }
-    };
 
-    checkGoogleOAuth();
-  }, []);
 
   // Enable Supabase mode when env variables are present
   useEffect(() => {
@@ -97,17 +84,22 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const { user, session } = await authHelpers.signUp(email.toLowerCase(), password, {
-        full_name: fullName.trim(),
-      });
+      const { user } = await authHelpers.signUp(email.toLowerCase(), password, fullName.trim());
 
       if (!user) {
         throw new Error("Failed to create account");
       }
 
-      // Always require email verification for new signups
-      toast.success("Account created! Please check your email to verify your account before logging in.");
-      router.push("/auth/login");
+      // Redirect to KYC for profile completion
+      toast.success("Account created successfully! Please complete your profile.");
+      
+      // Refresh session to ensure cookies are synced
+      await supabase.auth.refreshSession();
+      
+      // Small delay to ensure session is fully synced
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      router.push("/auth/kyc");
     } catch (error: any) {
       console.error("Signup error:", error);
 
