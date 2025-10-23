@@ -135,36 +135,33 @@ export default function DashboardPage() {
 
   // Get real recent activity from database
   const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [dashboardStats, setDashboardStats] = useState<any>(null)
   
   useEffect(() => {
-    const loadRecentActivity = async () => {
+    const loadDashboardData = async () => {
       try {
         const user = await authHelpers.getCurrentUser()
         if (!user) return
 
+        // Load recent notifications
         const { data: notifications } = await supabase
           .from('notifications')
           .select('*')
           .eq('user_id', user.id)
-          .eq('read', false)
           .order('created_at', { ascending: false })
-          .limit(3)
+          .limit(5)
 
         const iconMap = {
           goal_completed: CheckCircle2,
-          streak_milestone: Flame,
-          partner_joined: Users,
           goal_created: Target,
-          activity_completed: CheckCircle2,
-          encouragement_received: Heart
+          partner_request: Users,
+          achievement_unlocked: Trophy
         }
         const colorMap = {
           goal_completed: 'text-green-600',
-          streak_milestone: 'text-orange-600',
-          partner_joined: 'text-purple-600',
           goal_created: 'text-blue-600',
-          activity_completed: 'text-green-600',
-          encouragement_received: 'text-pink-600'
+          partner_request: 'text-purple-600',
+          achievement_unlocked: 'text-yellow-600'
         }
         
         const timeAgo = (date: string) => {
@@ -191,13 +188,24 @@ export default function DashboardPage() {
         }))
         
         setRecentActivity(activities)
+
+        // Calculate dashboard stats from goals
+        const stats = {
+          totalGoals: goals.length,
+          activeGoals: goals.filter(g => g.status === 'active').length,
+          completedGoals: goals.filter(g => g.status === 'completed').length,
+          completionRate: goals.length > 0 ? Math.round((goals.filter(g => g.status === 'completed').length / goals.length) * 100) : 0
+        }
+        setDashboardStats(stats)
       } catch (error) {
-        console.error('Error loading recent activity:', error)
+        console.error('Error loading dashboard data:', error)
       }
     }
     
-    loadRecentActivity()
-  }, [])
+    if (goals.length >= 0) {
+      loadDashboardData()
+    }
+  }, [goals])
 
   const toggleMotivation = () => {
     const newValue = !motivationEnabled

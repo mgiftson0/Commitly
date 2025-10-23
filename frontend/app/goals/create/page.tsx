@@ -323,6 +323,13 @@ export default function CreateGoalPage() {
       // Dispatch event to notify goals page to refresh
       window.dispatchEvent(new CustomEvent('goalCreated', { detail: { goalId: newGoal.id } }))
       
+      // Check for achievements
+      if (typeof window !== 'undefined') {
+        import('@/lib/achievement-tracker-db').then(({ triggerAchievementCheck }) => {
+          triggerAchievementCheck()
+        })
+      }
+      
       router.push("/goals");
     } catch (error: any) {
       toast.error(error.message || "Failed to create goal");

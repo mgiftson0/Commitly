@@ -11,6 +11,7 @@ import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
+import { supabase, authHelpers } from "@/lib/supabase-client"
 
 export default function UpdateGoalPage() {
   const [goal, setGoal] = useState<any>(null)
@@ -24,83 +25,157 @@ export default function UpdateGoalPage() {
     loadGoalData()
   }, [goalId])
 
-  const loadGoalData = () => {
+  const loadGoalData = async () => {
     try {
-      const storedGoals = localStorage.getItem('goals')
-      if (!storedGoals) {
+      const user = await authHelpers.getCurrentUser()
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
+
+      // Get goal from database
+      const { data: goalData, error: goalError } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('id', goalId)
+        .maybeSingle()
+
+      if (goalError || !goalData) {
+        toast.error('Goal not found')
         setGoal(null)
         setLoading(false)
         return
       }
-      
-      const goals = JSON.parse(storedGoals)
-      const foundGoal = goals.find((g: any) => g.id === goalId)
-      
-      if (!foundGoal) {
-        setGoal(null)
-        setLoading(false)
-        return
-      }
-      
+
       // Check if goal is completed
-      if (foundGoal.completedAt || foundGoal.status === 'completed') {
-        setGoal({ ...foundGoal, completedAt: foundGoal.completedAt || new Date().toISOString() })
+      if (goalData.completed_at || goalData.status === 'completed') {
+        setGoal({ ...goalData, completed_at: goalData.completed_at || new Date().toISOString() })
         setLoading(false)
         return
       }
-      
-      setGoal(foundGoal)
-      setActivities(foundGoal.activities || [])
+
+      setGoal(goalData)
+
+      // Get activities if multi-activity goal
+      if (goalData.goal_type === 'multi-activity') {
+        const { data: activitiesData } = await supabase
+          .from('goal_activities')
+          .select('*')
+          .eq('goal_id', goalId)
+          .order('order_index')
+
+        setActivities(activitiesData || [])
+      } else {
+        // For single-activity goals, create a virtual activity
+        setActivities([{ 
+          id: 'single', 
+          title: goalData.title, 
+          completed: goalData.status === 'completed',
+          goal_id: goalId,
+          order_index: 0
+        }])
+      }
+
       setLoading(false)
     } catch (error) {
+      console.error('Error loading goal:', error)
       toast.error("Failed to load goal")
       setLoading(false)
     }
   }
 
-  const toggleActivity = (activityIndex: number) => {
-    const updatedActivities = activities.map((activity, index) => {
-      if (index === activityIndex) {
-        return { ...activity, completed: !activity.completed }
-      }
-      return activity
-    })
-    
-    setActivities(updatedActivities)
-    
-    // Update localStorage
-    const storedGoals = localStorage.getItem('goals')
-    if (storedGoals) {
-      const goals = JSON.parse(storedGoals)
-      const updatedGoals = goals.map((g: any) => {
-        if (g.id === goalId) {
-          const completedCount = updatedActivities.filter(a => a.completed).length
-          const progress = updatedActivities.length > 0 ? Math.round((completedCount / updatedActivities.length) * 100) : 0
-          
-          // Update streak for recurring goals
-          let newStreak = g.streak || 0
-          if (g.scheduleType === 'recurring' && completedCount === updatedActivities.length) {
-            newStreak = (g.streak || 0) + 1
-          }
-          
-          return {
-            ...g,
-            activities: updatedActivities,
-            progress,
-            streak: newStreak,
-            updatedAt: new Date().toISOString(),
-            completedAt: progress === 100 ? new Date().toISOString() : null
-          }
+  const toggleActivity = async (activityIndex: number) => {
+    try {
+      const user = await authHelpers.getCurrentUser()
+      if (!user) return
+
+      const updatedActivities = activities.map((activity, index) => {
+        if (index === activityIndex) {
+          return { ...activity, completed: !activity.completed }
         }
-        return g
+        return activity
       })
       
-      localStorage.setItem('goals', JSON.stringify(updatedGoals))
+      setActivities(updatedActivities)
+
+      // Update activity in database
+      const activity = activities[activityIndex]
+      if (activity.id !== 'single') {
+        await supabase
+          .from('goal_activities')
+          .update({ completed: !activity.completed })
+          .eq('id', activity.id)
+      }
+
+      // Calculate new progress
+      const completedCount = updatedActivities.filter(a => a.completed).length
+      const progress = updatedActivities.length > 0 ? Math.round((completedCount / updatedActivities.length) * 100) : 0
+      
+      // Update goal in database
+      const isCompleted = progress === 100
+      const { error } = await supabase
+        .from('goals')
+        .update({
+          progress,
+          status: isCompleted ? 'completed' : 'active',
+          completed_at: isCompleted ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', goalId)
+
+      if (error) {
+        console.error('Error updating goal:', error)
+        toast.error('Failed to update progress')
+        return
+      }
+
+      // Create activity notification
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          title: updatedActivities[activityIndex].completed ? 'Activity Completed!' : 'Activity Unchecked',
+          message: updatedActivities[activityIndex].completed 
+            ? `You completed: ${activity.title || 'an activity'}` 
+            : `You unchecked: ${activity.title || 'an activity'}`,
+          type: 'activity_completed',
+          read: false,
+          data: { goal_id: goalId, activity_id: activity.id }
+        })
+
+      // If goal completed, create completion notification and check achievements
+      if (isCompleted) {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: user.id,
+            title: 'Goal Completed! 🎉',
+            message: `Congratulations! You completed: ${goal?.title}`,
+            type: 'goal_completed',
+            read: false,
+            data: { goal_id: goalId }
+          })
+        
+        // Check for achievements
+        if (typeof window !== 'undefined') {
+          import('@/lib/achievement-tracker-db').then(({ triggerAchievementCheck }) => {
+            triggerAchievementCheck()
+          })
+        }
+      }
       
       // Trigger update event
       window.dispatchEvent(new CustomEvent('goalUpdated'))
       
-      toast.success('Progress updated!')
+      toast.success(isCompleted ? 'Goal completed! 🎉' : 'Progress updated!')
+      
+      // Reload goal data
+      if (isCompleted) {
+        setTimeout(() => loadGoalData(), 500)
+      }
+    } catch (error) {
+      console.error('Error toggling activity:', error)
+      toast.error('Failed to update progress')
     }
   }
 
@@ -128,7 +203,7 @@ export default function UpdateGoalPage() {
   }
 
   // Check if goal is completed and redirect
-  if (goal.completedAt) {
+  if (goal.completed_at) {
     return (
       <MainLayout>
         <div className="text-center py-12">
@@ -202,7 +277,7 @@ export default function UpdateGoalPage() {
                   />
                   <div className="flex-1">
                     <span className={`text-sm ${activity.completed ? 'line-through text-muted-foreground' : ''}`}>
-                      {typeof activity === 'string' ? activity : activity.title || 'Activity'}
+                      {activity.title || 'Activity'}
                     </span>
                   </div>
                   {activity.completed && (
@@ -226,9 +301,9 @@ export default function UpdateGoalPage() {
               <Button
                 onClick={() => toggleActivity(0)}
                 className="w-full"
-                variant={goal.completedAt ? "outline" : "default"}
+                variant={activities[0]?.completed ? "outline" : "default"}
               >
-                {goal.completedAt ? (
+                {activities[0]?.completed ? (
                   <>
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Completed
