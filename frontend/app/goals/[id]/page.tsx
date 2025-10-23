@@ -71,6 +71,17 @@ export default function GoalDetailPage() {
 
         // Get goal details
         console.log('Loading goal with ID:', goalId)
+        console.log('Goal ID type:', typeof goalId)
+        console.log('User:', user)
+        
+        // Test basic query first
+        const { data: allGoals, error: allGoalsError } = await supabase
+          .from('goals')
+          .select('id, title')
+          .limit(3)
+        
+        console.log('All goals test:', { allGoals, allGoalsError })
+        
         const { data: goalData, error: goalError } = await supabase
           .from('goals')
           .select('*')
@@ -78,6 +89,8 @@ export default function GoalDetailPage() {
           .maybeSingle()
         
         console.log('Goal query result:', { goalData, goalError })
+        console.log('Supabase URL:', supabase.supabaseUrl)
+        console.log('Supabase Key:', supabase.supabaseKey?.substring(0, 20) + '...')
 
         if (goalError || !goalData) {
           toast.error('Goal not found')

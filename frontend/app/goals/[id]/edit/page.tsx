@@ -45,12 +45,15 @@ export default function EditGoalPage() {
           return
         }
 
+        console.log('Loading goal for edit with ID:', goalId)
         const { data: goalData, error } = await supabase
           .from('goals')
           .select('*')
           .eq('id', goalId)
           .eq('user_id', user.id)
           .maybeSingle()
+        
+        console.log('Edit goal query result:', { goalData, error })
 
         if (error || !goalData) {
           toast.error('Goal not found or access denied')

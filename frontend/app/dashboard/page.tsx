@@ -542,33 +542,34 @@ export default function DashboardPage() {
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .slice(0, 3)
                     .map((goal) => (
-                    <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full" onClick={() => {
-                      console.log('Clicking goal with ID:', goal.id)
-                      router.push(`/goals/${goal.id}`)
-                    }}>
-                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
-                        <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <h4 className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">{goal.title}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            {goal.goal_type}
-                          </Badge>
-                          {goal.streak > 0 && (
-                            <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
-                              <Flame className="h-3 w-3 text-orange-500 dark:text-orange-400" />
-                              <span>{goal.streak}d</span>
-                            </div>
-                          )}
+                      <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full" onClick={() => {
+                        console.log('Clicking goal with ID:', goal.id, 'Type:', typeof goal.id)
+                        router.push(`/goals/${goal.id}`)
+                      }}>
+                        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
+                          <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <h4 className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">{goal.title}</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {goal.goal_type}
+                            </Badge>
+                            {goal.streak > 0 && (
+                              <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
+                                <Flame className="h-3 w-3 text-orange-500 dark:text-orange-400" />
+                                <span>{goal.streak}d</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0 flex flex-col justify-center">
+                          <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{goal.progress}%</div>
+                          <Progress value={goal.progress} className={`w-16 h-1.5 mt-1 ${getProgressColor(goal.progress)}`} />
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0 flex flex-col justify-center">
-                        <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{goal.progress}%</div>
-                        <Progress value={goal.progress} className={`w-16 h-1.5 mt-1 ${getProgressColor(goal.progress)}`} />
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  }
                 </div>
               )}
             </CardContent>
@@ -784,7 +785,7 @@ export default function DashboardPage() {
                               {category.completed || 0}/{category.total || 0}
                             </span>
                           </div>
-                                <Progress value={category.progress} className={`h-2 ${getProgressColor(category.progress)}`} />
+                          <Progress value={category.progress} className={`h-2 ${getProgressColor(category.progress)}`} />
                         </div>
                       </div>
                     )
