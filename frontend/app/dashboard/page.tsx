@@ -151,6 +151,8 @@ export default function DashboardPage() {
           .order('created_at', { ascending: false })
           .limit(5)
 
+        console.log('Loaded notifications:', notifications)
+
         const iconMap = {
           goal_completed: CheckCircle2,
           goal_created: Target,
@@ -178,14 +180,16 @@ export default function DashboardPage() {
         
         const activities = (notifications || []).map((n: any) => ({
           id: n.id,
-          type: n.type,
-          title: n.title,
-          description: n.message,
+          type: n.type || 'general',
+          title: n.title || 'Notification',
+          description: n.message || 'No message',
           time: timeAgo(n.created_at),
           icon: iconMap[n.type as keyof typeof iconMap] || Bell,
           color: colorMap[n.type as keyof typeof colorMap] || 'text-gray-600',
           goalId: n.data?.goal_id
         }))
+        
+        console.log('Processed activities:', activities)
         
         setRecentActivity(activities)
 
@@ -197,6 +201,9 @@ export default function DashboardPage() {
           completionRate: goals.length > 0 ? Math.round((goals.filter(g => g.status === 'completed').length / goals.length) * 100) : 0
         }
         setDashboardStats(stats)
+        
+        console.log('Dashboard stats:', stats)
+        console.log('Goals data:', goals)
       } catch (error) {
         console.error('Error loading dashboard data:', error)
       }
@@ -535,7 +542,10 @@ export default function DashboardPage() {
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .slice(0, 3)
                     .map((goal) => (
-                    <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full" onClick={() => router.push(`/goals/${goal.id}`)}>
+                    <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full" onClick={() => {
+                      console.log('Clicking goal with ID:', goal.id)
+                      router.push(`/goals/${goal.id}`)
+                    }}>
                       <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
                         <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </div>

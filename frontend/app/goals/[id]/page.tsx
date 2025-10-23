@@ -70,11 +70,14 @@ export default function GoalDetailPage() {
         setCurrentUser(user)
 
         // Get goal details
+        console.log('Loading goal with ID:', goalId)
         const { data: goalData, error: goalError } = await supabase
           .from('goals')
           .select('*')
           .eq('id', goalId)
           .maybeSingle()
+        
+        console.log('Goal query result:', { goalData, goalError })
 
         if (goalError || !goalData) {
           toast.error('Goal not found')
@@ -152,6 +155,13 @@ export default function GoalDetailPage() {
       if (error) throw error
 
       setGoal(prev => prev ? { ...prev, status: 'completed', progress: 100 } : null)
+      
+      // Check for achievements
+      if (currentUser) {
+        const { checkAndUnlockAchievements } = await import('@/lib/achievements')
+        await checkAndUnlockAchievements(currentUser.id, 'goal_completed')
+      }
+      
       toast.success('Goal completed! 🎉')
     } catch (error: any) {
       toast.error(error.message || 'Failed to complete goal')

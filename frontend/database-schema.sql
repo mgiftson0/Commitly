@@ -98,16 +98,48 @@ CREATE TABLE IF NOT EXISTS public.encouragements (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- RLS policies for goals (CRITICAL FIX)
+ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own goals" ON public.goals
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view public goals" ON public.goals
+  FOR SELECT USING (visibility = 'public');
+
+CREATE POLICY "Users can view partner goals" ON public.goals
+  FOR SELECT USING (visibility = 'restricted' AND EXISTS (
+    SELECT 1 FROM public.accountability_partners 
+    WHERE (user_id = auth.uid() AND partner_id = goals.user_id) 
+    OR (partner_id = auth.uid() AND user_id = goals.user_id)
+    AND status = 'accepted'
+  ));
+
+CREATE POLICY "Users can insert own goals" ON public.goals
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own goals" ON public.goals
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own goals" ON public.goals
+  FOR DELETE USING (auth.uid() = user_id);
+
 -- RLS policies for goal activities
 ALTER TABLE public.goal_activities ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view activities of their goals" ON public.goal_activities
+CREATE POLICY "Users can view activities of accessible goals" ON public.goal_activities
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM public.goals WHERE goals.id = goal_activities.goal_id AND goals.user_id = auth.uid()
+    SELECT 1 FROM public.goals WHERE goals.id = goal_activities.goal_id 
+    AND (goals.user_id = auth.uid() OR goals.visibility = 'public')
   ));
   
 CREATE POLICY "Users can update activities of their goals" ON public.goal_activities
   FOR UPDATE USING (EXISTS (
+    SELECT 1 FROM public.goals WHERE goals.id = goal_activities.goal_id AND goals.user_id = auth.uid()
+  ));
+
+CREATE POLICY "Users can insert activities for their goals" ON public.goal_activities
+  FOR INSERT WITH CHECK (EXISTS (
     SELECT 1 FROM public.goals WHERE goals.id = goal_activities.goal_id AND goals.user_id = auth.uid()
   ));
 

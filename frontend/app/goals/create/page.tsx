@@ -288,6 +288,10 @@ export default function CreateGoalPage() {
         return
       }
 
+      // Check for achievements
+      const { checkAndUnlockAchievements } = await import('@/lib/achievements')
+      await checkAndUnlockAchievements(authUser.id, 'goal_created')
+
       // Create goal activities for multi-activity goals
       if (goalType === "multi-activity" && activities.length > 0) {
         const goalActivities = activities
