@@ -212,22 +212,48 @@ export default function CreateGoalPage() {
         return
       }
 
-      // Check if user exists in auth.users
-      const { data: userExists } = await supabase.auth.getUser()
-      if (!userExists.user) {
+      // Get authenticated user
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+      if (authError || !authUser) {
         toast.error('Authentication required')
         router.push('/auth/login')
         return
       }
 
-      // Show message if no accountability partners available
+      // Ensure user profile exists - this is critical for foreign key constraint
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .eq('id', authUser.id)
+        .maybeSingle()
+
+      if (profileError) {
+        console.error('Profile check error:', profileError)
+        toast.error('Database error. Please try again.')
+        return
+      }
+
+      if (!profile) {
+        toast.error('Profile not found. Please complete your profile first.')
+        router.push('/auth/kyc')
+        return
+      }
+
+      // Double-check the user ID matches
+      if (profile.id !== authUser.id) {
+        toast.error('Authentication mismatch. Please log in again.')
+        router.push('/auth/login')
+        return
+      }
+
+      // Show modal if no accountability partners available
       if (goalNature === "personal" && selectedPartners.length === 0 && availablePartners.length === 0) {
-        toast.info('No accountability partners available. You can still create the goal and add partners later.')
+        // This will be handled by the UI showing the dropdown with empty state
       }
 
       // Prepare goal data for database
       const goalData = {
-        user_id: userExists.user.id,
+        user_id: authUser.id,
         title: title || "Untitled Goal",
         description,
         goal_type: goalType,
@@ -250,11 +276,29 @@ export default function CreateGoalPage() {
 
       if (goalError) throw goalError
 
+      // Create goal activities for multi-activity goals
+      if (goalType === "multi-activity" && activities.length > 0) {
+        const goalActivities = activities
+          .filter(activity => activity.trim())
+          .map((activity, index) => ({
+            goal_id: newGoal.id,
+            title: activity.trim(),
+            completed: false,
+            order_index: index
+          }))
+
+        if (goalActivities.length > 0) {
+          await supabase
+            .from('goal_activities')
+            .insert(goalActivities)
+        }
+      }
+
       // Create notification
       await supabase
         .from('notifications')
         .insert({
-          user_id: currentUser.id,
+          user_id: authUser.id,
           title: 'Goal Created!',
           message: `You created a new goal: ${title}`,
           type: 'goal_created',
@@ -1127,27 +1171,35 @@ export default function CreateGoalPage() {
                           <SelectValue placeholder="Add an accountability partner..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {availablePartners
-                            .filter((p) => !selectedPartners.includes(p.id))
-                            .map((partner) => (
-                              <SelectItem key={partner.id} value={partner.id}>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                                    <span className="text-xs font-medium">
-                                      {partner.name.charAt(0)}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <div className="text-sm font-medium">
-                                      {partner.name}
+                          {availablePartners.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground">
+                              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm mb-2">No accountability partners available</p>
+                              <p className="text-xs">You can still create the goal and add partners later from your Partners page.</p>
+                            </div>
+                          ) : (
+                            availablePartners
+                              .filter((p) => !selectedPartners.includes(p.id))
+                              .map((partner) => (
+                                <SelectItem key={partner.id} value={partner.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                      <span className="text-xs font-medium">
+                                        {partner.name.charAt(0)}
+                                      </span>
                                     </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      @{partner.username}
+                                    <div>
+                                      <div className="text-sm font-medium">
+                                        {partner.name}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        @{partner.username}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              </SelectItem>
-                            ))}
+                                </SelectItem>
+                              ))
+                          )}
                         </SelectContent>
                       </Select>
 

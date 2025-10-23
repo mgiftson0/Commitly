@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Search, Target, Users, Award, Bell, X, Clock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { ACHIEVEMENTS } from "@/lib/achievements"
+import { supabase } from "@/lib/supabase-client"
 
 interface SearchResult {
   id: string
@@ -103,7 +103,7 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
     return () => clearTimeout(timeoutId)
   }, [query])
 
-  const performSearch = (searchQuery: string): void => {
+  const performSearch = async (searchQuery: string): Promise<void> => {
     // Early return for very short queries
     if (searchQuery.length < 2) {
       setResults([])
@@ -112,165 +112,102 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
 
     const searchResults: SearchResult[] = []
     const lowerQuery = searchQuery.toLowerCase()
-    const queryWords = lowerQuery.split(' ').filter(word => word.length > 0)
 
-    // Helper function to check if text matches query
-    const matchesQuery = (text: string | undefined): boolean => {
-      if (!text) return false
-      const lowerText = text.toLowerCase()
-      return queryWords.some(word => lowerText.includes(word))
-    }
-
-    // Helper function to check if text starts with query (for better relevance)
-    const startsWithQuery = (text: string | undefined): boolean => {
-      if (!text) return false
-      const lowerText = text.toLowerCase()
-      return queryWords.some(word => lowerText.startsWith(word))
-    }
-
-    // Search goals with improved matching
     try {
-      const goals = JSON.parse(localStorage.getItem('goals') || '[]') as GoalData[]
-      goals.forEach((goal) => {
-        const titleMatch = matchesQuery(goal.title)
-        const descMatch = matchesQuery(goal.description)
-        const categoryMatch = matchesQuery(goal.category)
+      // Search users by username, first_name, last_name
+      const { data: users } = await supabase
+        .from('profiles')
+        .select('id, username, first_name, last_name, profile_picture_url')
+        .or(`username.ilike.%${lowerQuery}%,first_name.ilike.%${lowerQuery}%,last_name.ilike.%${lowerQuery}%`)
+        .limit(5)
 
-        if (titleMatch || descMatch || categoryMatch) {
-          // Prioritize results that start with the query
-          const priority = startsWithQuery(goal.title) ? 2 : startsWithQuery(goal.description) ? 1 : 0
+      if (users) {
+        users.forEach(user => {
+          const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username
+          searchResults.push({
+            id: user.id,
+            type: 'user',
+            title: fullName,
+            description: `@${user.username}`,
+            avatar: user.profile_picture_url,
+            onClick: () => {
+              router.push(`/profile/${user.username}`)
+              addToRecentSearches(searchQuery)
+              setIsOpen(false)
+            }
+          })
+        })
+      }
 
+      // Search goals by title and description
+      const { data: goals } = await supabase
+        .from('goals')
+        .select(`
+          id, title, description, category, status, progress,
+          profiles!goals_user_id_fkey(username, first_name, last_name)
+        `)
+        .or(`title.ilike.%${lowerQuery}%,description.ilike.%${lowerQuery}%`)
+        .eq('visibility', 'public')
+        .limit(5)
+
+      if (goals) {
+        goals.forEach(goal => {
+          const owner = goal.profiles as any
+          const ownerName = owner ? `${owner.first_name || ''} ${owner.last_name || ''}`.trim() || owner.username : 'Unknown'
+          
           searchResults.push({
             id: goal.id,
             type: 'goal',
             title: goal.title,
-            description: goal.description,
+            description: `by ${ownerName}`,
             category: goal.category,
             status: goal.status,
             progress: goal.progress,
-            streak: goal.streak,
             onClick: () => {
               router.push(`/goals/${goal.id}`)
               addToRecentSearches(searchQuery)
               setIsOpen(false)
             }
           })
-        }
-      })
-
-      // Search partner goals
-      const partnerGoals = JSON.parse(localStorage.getItem('partnerGoals') || '[]') as PartnerGoalData[]
-      partnerGoals.forEach((goal) => {
-        const titleMatch = matchesQuery(goal.title)
-        const descMatch = matchesQuery(goal.description)
-        const ownerMatch = matchesQuery(goal.ownerName)
-
-        if (titleMatch || descMatch || ownerMatch) {
-          searchResults.push({
-            id: goal.id,
-            type: 'goal',
-            title: goal.title,
-            description: `Partner goal by ${goal.ownerName}`,
-            category: goal.category,
-            status: 'partner',
-            progress: goal.progress,
-            onClick: () => {
-              router.push(`/goals/${goal.id}`)
-              addToRecentSearches(searchQuery)
-              setIsOpen(false)
-            }
-          })
-        }
-      })
-    } catch (error) {
-      console.warn('Error searching goals:', error)
-    }
-
-    // Search achievements
-    try {
-      ACHIEVEMENTS.forEach((achievement: AchievementData) => {
-        const titleMatch = matchesQuery(achievement.title)
-        const descMatch = matchesQuery(achievement.description)
-        const typeMatch = matchesQuery(achievement.type)
-
-        if (titleMatch || descMatch || typeMatch) {
-          searchResults.push({
-            id: achievement.id,
-            type: 'achievement',
-            title: achievement.title,
-            description: achievement.description,
-            category: achievement.rarity,
-            onClick: () => {
-              router.push('/achievements')
-              addToRecentSearches(searchQuery)
-              setIsOpen(false)
-            }
-          })
-        }
-      })
-    } catch (error) {
-      console.warn('Error searching achievements:', error)
-    }
-
-    // Search notifications
-    try {
-      const notifications = JSON.parse(localStorage.getItem('notifications') || '[]') as NotificationData[]
-      notifications.slice(0, 20).forEach((notification) => {
-        const titleMatch = matchesQuery(notification.title)
-        const messageMatch = matchesQuery(notification.message)
-
-        if (titleMatch || messageMatch) {
-          searchResults.push({
-            id: notification.id,
-            type: 'notification',
-            title: notification.title,
-            description: notification.message,
-            onClick: () => {
-              router.push('/notifications')
-              addToRecentSearches(searchQuery)
-              setIsOpen(false)
-            }
-          })
-        }
-      })
-    } catch (error) {
-      console.warn('Error searching notifications:', error)
-    }
-
-    // Mock users search
-    const mockUsers: MockUser[] = [
-      { id: 'sarah-martinez', name: 'Sarah Martinez', avatar: '/placeholder-avatar.jpg' },
-      { id: 'mike-chen', name: 'Mike Chen', avatar: '/placeholder-avatar.jpg' },
-      { id: 'alex-johnson', name: 'Alex Johnson', avatar: '/placeholder-avatar.jpg' },
-      { id: 'emma-wilson', name: 'Emma Wilson', avatar: '/placeholder-avatar.jpg' }
-    ]
-
-    mockUsers.forEach(user => {
-      if (matchesQuery(user.name)) {
-        searchResults.push({
-          id: user.id,
-          type: 'user',
-          title: user.name,
-          description: 'Accountability partner',
-          avatar: user.avatar,
-          onClick: () => {
-            router.push('/partners')
-            addToRecentSearches(searchQuery)
-            setIsOpen(false)
-          }
         })
       }
-    })
 
-    // Sort results by relevance and limit to 8
+      // Search notifications for current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: notifications } = await supabase
+          .from('notifications')
+          .select('id, title, message')
+          .eq('user_id', user.id)
+          .or(`title.ilike.%${lowerQuery}%,message.ilike.%${lowerQuery}%`)
+          .limit(3)
+
+        if (notifications) {
+          notifications.forEach(notification => {
+            searchResults.push({
+              id: notification.id,
+              type: 'notification',
+              title: notification.title,
+              description: notification.message,
+              onClick: () => {
+                router.push('/notifications')
+                addToRecentSearches(searchQuery)
+                setIsOpen(false)
+              }
+            })
+          })
+        }
+      }
+    } catch (error) {
+      console.warn('Error performing search:', error)
+    }
+
+    // Sort results by relevance - users first, then goals, then notifications
     searchResults.sort((a, b) => {
-      // Prioritize goals and users over achievements and notifications
-      if (a.type === 'goal' && b.type !== 'goal') return -1
-      if (a.type !== 'goal' && b.type === 'goal') return 1
       if (a.type === 'user' && b.type !== 'user') return -1
       if (a.type !== 'user' && b.type === 'user') return 1
-
-      // Then sort by title length (shorter titles are likely more relevant)
+      if (a.type === 'goal' && b.type !== 'goal') return -1
+      if (a.type !== 'goal' && b.type === 'goal') return 1
       return a.title.length - b.title.length
     })
 

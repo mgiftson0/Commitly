@@ -77,6 +77,16 @@ CREATE POLICY "Users can update own profile pictures" ON storage.objects
 CREATE POLICY "Users can delete own profile pictures" ON storage.objects
   FOR DELETE USING (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[1]);
 
+-- Goal activities table for multi-activity goals
+CREATE TABLE IF NOT EXISTS public.goal_activities (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  goal_id UUID REFERENCES public.goals(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  completed BOOLEAN DEFAULT FALSE,
+  order_index INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
 -- Encouragements table
 CREATE TABLE IF NOT EXISTS public.encouragements (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -87,6 +97,19 @@ CREATE TABLE IF NOT EXISTS public.encouragements (
   type TEXT DEFAULT 'general' CHECK (type IN ('cheer', 'milestone', 'streak', 'comeback', 'general')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+-- RLS policies for goal activities
+ALTER TABLE public.goal_activities ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view activities of their goals" ON public.goal_activities
+  FOR SELECT USING (EXISTS (
+    SELECT 1 FROM public.goals WHERE goals.id = goal_activities.goal_id AND goals.user_id = auth.uid()
+  ));
+  
+CREATE POLICY "Users can update activities of their goals" ON public.goal_activities
+  FOR UPDATE USING (EXISTS (
+    SELECT 1 FROM public.goals WHERE goals.id = goal_activities.goal_id AND goals.user_id = auth.uid()
+  ));
 
 -- RLS policies for encouragements
 ALTER TABLE public.encouragements ENABLE ROW LEVEL SECURITY;

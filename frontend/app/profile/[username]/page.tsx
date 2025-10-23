@@ -1,240 +1,288 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import * as React from "react"
+import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import {
-  Target,
-  ArrowLeft,
-  Trophy,
+import { 
+  ArrowLeft, 
+  UserPlus, 
+  UserCheck, 
+  MessageCircle, 
+  Target, 
   Calendar,
   MapPin,
-  Link as LinkIcon,
-  Edit,
-  Settings,
-  Award,
-  TrendingUp,
-  Flame,
-  CheckCircle2,
-  Clock,
   Users,
-  Star,
-  BookOpen,
-  Dumbbell,
-  Briefcase,
-  Heart,
-  UserPlus,
-  UserMinus,
-  Lock,
-  Eye,
-  EyeOff
+  Trophy,
+  Flame
 } from "lucide-react"
-import Link from "next/link"
-import { useRouter, useParams } from "next/navigation"
-import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
-import { AchievementSquare } from "@/components/achievements/achievement-square"
+import { supabase, authHelpers } from "@/lib/supabase-client"
+import { toast } from "sonner"
 
-export default function ProfilePage() {
-  const [profile, setProfile] = useState<any>(null)
-  const [goals, setGoals] = useState<any[]>([])
-  const [achievements, setAchievements] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isOwner, setIsOwner] = useState(false)
-  const [canViewProfile, setCanViewProfile] = useState(false)
-  const [showFollowersModal, setShowFollowersModal] = useState(false)
-  const [showFollowingModal, setShowFollowingModal] = useState(false)
-  const [followers, setFollowers] = useState<any[]>([])
-  const [following, setFollowing] = useState<any[]>([])
-  
-  const router = useRouter()
+interface UserProfile {
+  id: string
+  username: string
+  first_name: string
+  last_name: string
+  profile_picture_url: string
+  bio: string
+  location: string
+  date_of_birth: string
+  created_at: string
+}
+
+interface Goal {
+  id: string
+  title: string
+  description: string
+  category: string
+  status: string
+  progress: number
+  created_at: string
+}
+
+export default function UserProfilePage() {
   const params = useParams()
+  const router = useRouter()
   const username = params.username as string
-  const currentUserId = 'mock-user-id'
+  
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [isPartner, setIsPartner] = useState(false)
+  const [requestSent, setRequestSent] = useState(false)
+  const [requestLoading, setRequestLoading] = useState(false)
 
   useEffect(() => {
-    loadProfile()
-  }, [username])
-
-  const loadProfile = async () => {
-    try {
-      // Simple profile loading - just check if user exists
-      // Always show profile for johndoe
-      const targetProfile = {
-        id: 'mock-user-id',
-        username: 'johndoe',
-        firstName: 'John',
-        lastName: 'Doe',
-        bio: 'Goal-oriented individual passionate about personal growth.',
-        joinDate: '2024-01-15',
-        followersCount: 125,
-        followingCount: 89,
-        visibility: {
-          profileVisibility: 'public',
-          showStreaks: true,
-          showAchievements: true,
-          showProgress: true,
-          showFollowers: true,
-          showFollowing: true,
-          showGoals: true
+    const loadProfile = async () => {
+      try {
+        // Get current user
+        const user = await authHelpers.getCurrentUser()
+        if (!user) {
+          router.push('/auth/login')
+          return
         }
-      }
-      
-      if (!targetProfile) {
-        setProfile(null)
-        setCanViewProfile(false)
-        setLoading(false)
-        return
-      }
+        setCurrentUser(user)
 
-      setProfile(targetProfile)
-      setIsOwner(targetProfile.id === currentUserId)
-      setCanViewProfile(true)
-      
-      // Load sample goals
-      setGoals([
-        { id: '1', title: 'Morning Workout', visibility: 'public', status: 'active', progress: 75, completedAt: null },
-        { id: '2', title: 'Learn Spanish', visibility: 'public', status: 'active', progress: 45, completedAt: null }
-      ])
-      
-      // Load sample achievements
-      setAchievements([
-        { id: 'first_goal', unlocked: true, title: 'First Steps', rarity: 'common' },
-        { id: 'streak_starter', unlocked: true, title: 'Streak Starter', rarity: 'rare' }
-      ])
-    } catch (error) {
-      console.error('Failed to load profile:', error)
-      setProfile(null)
+        // Get profile by username
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('username', username)
+          .maybeSingle()
+
+        if (profileError || !profileData) {
+          toast.error('User not found')
+          router.push('/partners')
+          return
+        }
+
+        setProfile(profileData)
+
+        // Check if already partners
+        const { data: partnerCheck } = await supabase
+          .from('accountability_partners')
+          .select('*')
+          .or(`and(user_id.eq.${user.id},partner_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},partner_id.eq.${user.id})`)
+          .maybeSingle()
+
+        if (partnerCheck) {
+          setIsPartner(partnerCheck.status === 'accepted')
+          setRequestSent(partnerCheck.status === 'pending')
+        }
+
+        // Get user's public goals
+        const { data: goalsData } = await supabase
+          .from('goals')
+          .select('*')
+          .eq('user_id', profileData.id)
+          .eq('visibility', 'public')
+          .order('created_at', { ascending: false })
+          .limit(6)
+
+        setGoals(goalsData || [])
+      } catch (error) {
+        console.error('Error loading profile:', error)
+        toast.error('Failed to load profile')
+      } finally {
+        setLoading(false)
+      }
     }
-    setLoading(false)
+
+    if (username) {
+      loadProfile()
+    }
+  }, [username, router])
+
+  const sendPartnerRequest = async () => {
+    if (!currentUser || !profile) return
+
+    setRequestLoading(true)
+    try {
+      const { error } = await supabase
+        .from('accountability_partners')
+        .insert({
+          user_id: currentUser.id,
+          partner_id: profile.id,
+          status: 'pending'
+        })
+
+      if (error) throw error
+
+      // Create notification for the user
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: profile.id,
+          title: 'New Partner Request',
+          message: `${currentUser.email} wants to be your accountability partner`,
+          type: 'partner_request',
+          read: false,
+          data: { requester_id: currentUser.id }
+        })
+
+      setRequestSent(true)
+      toast.success('Partner request sent!')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send request')
+    } finally {
+      setRequestLoading(false)
+    }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Target className="h-12 w-12 text-blue-600 animate-pulse" />
-      </div>
-    )
-  }
-
-  if (!canViewProfile || !profile) {
-    return (
       <MainLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <Lock className="h-16 w-16 text-muted-foreground mx-auto" />
-            <div>
-              <h1 className="text-2xl font-bold">Profile Not Available</h1>
-              <p className="text-muted-foreground">
-                {!profile ? 'User not found' : 'This profile is private'}
-              </p>
-            </div>
-            <Link href="/dashboard">
-              <Button>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Target className="h-12 w-12 text-primary animate-pulse mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading profile...</p>
           </div>
         </div>
       </MainLayout>
     )
   }
 
+  if (!profile) {
+    return (
+      <MainLayout>
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-bold mb-4">User not found</h1>
+          <Button onClick={() => router.push('/partners')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Partners
+          </Button>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username
+  const isOwnProfile = currentUser?.id === profile.id
+
   return (
     <MainLayout>
-      <div className="space-y-4 sm:space-y-6">
-        {/* Back Button */}
+      <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <Button variant="outline" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
         </div>
 
-        {/* Profile Header Card */}
-        <Card className="overflow-hidden">
-          <div className="h-24 sm:h-32 md:h-40 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20" />
-          
-          <CardContent className="p-3 sm:p-4 md:p-6">
-            <div className="flex justify-between items-start mb-3 sm:mb-4">
-              <div className="relative -mt-12 sm:-mt-16">
-                <Avatar className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 border-4 border-background">
-                  <AvatarImage src={profile.avatar || "/placeholder-avatar.jpg"} />
-                  <AvatarFallback className="text-xl sm:text-2xl md:text-3xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                    {profile.firstName[0]}{profile.lastName[0]}
+        {/* Profile Header */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="flex flex-col items-center md:items-start">
+                <Avatar className="h-24 w-24 mb-4">
+                  <AvatarImage src={profile.profile_picture_url} />
+                  <AvatarFallback className="text-2xl">
+                    {fullName.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
-              </div>
-              <div className="flex gap-2">
-                {isOwner ? (
-                  <>
-                    <Link href="/settings/privacy">
-                      <Button variant="outline" size="sm" className="text-xs">
-                        <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Privacy</span>
+                
+                {!isOwnProfile && (
+                  <div className="flex gap-2">
+                    {isPartner ? (
+                      <Badge variant="default" className="flex items-center gap-1">
+                        <UserCheck className="h-3 w-3" />
+                        Partner
+                      </Badge>
+                    ) : requestSent ? (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        Request Sent
+                      </Badge>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        onClick={sendPartnerRequest}
+                        disabled={requestLoading}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        {requestLoading ? 'Sending...' : 'Add Partner'}
                       </Button>
-                    </Link>
-                    <Link href="/profile/edit">
-                      <Button size="sm" className="text-xs">
-                        <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Edit Profile</span>
+                    )}
+                    
+                    {isPartner && (
+                      <Button size="sm" variant="outline">
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Message
                       </Button>
-                    </Link>
-                  </>
-                ) : (
-                  <Button size="sm" className="text-xs">
-                    <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Follow</span>
-                  </Button>
+                    )}
+                  </div>
                 )}
               </div>
-            </div>
 
-            <div className="space-y-2 sm:space-y-3">
-              <div>
-                <h1 className="text-lg sm:text-xl md:text-2xl font-bold">
-                  {profile.firstName} {profile.lastName}
-                </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  @{profile.username}
-                </p>
-              </div>
+              <div className="flex-1">
+                <div className="space-y-4">
+                  <div>
+                    <h1 className="text-2xl font-bold">{fullName}</h1>
+                    <p className="text-muted-foreground">@{profile.username}</p>
+                  </div>
 
-              {profile.bio && (
-                <p className="text-xs sm:text-sm leading-relaxed">{profile.bio}</p>
-              )}
+                  {profile.bio && (
+                    <p className="text-sm">{profile.bio}</p>
+                  )}
 
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>Joined {new Date(profile.joinDate).toLocaleDateString()}</span>
-                </div>
-              </div>
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    {profile.location && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        {profile.location}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      Joined {new Date(profile.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
 
-              {/* Follow Stats */}
-              <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-2">
-                <div>
-                  <span className="font-bold text-sm sm:text-base">{profile.followersCount}</span>
-                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Followers</span>
-                </div>
-                <div>
-                  <span className="font-bold text-sm sm:text-base">{profile.followingCount}</span>
-                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Following</span>
-                </div>
-                <div>
-                  <span className="font-bold text-sm sm:text-base">{goals.length}</span>
-                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Goals</span>
-                </div>
-                <div>
-                  <span className="font-bold text-sm sm:text-base">{achievements.length}</span>
-                  <span className="text-xs sm:text-sm text-muted-foreground ml-1">Badges</span>
+                  <div className="flex gap-6">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-primary">{goals.length}</div>
+                      <div className="text-xs text-muted-foreground">Public Goals</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {goals.filter(g => g.status === 'completed').length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Completed</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">
+                        {goals.filter(g => g.status === 'active').length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Active</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -243,106 +291,65 @@ export default function ProfilePage() {
 
         {/* Content Tabs */}
         <Tabs defaultValue="goals" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="goals">Goals ({goals.length})</TabsTrigger>
-            <TabsTrigger value="achievements">Achievements ({achievements.length})</TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="goals">Public Goals</TabsTrigger>
+            <TabsTrigger value="achievements">Achievements</TabsTrigger>
           </TabsList>
 
           <TabsContent value="goals" className="space-y-4">
-            {goals.length > 0 ? (
-              <div className="grid gap-4">
-                {goals.map(goal => (
-                  <Card key={goal.id} className="hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => router.push(`/goals/${goal.id}`)}>
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium truncate">{goal.title}</h3>
-                            <div className="flex items-center gap-2 mt-1.5">
-                              <Badge variant="outline" className="text-xs">
-                                {goal.visibility}
-                              </Badge>
-                              <Badge variant="outline" className={cn(
-                                "text-xs",
-                                goal.status === "active" && "bg-green-500/10 text-green-600 border-green-500/20",
-                                goal.status === "paused" && "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
-                                goal.status === "completed" && "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                              )}>
-                                {goal.status}
-                              </Badge>
-                              {goal.streak > 0 && (
-                                <div className="flex items-center gap-1 text-xs text-orange-500">
-                                  <Flame className="h-3 w-3" />
-                                  <span>{goal.streak}d</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium">{goal.progress}%</div>
-                            <Progress 
-                              value={goal.progress} 
-                              className={cn(
-                                "w-20 h-1.5 mt-1",
-                                goal.progress < 30 && "text-red-500",
-                                goal.progress >= 30 && goal.progress < 70 && "text-yellow-500",
-                                goal.progress >= 70 && "text-green-500"
-                              )} 
-                            />
-                          </div>
-                        </div>
-                        {goal.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">{goal.description}</p>
-                        )}
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(goal.created_at).toLocaleDateString()}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {goal.accountabilityPartners?.length > 0 && (
-                              <div className="flex items-center gap-1">
-                                <Users2 className="h-3 w-3" />
-                                {goal.accountabilityPartners.length}
-                              </div>
-                            )}
-                            {goal.type && (
-                              <Badge variant="secondary" className="text-[10px] px-1 py-0">
-                                {goal.type}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
+            {goals.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No public goals</h3>
+                  <p className="text-muted-foreground">
+                    {isOwnProfile ? "You haven't created any public goals yet." : `${fullName} hasn't shared any public goals yet.`}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {goals.map((goal) => (
+                  <Card key={goal.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-lg">{goal.title}</CardTitle>
+                        <Badge variant={goal.status === 'completed' ? 'default' : 'secondary'}>
+                          {goal.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {goal.description}
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="capitalize">{goal.category?.replace('_', ' ')}</span>
+                        <span>{goal.progress}% complete</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2 mt-2">
+                        <div 
+                          className="bg-primary h-2 rounded-full transition-all"
+                          style={{ width: `${goal.progress}%` }}
+                        />
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No goals yet</p>
-              </div>
             )}
           </TabsContent>
 
           <TabsContent value="achievements" className="space-y-4">
-            {achievements.length > 0 ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                {achievements.map(achievement => (
-                  <AchievementSquare 
-                    key={achievement.id}
-                    achievement={achievement}
-                    size="md"
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No achievements yet</p>
-              </div>
-            )}
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Achievements</h3>
+                <p className="text-muted-foreground">
+                  Achievement system coming soon!
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

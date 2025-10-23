@@ -343,7 +343,7 @@ export default function PartnersPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Link href="/partners/find">
+            <Link href="/partners/search">
               <Button className="hover-lift">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Find Partners

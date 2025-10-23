@@ -74,8 +74,9 @@ export default function KYCPage() {
         setUsernameAvailable(!profileData);
       } catch (error) {
         console.error('Username check error:', error);
-        // On error, assume username might be taken (safer approach)
+        // On error, show as unavailable for safety
         setUsernameAvailable(false);
+        console.warn('Username check failed, assuming unavailable for safety');
       } finally {
         setCheckingUsername(false);
       }
@@ -404,8 +405,8 @@ export default function KYCPage() {
                         value={username}
                         onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                         className={`focus-ring pr-10 ${
-                          username.length >= 3 && usernameAvailable === false ? 'border-red-500' : 
-                          username.length >= 3 && usernameAvailable === true ? 'border-green-500' : ''
+                          username.length >= 3 && usernameAvailable === false ? 'border-red-500 focus:border-red-500' : 
+                          username.length >= 3 && usernameAvailable === true ? 'border-green-500 focus:border-green-500' : ''
                         }`}
                         required
                         pattern="[a-z0-9_]+"
@@ -430,14 +431,14 @@ export default function KYCPage() {
                         Lowercase letters, numbers, and underscores only (min 3 characters)
                       </p>
                       {username.length >= 3 && (
-                        <p className={`text-xs font-medium ${
+                        <p className={`text-xs font-medium transition-colors ${
                           checkingUsername ? 'text-gray-500' :
                           usernameAvailable === true ? 'text-green-600' :
                           usernameAvailable === false ? 'text-red-600' : ''
                         }`}>
-                          {checkingUsername ? 'Checking availability...' :
-                           usernameAvailable === true ? '✓ Username is available' :
-                           usernameAvailable === false ? '✕ Username is already taken' : ''}
+                          {checkingUsername ? '⏳ Checking availability...' :
+                           usernameAvailable === true ? '✅ Username is available' :
+                           usernameAvailable === false ? '❌ Username is already taken - try another' : ''}
                         </p>
                       )}
                     </div>
