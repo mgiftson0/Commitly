@@ -66,9 +66,9 @@ import { getProgressColor } from "@/lib/utils/progress-colors"
 import { supabase, authHelpers } from "@/lib/supabase-client"
 
 // Mock data for goals with enhanced features
-const mockGoals = [
+const mockGoals: any[] = [
   {
-    id: 1,
+    id: "1",
     title: "Morning Workout Routine",
     description: "Daily exercise to build strength and endurance",
     type: "recurring",
@@ -430,6 +430,7 @@ export default function GoalsPage() {
   const [filterCategory, setFilterCategory] = useState("all")
   const [sortBy, setSortBy] = useState("recent")
   const [realGoals, setRealGoals] = useState<any[]>([])
+  const [devModeOverride, setDevModeOverride] = useState<boolean>(false)
   const router = useRouter()
 
   // Load real goals from Supabase database
@@ -640,12 +641,20 @@ export default function GoalsPage() {
               Track and manage your personal goals
             </p>
           </div>
-          <Link href="/goals/create">
-            <Button className="hover-lift">
-              <Plus className="h-4 w-4 mr-2" />
-              New Goal
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Link href="/goals/create">
+              <Button className="hover-lift" variant="default">
+                <Target className="h-4 w-4 mr-2" />
+                Standard Goal
+              </Button>
+            </Link>
+            <Link href="/goals/seasonal/create">
+              <Button className="hover-lift" variant="outline">
+                <Calendar className="h-4 w-4 mr-2" />
+                Seasonal Goal
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats Cards - Dashboard Style */}
@@ -1088,7 +1097,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs text-muted-foreground">Partners:</span>
                   <div className="flex -space-x-1">
-                    {goal.accountabilityPartners.slice(0, 3).map((partner, index) => (
+                    {goal.accountabilityPartners.slice(0, 3).map((partner: any, index: number) => (
                       <div key={partner.id} className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center">
                         <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
                       </div>

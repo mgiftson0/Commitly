@@ -97,6 +97,19 @@ export interface Database {
           updated_at: string
           category: string | null
           priority: string | null
+          duration_type: string | null
+          seasonal_year: number | null
+          seasonal_quarter: number | null
+          dev_mode_override: boolean | null
+          schedule_type: string | null
+          recurrence_pattern: string | null
+          recurrence_days: string[] | null
+          end_condition: string | null
+          target_completions: number | null
+          visibility: string | null
+          goal_type: string | null
+          is_suspended: boolean | null
+          completed_at: string | null
         }
         Insert: {
           id?: string
@@ -109,6 +122,19 @@ export interface Database {
           updated_at?: string
           category?: string | null
           priority?: string | null
+          duration_type?: string | null
+          seasonal_year?: number | null
+          seasonal_quarter?: number | null
+          dev_mode_override?: boolean | null
+          schedule_type?: string | null
+          recurrence_pattern?: string | null
+          recurrence_days?: string[] | null
+          end_condition?: string | null
+          target_completions?: number | null
+          visibility?: string | null
+          goal_type?: string | null
+          is_suspended?: boolean | null
+          completed_at?: string | null
         }
         Update: {
           id?: string
@@ -121,6 +147,19 @@ export interface Database {
           updated_at?: string
           category?: string | null
           priority?: string | null
+          duration_type?: string | null
+          seasonal_year?: number | null
+          seasonal_quarter?: number | null
+          dev_mode_override?: boolean | null
+          schedule_type?: string | null
+          recurrence_pattern?: string | null
+          recurrence_days?: string[] | null
+          end_condition?: string | null
+          target_completions?: number | null
+          visibility?: string | null
+          goal_type?: string | null
+          is_suspended?: boolean | null
+          completed_at?: string | null
         }
       }
       activities: {
@@ -147,6 +186,44 @@ export interface Database {
           description?: string
           activity_date?: string
           created_at?: string
+        }
+      }
+      goal_activities: {
+        Row: {
+          id: string
+          goal_id: string | null
+          title: string
+          description: string | null
+          completed: boolean | null
+          order_index: number | null
+          due_date: string | null
+          assigned_to: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          goal_id?: string | null
+          title: string
+          description?: string | null
+          completed?: boolean | null
+          order_index?: number | null
+          due_date?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          goal_id?: string | null
+          title?: string
+          description?: string | null
+          completed?: boolean | null
+          order_index?: number | null
+          due_date?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
       accountability_partners: {

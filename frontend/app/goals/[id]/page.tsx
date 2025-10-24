@@ -7,15 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
-import { 
-  ArrowLeft, 
-  Edit, 
-  Trash2, 
-  CheckCircle2, 
+import {
+  ArrowLeft,
+  Edit,
+  Trash2,
+  CheckCircle2,
   Target,
   Calendar,
   User,
-  MoreHorizontal
+  MoreHorizontal,
+  Clock,
+  Flame
 } from "lucide-react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { supabase, authHelpers } from "@/lib/supabase-client"
@@ -39,6 +41,17 @@ interface Goal {
   target_date: string
   created_at: string
   user_id: string
+  duration_type?: string
+  seasonal_year?: number
+  seasonal_quarter?: number
+  dev_mode_override?: boolean
+  schedule_type?: string
+  recurrence_pattern?: string
+  recurrence_days?: string[]
+  end_condition?: string
+  target_completions?: number
+  is_suspended?: boolean
+  completed_at?: string
 }
 
 interface Activity {
@@ -47,6 +60,25 @@ interface Activity {
   completed: boolean
   order_index: number
 }
+
+// Helper function to get quarter date range
+const getQuarterDateRange = (quarter: number): string => {
+  const year = new Date().getFullYear();
+  const quarters = {
+    1: { start: `${year}-01-01`, end: `${year}-03-31` },
+    2: { start: `${year}-04-01`, end: `${year}-06-30` },
+    3: { start: `${year}-07-01`, end: `${year}-09-30` },
+    4: { start: `${year}-10-01`, end: `${year}-12-31` }
+  };
+
+  const q = quarters[quarter as keyof typeof quarters];
+  if (!q) return '';
+
+  const startDate = new Date(q.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const endDate = new Date(q.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  return `${startDate} - ${endDate}`;
+};
 
 export default function GoalDetailPage() {
   const params = useParams()
@@ -78,27 +110,11 @@ export default function GoalDetailPage() {
         }
 
         // Get goal details
-        console.log('Loading goal with ID:', goalId)
-        console.log('Goal ID type:', typeof goalId)
-        console.log('User:', user)
-        
-        // Test basic query first
-        const { data: allGoals, error: allGoalsError } = await supabase
-          .from('goals')
-          .select('id, title')
-          .limit(3)
-        
-        console.log('All goals test:', { allGoals, allGoalsError })
-        
         const { data: goalData, error: goalError } = await supabase
           .from('goals')
           .select('*')
           .eq('id', goalId)
           .maybeSingle()
-        
-        console.log('Goal query result:', { goalData, goalError })
-        console.log('Supabase URL:', supabase.supabaseUrl)
-        console.log('Supabase Key:', supabase.supabaseKey?.substring(0, 20) + '...')
 
         if (goalError || !goalData) {
           toast.error('Goal not found')
@@ -297,7 +313,7 @@ export default function GoalDetailPage() {
             
             <Progress value={goal.progress} className="h-3" />
             
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -323,6 +339,74 @@ export default function GoalDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Seasonal Goal Information */}
+              {goal.duration_type && goal.duration_type !== 'standard' && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="text-sm font-medium">Duration Type</div>
+                      <div className="text-sm text-muted-foreground capitalize">
+                        {goal.duration_type === 'annual' && 'Annual Goal'}
+                        {goal.duration_type === 'quarterly' && 'Quarterly Goal'}
+                        {goal.duration_type === 'biannual' && 'Bi-Annual Goal'}
+                      </div>
+                    </div>
+                  </div>
+                  {goal.seasonal_year && (
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm font-medium">Year</div>
+                        <div className="text-sm text-muted-foreground">{goal.seasonal_year}</div>
+                      </div>
+                    </div>
+                  )}
+                  {goal.seasonal_quarter && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm font-medium">Quarter</div>
+                        <div className="text-sm text-muted-foreground">
+                          Q{goal.seasonal_quarter} ({getQuarterDateRange(goal.seasonal_quarter)})
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Schedule Information */}
+              {goal.schedule_type && (
+                <div className="flex items-center gap-2">
+                  <Flame className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="text-sm font-medium">Schedule</div>
+                    <div className="text-sm text-muted-foreground capitalize">
+                      {goal.schedule_type === 'recurring' ? 'Recurring' : 'One-time'}
+                      {goal.schedule_type === 'recurring' && goal.recurrence_pattern && (
+                        <span className="ml-1">({goal.recurrence_pattern})</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* End Condition */}
+              {goal.schedule_type === 'recurring' && goal.end_condition && (
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <div className="text-sm font-medium">End Condition</div>
+                    <div className="text-sm text-muted-foreground capitalize">
+                      {goal.end_condition === 'by-date' && goal.target_date && `Ends ${new Date(goal.target_date).toLocaleDateString()}`}
+                      {goal.end_condition === 'after-completions' && goal.target_completions && `After ${goal.target_completions} completions`}
+                      {goal.end_condition === 'ongoing' && 'Ongoing (no end date)'}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

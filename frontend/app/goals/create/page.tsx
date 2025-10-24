@@ -69,7 +69,7 @@ export default function CreateGoalPage() {
   const [loading, setLoading] = useState(false);
   const [selectedPartners, setSelectedPartners] = useState<string[]>([]);
   const [groupMembers, setGroupMembers] = useState<string[]>([]);
-  const [activityAssignments, setActivityAssignments] = useState<{[key: number]: string[]}>({});
+  const [activityAssignments, setActivityAssignments] = useState<{[key: number]: string}>({});
   const [singleActivity, setSingleActivity] = useState("");
   const [scheduleType, setScheduleType] = useState<"date" | "recurring">("date");
   const [singleDate, setSingleDate] = useState("");
@@ -83,6 +83,11 @@ export default function CreateGoalPage() {
   const [templateGoalType, setTemplateGoalType] = useState<"single-activity" | "multi-activity">("single-activity");
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [selectedSingleActivity, setSelectedSingleActivity] = useState<string>("");
+  const [durationType, setDurationType] = useState<"standard" | "seasonal">("standard");
+  const [seasonalType, setSeasonalType] = useState<"annual" | "quarterly" | "biannual">("annual");
+  const [seasonalYear, setSeasonalYear] = useState<number>(new Date().getFullYear());
+  const [seasonalQuarter, setSeasonalQuarter] = useState<number>(Math.ceil((new Date().getMonth() + 1) / 3));
+  const [activityDueDates, setActivityDueDates] = useState<{[key: number]: string}>({});
   const router = useRouter();
 
   // Load real user and partners data
@@ -251,6 +256,8 @@ export default function CreateGoalPage() {
         // This will be handled by the UI showing the dropdown with empty state
       }
 
+
+
       // Prepare goal data for database - ensure user_id matches auth.users table
       const goalData = {
         user_id: authUser.id, // This should match auth.users(id)
@@ -264,7 +271,13 @@ export default function CreateGoalPage() {
         priority: "medium",
         target_date: endCondition === "by-date" ? singleDate : null,
         is_suspended: false,
-        completed_at: null
+        completed_at: null,
+        duration_type: durationType,
+        schedule_type: scheduleType,
+        recurrence_pattern: scheduleType === "recurring" ? recurrencePattern : null,
+        recurrence_days: scheduleType === "recurring" && recurrencePattern === "custom" ? recurrenceDays : null,
+        end_condition: scheduleType === "recurring" ? endCondition : null,
+        target_completions: scheduleType === "recurring" && endCondition === "after-completions" ? parseInt(targetCompletions) : null
       }
 
       console.log('Creating goal with user_id:', authUser.id)
@@ -477,10 +490,10 @@ export default function CreateGoalPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              Create New Goal
+              Create Standard Goal
             </h1>
             <p className="text-muted-foreground">
-              Set a meaningful goal and start your journey to success
+              Set a regular goal with custom timeline and activities
             </p>
           </div>
           <div className="flex gap-2">
@@ -500,12 +513,11 @@ export default function CreateGoalPage() {
               <Card className="hover-lift">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    Goal Details
+                    <Target className="h-5 w-5 text-primary" />
+                    Standard Goal Details
                   </CardTitle>
                   <CardDescription>
-                    Define what you want to achieve and how you&lsquo;ll track
-                    it
+                    Define your regular goal with custom timeline and activities
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -749,6 +761,8 @@ export default function CreateGoalPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+
 
                   {/* Goal Type Selection */}
                   <div className="space-y-4">
@@ -1140,26 +1154,85 @@ export default function CreateGoalPage() {
 
                       <div className="space-y-3">
                         {activities.map((activity, index) => (
-                          <div key={index} className="flex gap-2">
-                            <Input
-                              placeholder={`Activity ${index + 1}`}
-                              value={activity}
-                              onChange={(e) =>
-                                updateActivity(index, e.target.value)
-                              }
-                              className="focus-ring"
-                              required
-                            />
-                            {activities.length > 1 && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                onClick={() => removeActivity(index)}
-                                className="shrink-0"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                          <div key={index} className="space-y-2 p-3 rounded-lg border bg-card">
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder={`Activity ${index + 1}`}
+                                value={activity}
+                                onChange={(e) =>
+                                  updateActivity(index, e.target.value)
+                                }
+                                className="focus-ring"
+                                required
+                              />
+                              {activities.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => removeActivity(index)}
+                                  className="shrink-0"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+
+                            {/* Activity Due Date */}
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs font-medium text-muted-foreground">
+                                Due Date (Optional)
+                              </Label>
+                              <Input
+                                type="date"
+                                value={activityDueDates[index] || ''}
+                                onChange={(e) => {
+                                  const newDueDates = { ...activityDueDates };
+                                  newDueDates[index] = e.target.value;
+                                  setActivityDueDates(newDueDates);
+                                }}
+                                className="focus-ring h-8 text-xs"
+                                min={new Date().toISOString().split("T")[0]}
+                              />
+                            </div>
+
+                            {/* Activity Assignment (for group goals) */}
+                            {goalNature === "group" && groupMembers.length > 1 && (
+                              <div className="flex items-center gap-2">
+                                <Label className="text-xs font-medium text-muted-foreground">
+                                  Assign to
+                                </Label>
+                                <Select
+                                  value={activityAssignments[index] || ''}
+                                  onValueChange={(value) => {
+                                    const newAssignments = { ...activityAssignments };
+                                    newAssignments[index] = value;
+                                    setActivityAssignments(newAssignments);
+                                  }}
+                                >
+                                  <SelectTrigger className="focus-ring h-8 text-xs">
+                                    <SelectValue placeholder="Select member..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {groupMembers.map((memberId) => {
+                                      const member = allGroupCandidates.find(p => p.id === memberId);
+                                      if (!member) return null;
+                                      return (
+                                        <SelectItem key={memberId} value={memberId}>
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                                              <span className="text-xs font-medium">
+                                                {member.name.charAt(0)}
+                                              </span>
+                                            </div>
+                                            <span className="text-sm">{member.name}</span>
+                                          </div>
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             )}
                           </div>
                         ))}

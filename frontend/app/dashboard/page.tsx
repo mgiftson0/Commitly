@@ -51,6 +51,7 @@ import { useNotifications } from "@/hooks/use-notifications"
 import { getProgressColor } from "@/lib/utils/progress-colors"
 import { CATEGORIES, CATEGORY_MAP } from "@/lib/constants/categories"
 import { authHelpers, supabase } from "@/lib/supabase-client"
+import { seasonalIntegration } from "@/lib/seasonal-goals-integration"
 
 export default function DashboardPage() {
   const [goals, setGoals] = useState<any[]>([])
@@ -139,6 +140,7 @@ export default function DashboardPage() {
   // Get real recent activity from database
   const [recentActivity, setRecentActivity] = useState<any[]>([])
   const [dashboardStats, setDashboardStats] = useState<any>(null)
+  const [seasonalStats, setSeasonalStats] = useState<any>(null)
   
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -205,7 +207,12 @@ export default function DashboardPage() {
         }
         setDashboardStats(stats)
         
+        // Load seasonal stats
+        const seasonalData = await seasonalIntegration.getSeasonalStats(user.id)
+        setSeasonalStats(seasonalData)
+        
         console.log('Dashboard stats:', stats)
+        console.log('Seasonal stats:', seasonalData)
         console.log('Goals data:', goals)
         console.log('Goal IDs:', goals.map(g => ({ id: g.id, type: typeof g.id, title: g.title })))
       } catch (error) {
