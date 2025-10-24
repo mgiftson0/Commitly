@@ -273,10 +273,7 @@ export default function CreateGoalPage() {
         is_suspended: false,
         completed_at: null,
         duration_type: 'standard',
-        recurrence_pattern: scheduleType === "recurring" ? recurrencePattern : null,
-        recurrence_days: scheduleType === "recurring" && recurrencePattern === "custom" ? recurrenceDays : null,
-        end_condition: scheduleType === "recurring" ? endCondition : null,
-        target_completions: scheduleType === "recurring" && endCondition === "after-completions" ? parseInt(targetCompletions) : null
+
       }
 
       console.log('Creating goal with user_id:', authUser.id)

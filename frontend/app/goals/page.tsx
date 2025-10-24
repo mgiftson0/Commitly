@@ -42,7 +42,8 @@ import {
   MessageCircle,
   Lock,
   Globe,
-  AlertTriangle
+  AlertTriangle,
+  Star
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -414,6 +415,9 @@ const isAccountabilityPartner = (goal: typeof mockGoals[0], currentUserId: strin
 
 // Get goal card styling based on type
 const getGoalCardStyle = (goal: typeof mockGoals[0]) => {
+  if ((goal as any).is_seasonal || (goal as any).duration_type === 'seasonal') {
+    return "border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-background"
+  }
   if (goal.isGroupGoal) {
     return "border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50/50 to-white dark:from-purple-950/20 dark:to-background"
   }
@@ -580,7 +584,13 @@ export default function GoalsPage() {
         scheduleType: goal.scheduleType,
         isPartnerGoal: goal.isPartnerGoal || false,
         ownerName: goal.ownerName,
-        goalOwner: goal.ownerName ? { id: goal.userId, name: goal.ownerName, avatar: '/placeholder-avatar.jpg' } : undefined
+        goalOwner: goal.ownerName ? { id: goal.userId, name: goal.ownerName, avatar: '/placeholder-avatar.jpg' } : undefined,
+        is_seasonal: goal.is_seasonal || false,
+        duration_type: goal.duration_type || 'standard',
+        seasonal_year: goal.seasonal_year,
+        seasonal_quarter: goal.seasonal_quarter,
+        updated_at: goal.updated_at,
+        completed_at: goal.completed_at
       }
     })
     
@@ -954,6 +964,12 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 <Badge variant="outline" className="text-xs">
                   {goal.type}
                 </Badge>
+                {((goal as any).is_seasonal || (goal as any).duration_type === 'seasonal') && (
+                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                    <Star className="h-3 w-3 mr-1" />
+                    Seasonal
+                  </Badge>
+                )}
                 {goal.isGroupGoal && (
                   <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
                     <Users className="h-3 w-3 mr-1" />

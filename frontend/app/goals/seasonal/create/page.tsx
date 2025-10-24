@@ -227,16 +227,53 @@ export default function CreateSeasonalGoalPage() {
       }
 
       // Create notification
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: user.id,
-          title: 'Seasonal Goal Created!',
-          message: `You created a new seasonal goal: ${title}`,
-          type: 'goal_created',
-          read: false,
-          data: { goal_id: newGoal.id }
-        })
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: user.id,
+            title: 'Seasonal Goal Created! 🌟',
+            message: `You created a new seasonal goal: ${title}`,
+            type: 'seasonal_goal_created',
+            read: false,
+            data: { goal_id: newGoal.id, duration_type: durationType }
+          })
+      } catch (notifError) {
+        console.error('Failed to create notification:', notifError)
+      }
+
+      // Check for seasonal goal achievements
+      try {
+        const { data: seasonalGoalCount } = await supabase
+          .from('goals')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user.id)
+          .eq('is_seasonal', true)
+        
+        if (seasonalGoalCount === 1) {
+          await supabase
+            .from('user_achievements')
+            .insert({
+              user_id: user.id,
+              achievement_type: 'first_seasonal_goal',
+              unlocked_at: new Date().toISOString(),
+              data: { goal_id: newGoal.id, duration_type: durationType }
+            })
+        }
+        
+        if (durationType === 'annual' && seasonalGoalCount >= 3) {
+          await supabase
+            .from('user_achievements')
+            .insert({
+              user_id: user.id,
+              achievement_type: 'annual_planner',
+              unlocked_at: new Date().toISOString(),
+              data: { seasonal_goal_count: seasonalGoalCount }
+            })
+        }
+      } catch (achievementError) {
+        console.error('Failed to check seasonal achievements:', achievementError)
+      }
 
       toast.success('Seasonal goal created successfully!')
       window.dispatchEvent(new CustomEvent('goalCreated', { detail: { goalId: newGoal.id } }))

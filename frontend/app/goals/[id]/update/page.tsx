@@ -154,22 +154,52 @@ export default function UpdateGoalPage() {
 
       // If goal completed, create completion notification and check achievements
       if (isCompleted) {
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: user.id,
-            title: 'Goal Completed! 🎉',
-            message: `Congratulations! You completed: ${goal?.title}`,
-            type: 'goal_completed',
-            read: false,
-            data: { goal_id: goalId }
-          })
+        try {
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id: user.id,
+              title: 'Goal Completed! 🎉',
+              message: `Congratulations! You completed: ${goal?.title}`,
+              type: 'goal_completed',
+              read: false,
+              data: { goal_id: goalId }
+            })
+        } catch (notifError) {
+          console.error('Failed to create completion notification:', notifError)
+        }
         
-        // Check for achievements
-        if (typeof window !== 'undefined') {
-          import('@/lib/achievement-tracker-db').then(({ triggerAchievementCheck }) => {
-            triggerAchievementCheck()
-          })
+        // Check for completion achievements
+        try {
+          const { data: completedGoals } = await supabase
+            .from('goals')
+            .select('id', { count: 'exact' })
+            .eq('user_id', user.id)
+            .eq('status', 'completed')
+          
+          if (completedGoals === 1) {
+            await supabase
+              .from('user_achievements')
+              .insert({
+                user_id: user.id,
+                achievement_type: 'first_completion',
+                unlocked_at: new Date().toISOString(),
+                data: { goal_id: goalId }
+              })
+          }
+          
+          if (completedGoals === 10) {
+            await supabase
+              .from('user_achievements')
+              .insert({
+                user_id: user.id,
+                achievement_type: 'goal_master',
+                unlocked_at: new Date().toISOString(),
+                data: { completed_goals: completedGoals }
+              })
+          }
+        } catch (achievementError) {
+          console.error('Failed to check completion achievements:', achievementError)
         }
       }
       
