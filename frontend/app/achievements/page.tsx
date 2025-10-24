@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AchievementSquare } from "@/components/achievements/achievement-square";
+import { AchievementCard } from "@/components/achievements/achievement-card";
 import { Celebration } from "@/components/achievements/celebration";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -88,12 +88,12 @@ export default function AchievementsPage() {
         </Card>
 
         {/* Achievement Grid */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {(achievements || []).map((achievement) => (
-            <AchievementSquare
+            <AchievementCard
               key={achievement.id}
               achievement={achievement}
-              size="sm"
+              size="md"
             />
           ))}
         </div>

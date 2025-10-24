@@ -182,7 +182,7 @@ export default function PartnersPage() {
           name: r.sender_profile ? `${r.sender_profile.first_name || ''} ${r.sender_profile.last_name || ''}`.trim() || 'User' : 'User',
           username: r.sender_profile?.username || 'user',
           avatar: r.sender_profile?.profile_picture_url,
-          message: r.message || 'Would like to be accountability partners!',
+          message: 'Would like to be accountability partners!',
           sentAt: new Date(r.created_at).toLocaleDateString(),
           compatibility: Math.floor(Math.random() * 20) + 80
         }))
@@ -285,7 +285,7 @@ export default function PartnersPage() {
           name: r.sender_profile ? `${r.sender_profile.first_name || ''} ${r.sender_profile.last_name || ''}`.trim() || 'User' : 'User',
           username: r.sender_profile?.username || 'user',
           avatar: r.sender_profile?.profile_picture_url,
-          message: r.message || 'Would like to be accountability partners!',
+          message: 'Would like to be accountability partners!',
           sentAt: new Date(r.created_at).toLocaleDateString(),
           compatibility: Math.floor(Math.random() * 20) + 80
         }))
@@ -334,110 +334,80 @@ export default function PartnersPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Partners</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Connect with accountability partners to achieve your goals together
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/partners/search">
-              <Button className="hover-lift">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Find Partners
-              </Button>
-            </Link>
-            <Button 
-              variant="outline" 
-              className="hover-lift"
-              onClick={handleSyncContacts}
-              disabled={loading}
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Sync Contacts
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 rounded-lg bg-green-500/10 mr-3">
-                  <UserCheck className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Active Partners</p>
-                  <p className="text-2xl font-bold">{partners.filter(p => p.status === 'active').length}</p>
-                </div>
+        {/* Twitter-like Header */}
+        <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-bold">Connect</h1>
+              <div className="hidden sm:flex items-center gap-6 text-sm text-muted-foreground">
+                <span>{partners.length} Following</span>
+                <span>{requests.length} Requests</span>
               </div>
-            </CardContent>
-          </Card>
-          <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 rounded-lg bg-blue-500/10 mr-3">
-                  <Users className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Pending Requests</p>
-                  <p className="text-2xl font-bold">{requests.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 rounded-lg bg-purple-500/10 mr-3">
-                  <Target className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Shared Goals</p>
-                  <p className="text-2xl font-bold">{partners.reduce((sum, p) => sum + p.sharedGoals, 0)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="hover-lift">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 rounded-lg bg-orange-500/10 mr-3">
-                  <Award className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Avg Success Rate</p>
-                  <p className="text-2xl font-bold">92%</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search partners by name or username..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex gap-2">
+              <Link href="/search">
+                <Button size="sm" variant="outline">
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
+              </Link>
+              <Link href="/partners/search">
+                <Button size="sm">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Find People
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
 
-        {/* Partners Tabs */}
-        <Tabs defaultValue="partners" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="partners">My Partners ({partners.length})</TabsTrigger>
-            <TabsTrigger value="requests">Requests ({requests.length})</TabsTrigger>
-            <TabsTrigger value="discover">Discover ({discover.length})</TabsTrigger>
+        {/* Twitter-like Quick Stats */}
+        <div className="border-b">
+          <div className="grid grid-cols-4 text-center py-3">
+            <div>
+              <div className="text-lg font-bold">{partners.filter(p => p.status === 'active').length}</div>
+              <div className="text-xs text-muted-foreground">Following</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold">{requests.length}</div>
+              <div className="text-xs text-muted-foreground">Requests</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold">{partners.reduce((sum, p) => sum + p.sharedGoals, 0)}</div>
+              <div className="text-xs text-muted-foreground">Goals</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold">92%</div>
+              <div className="text-xs text-muted-foreground">Success</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Twitter-like Search */}
+        <div className="p-4 border-b">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search people..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 rounded-full border-muted-foreground/20 bg-muted/50"
+            />
+          </div>
+        </div>
+
+        {/* Twitter-like Tabs */}
+        <Tabs defaultValue="partners" className="space-y-0">
+          <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
+            <TabsTrigger value="partners" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3">
+              Following
+            </TabsTrigger>
+            <TabsTrigger value="requests" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3">
+              Requests {requests.length > 0 && <Badge className="ml-2 h-5 w-5 p-0 text-xs">{requests.length}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="discover" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3">
+              Discover
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="partners" className="space-y-4">
@@ -478,33 +448,37 @@ function PartnersList({ partners, loading, onSendEncouragement }: {
 }) {
   if (loading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-0">
         {[1,2,3].map(i => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-4">
-              <div className="h-20 bg-muted rounded" />
-            </CardContent>
-          </Card>
+          <div key={i} className="border-b p-4 animate-pulse">
+            <div className="flex gap-3">
+              <div className="h-12 w-12 bg-muted rounded-full" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-muted rounded w-1/3" />
+                <div className="h-3 bg-muted rounded w-1/4" />
+                <div className="h-3 bg-muted rounded w-2/3" />
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     )
   }
+  
   if (partners.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground mb-4">No partners found</p>
-          <Link href="/partners/find">
-            <Button>Find Your First Partner</Button>
-          </Link>
-        </CardContent>
-      </Card>
+      <div className="py-12 text-center">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground mb-4">No partners found</p>
+        <Link href="/partners/search">
+          <Button>Find Your First Partner</Button>
+        </Link>
+      </div>
     )
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-0">
       {partners.map((partner) => (
         <PartnerCard 
           key={partner.id} 
@@ -521,123 +495,102 @@ function PartnerCard({ partner, onSendEncouragement }: {
   onSendEncouragement: (partnerId: string, partnerName: string) => void
 }) {
   return (
-    <Card className="hover-lift group">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3 mb-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={partner.avatar} />
-            <AvatarFallback>{partner.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm truncate">{partner.name}</h3>
-            <p className="text-xs text-muted-foreground">@{partner.username}</p>
-          </div>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className="border-b hover:bg-muted/50 transition-colors p-4">
+      <div className="flex items-start gap-3">
+        <Avatar className="h-12 w-12">
+          <AvatarImage src={partner.avatar} />
+          <AvatarFallback>{partner.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold truncate">{partner.name}</h3>
+              <p className="text-sm text-muted-foreground">@{partner.username}</p>
+            </div>
+            
             <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7"
+              variant="outline" 
+              size="sm"
               onClick={() => onSendEncouragement(partner.id, partner.name)}
-              title="Send encouragement"
+              className="ml-2"
             >
-              <MessageCircle className="h-3 w-3" />
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Message
             </Button>
           </div>
-        </div>
-
-        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
-          {partner.bio}
-        </p>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="text-center p-2 rounded bg-muted/50">
-            <div className="text-sm font-bold text-primary">{partner.sharedGoals}</div>
-            <div className="text-xs text-muted-foreground">Goals</div>
-          </div>
-          <div className="text-center p-2 rounded bg-muted/50">
-            <div className="text-sm font-bold text-green-600">{partner.successRate}%</div>
-            <div className="text-xs text-muted-foreground">Success</div>
+          
+          <p className="text-sm mt-2 line-clamp-2">
+            {partner.bio}
+          </p>
+          
+          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+            <span>{partner.sharedGoals} shared goals</span>
+            <span>{partner.successRate}% success rate</span>
+            <span className="flex items-center gap-1">
+              <div className={`w-2 h-2 rounded-full ${partner.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+              {partner.lastActive}
+            </span>
           </div>
         </div>
-
-        {/* Status */}
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1">
-            <div className={`w-1.5 h-1.5 rounded-full ${partner.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
-            <span className="text-muted-foreground capitalize">{partner.status}</span>
-          </div>
-          <span className="text-muted-foreground">{partner.lastActive}</span>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
 function RequestsList({ requests, onRequestAction }: { requests: any[], onRequestAction: (requestId: string, action: 'accept' | 'decline') => void }) {
   if (requests.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">No pending requests</p>
-        </CardContent>
-      </Card>
+      <div className="py-12 text-center">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">No pending requests</p>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       {requests.map((request) => (
-        <Card key={request.id} className="hover-lift">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={request.avatar} />
-                <AvatarFallback>{request.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-sm truncate">{request.name}</h3>
-                    <p className="text-xs text-muted-foreground">@{request.username}</p>
-                  </div>
-                  <div className="text-right text-xs">
-                    <div className="font-medium">{request.compatibility}%</div>
-                    <div className="text-muted-foreground">match</div>
-                  </div>
+        <div key={request.id} className="border-b hover:bg-muted/50 transition-colors p-4">
+          <div className="flex items-start gap-3">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={request.avatar} />
+              <AvatarFallback>{request.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold truncate">{request.name}</h3>
+                  <p className="text-sm text-muted-foreground">@{request.username}</p>
                 </div>
-
-                <p className="text-xs mb-3 line-clamp-2">{request.message}</p>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {request.sentAt}
-                  </span>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="h-7 text-xs"
-                      onClick={() => onRequestAction(request.id, 'decline')}
-                    >
-                      <X className="h-3 w-3 mr-1" />
-                      Decline
-                    </Button>
-                    <Button 
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => onRequestAction(request.id, 'accept')}
-                    >
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Accept
-                    </Button>
-                  </div>
+                
+                <div className="flex gap-2 ml-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => onRequestAction(request.id, 'decline')}
+                  >
+                    Decline
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={() => onRequestAction(request.id, 'accept')}
+                  >
+                    Accept
+                  </Button>
                 </div>
               </div>
+              
+              <p className="text-sm mt-2 line-clamp-2">{request.message}</p>
+              
+              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                <span>{request.compatibility}% match</span>
+                <span>{request.sentAt}</span>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ))}
     </div>
   )
@@ -645,85 +598,55 @@ function RequestsList({ requests, onRequestAction }: { requests: any[], onReques
 
 function DiscoverList({ people }: { people: any[] }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-0">
       {people.map((person) => (
-        <Card key={person.id} className="hover-lift group">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={person.avatar} />
-                <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button size="sm" variant="outline">
-                  View Profile
+        <div key={person.id} className="border-b hover:bg-muted/50 transition-colors p-4">
+          <div className="flex items-start gap-3">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={person.avatar} />
+              <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold truncate">{person.name}</h3>
+                  <p className="text-sm text-muted-foreground">@{person.username}</p>
+                </div>
+                
+                <Button size="sm" variant="outline" className="ml-2">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Follow
                 </Button>
-                <Button size="sm">
-                  <UserPlus className="h-4 w-4" />
-                </Button>
               </div>
-            </div>
-
-            <div>
-              <CardTitle className="text-lg">{person.name}</CardTitle>
-              <CardDescription>@{person.username}</CardDescription>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {person.bio}
-            </p>
-
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3" />
-              <span>{person.location}</span>
-            </div>
-
-            {/* Shared Goals */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Shared Goals:</p>
-              <div className="flex flex-wrap gap-1">
-                {person.sharedGoals.map((goal) => (
-                  <Badge key={goal} variant="outline" className="text-xs">
-                    {goal}
-                  </Badge>
-                ))}
+              
+              <p className="text-sm mt-2 line-clamp-2">{person.bio}</p>
+              
+              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                {person.location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {person.location}
+                  </span>
+                )}
+                <span>{person.compatibility}% match</span>
+                {person.mutualConnections > 0 && (
+                  <span>{person.mutualConnections} mutual</span>
+                )}
               </div>
+              
+              {person.badges && person.badges.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {person.badges.slice(0, 3).map((badge: string) => (
+                    <Badge key={badge} variant="secondary" className="text-xs">
+                      {badge}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
-
-            {/* Compatibility */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Compatibility</span>
-                <span className="font-medium">{person.compatibility}%</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-1.5">
-                <div
-                  className="bg-gradient-to-r from-primary to-primary/60 h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${person.compatibility}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Mutual Connections */}
-            {person.mutualConnections > 0 && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Users className="h-3 w-3" />
-                <span>{person.mutualConnections} mutual connection{person.mutualConnections !== 1 ? 's' : ''}</span>
-              </div>
-            )}
-
-            {/* Badges */}
-            <div className="flex flex-wrap gap-1">
-              {person.badges.map((badge) => (
-                <Badge key={badge} variant="secondary" className="text-xs">
-                  {badge}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ))}
     </div>
   )

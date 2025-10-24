@@ -50,6 +50,24 @@ export default function SearchPartnersPage() {
 
   const sendFollowRequest = async (partnerId: string, partnerName: string) => {
     try {
+      // Check if both users exist in profiles table
+      const { data: userExists } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', partnerId)
+        .single()
+
+      const { data: currentUserExists } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', currentUser.id)
+        .single()
+
+      if (!userExists || !currentUserExists) {
+        toast.error('User profile not found')
+        return
+      }
+
       const { data: existing } = await supabase
         .from('accountability_partners')
         .select('id, status')
@@ -66,11 +84,17 @@ export default function SearchPartnersPage() {
         .insert({
           user_id: currentUser.id,
           partner_id: partnerId,
-          status: 'pending',
-          message: `Hi! I'd like to be accountability partners with you.`
+          status: 'pending'
         })
 
-      if (error) throw error
+      if (error) {
+        if (error.code === '23503') { // Foreign key violation
+          toast.error('User not found or invalid')
+        } else {
+          throw error
+        }
+        return
+      }
 
       await supabase
         .from('notifications')
@@ -85,6 +109,7 @@ export default function SearchPartnersPage() {
 
       toast.success(`Request sent to ${partnerName}!`)
     } catch (error: any) {
+      console.error('Follow request error:', error)
       toast.error(error.message || 'Failed to send request')
     }
   }

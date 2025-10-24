@@ -4,111 +4,96 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  ArrowLeft, 
-  UserPlus, 
-  UserCheck, 
-  MessageCircle, 
-  Target, 
-  Calendar,
+import {
+  ArrowLeft,
   MapPin,
-  Users,
+  Calendar,
+  Link as LinkIcon,
+  UserPlus,
+  UserCheck,
+  MessageCircle,
+  Target,
   Trophy,
-  Flame
+  Star,
+  Heart,
+  BookOpen,
+  Briefcase,
+  CheckCircle2,
+  Users,
+  MoreHorizontal
 } from "lucide-react"
+import Link from "next/link"
 import { MainLayout } from "@/components/layout/main-layout"
-import { supabase, authHelpers } from "@/lib/supabase-client"
+import { authHelpers, supabase } from "@/lib/supabase-client"
 import { toast } from "sonner"
-
-interface UserProfile {
-  id: string
-  username: string
-  first_name: string
-  last_name: string
-  profile_picture_url: string
-  bio: string
-  location: string
-  date_of_birth: string
-  created_at: string
-}
-
-interface Goal {
-  id: string
-  title: string
-  description: string
-  category: string
-  status: string
-  progress: number
-  created_at: string
-}
+import { getProgressColor } from "@/lib/utils/progress-colors"
+import { SocialLinks } from "@/components/profile/social-links"
 
 export default function UserProfilePage() {
   const params = useParams()
   const router = useRouter()
   const username = params.username as string
   
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [goals, setGoals] = useState<Goal[]>([])
-  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState<any>(null)
+  const [goals, setGoals] = useState<any[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
-  const [isPartner, setIsPartner] = useState(false)
-  const [requestSent, setRequestSent] = useState(false)
-  const [requestLoading, setRequestLoading] = useState(false)
+  const [followState, setFollowState] = useState<'none' | 'pending' | 'following' | 'followers'>('none')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        // Get current user
         const user = await authHelpers.getCurrentUser()
-        if (!user) {
-          router.push('/auth/login')
-          return
-        }
         setCurrentUser(user)
 
-        // Get profile by username
+        // Load profile by username
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('username', username)
-          .maybeSingle()
+          .single()
 
-        if (profileError || !profileData) {
-          toast.error('User not found')
-          router.push('/partners')
+        if (profileError) {
+          console.error('Profile not found:', profileError)
+          router.push('/404')
           return
         }
 
         setProfile(profileData)
 
-        // Check if already partners
-        const { data: partnerCheck } = await supabase
-          .from('accountability_partners')
-          .select('*')
-          .or(`and(user_id.eq.${user.id},partner_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},partner_id.eq.${user.id})`)
-          .maybeSingle()
-
-        if (partnerCheck) {
-          setIsPartner(partnerCheck.status === 'accepted')
-          setRequestSent(partnerCheck.status === 'pending')
-        }
-
-        // Get user's public goals
+        // Load public goals
         const { data: goalsData } = await supabase
           .from('goals')
           .select('*')
           .eq('user_id', profileData.id)
-          .eq('visibility', 'public')
+          .eq('is_public', true)
           .order('created_at', { ascending: false })
-          .limit(6)
 
         setGoals(goalsData || [])
+
+        // Check follow relationship if user is logged in
+        if (user && user.id !== profileData.id) {
+          const { data: followData } = await supabase
+            .from('accountability_partners')
+            .select('status, user_id, partner_id')
+            .or(`and(user_id.eq.${user.id},partner_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},partner_id.eq.${user.id})`)
+            .maybeSingle()
+
+          if (followData) {
+            if (followData.user_id === user.id) {
+              setFollowState(followData.status === 'accepted' ? 'following' : 'pending')
+            } else {
+              setFollowState(followData.status === 'accepted' ? 'following' : 'followers')
+            }
+          }
+        }
       } catch (error) {
         console.error('Error loading profile:', error)
-        toast.error('Failed to load profile')
+        router.push('/404')
       } finally {
         setLoading(false)
       }
@@ -119,50 +104,65 @@ export default function UserProfilePage() {
     }
   }, [username, router])
 
-  const sendPartnerRequest = async () => {
+  const handleFollowAction = async (action: 'follow' | 'unfollow') => {
     if (!currentUser || !profile) return
 
-    setRequestLoading(true)
     try {
-      const { error } = await supabase
-        .from('accountability_partners')
-        .insert({
-          user_id: currentUser.id,
-          partner_id: profile.id,
-          status: 'pending'
-        })
+      if (action === 'follow') {
+        // Check if both users exist in profiles table
+        const { data: currentUserExists } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', currentUser.id)
+          .single()
 
-      if (error) throw error
+        if (!currentUserExists) {
+          toast.error('Your profile not found')
+          return
+        }
 
-      // Create notification for the user
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: profile.id,
-          title: 'New Partner Request',
-          message: `${currentUser.email} wants to be your accountability partner`,
-          type: 'partner_request',
-          read: false,
-          data: { requester_id: currentUser.id }
-        })
+        const { error } = await supabase
+          .from('accountability_partners')
+          .insert({
+            user_id: currentUser.id,
+            partner_id: profile.id,
+            status: 'pending'
+          })
 
-      setRequestSent(true)
-      toast.success('Partner request sent!')
+        if (error) {
+          if (error.code === '23505') {
+            toast.error('Request already sent')
+          } else {
+            throw error
+          }
+          return
+        }
+
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: profile.id,
+            title: 'New Follow Request',
+            message: `${currentUser.first_name || 'Someone'} wants to follow you!`,
+            type: 'partner_request',
+            read: false,
+            data: { sender_id: currentUser.id }
+          })
+
+        setFollowState('pending')
+        toast.success('Follow request sent!')
+      }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to send request')
-    } finally {
-      setRequestLoading(false)
+      console.error('Follow action error:', error)
+      toast.error(error.message || 'Action failed')
     }
   }
 
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <Target className="h-12 w-12 text-primary animate-pulse mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading profile...</p>
-          </div>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </MainLayout>
     )
@@ -172,187 +172,286 @@ export default function UserProfilePage() {
     return (
       <MainLayout>
         <div className="text-center py-12">
-          <h1 className="text-2xl font-bold mb-4">User not found</h1>
-          <Button onClick={() => router.push('/partners')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Partners
-          </Button>
+          <h1 className="text-2xl font-bold mb-4">Profile not found</h1>
+          <Link href="/search">
+            <Button>Search Users</Button>
+          </Link>
         </div>
       </MainLayout>
     )
   }
 
-  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username
   const isOwnProfile = currentUser?.id === profile.id
+  const completedGoals = goals.filter(g => g.completed_at || g.status === 'completed')
+  const activeGoals = goals.filter(g => !g.completed_at && g.status !== 'completed')
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+        <div className="flex items-center gap-4 p-4 border-b">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
+          <div>
+            <h1 className="text-xl font-bold">
+              {profile.first_name} {profile.last_name}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {goals.length} goals
+            </p>
+          </div>
         </div>
 
         {/* Profile Header */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex flex-col items-center md:items-start">
-                <Avatar className="h-24 w-24 mb-4">
-                  <AvatarImage src={profile.profile_picture_url} />
-                  <AvatarFallback className="text-2xl">
-                    {fullName.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                
-                {!isOwnProfile && (
-                  <div className="flex gap-2">
-                    {isPartner ? (
-                      <Badge variant="default" className="flex items-center gap-1">
-                        <UserCheck className="h-3 w-3" />
-                        Partner
-                      </Badge>
-                    ) : requestSent ? (
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        Request Sent
-                      </Badge>
-                    ) : (
-                      <Button 
-                        size="sm" 
-                        onClick={sendPartnerRequest}
-                        disabled={requestLoading}
-                      >
+        <div className="relative">
+          {/* Cover */}
+          <div className="h-48 bg-gradient-to-br from-primary/10 via-primary/20 to-primary/10" />
+          
+          {/* Profile Info */}
+          <div className="p-4">
+            <div className="flex justify-between items-start mb-4">
+              <Avatar className="h-24 w-24 -mt-12 border-4 border-background">
+                <AvatarImage src={profile.profile_picture_url} />
+                <AvatarFallback className="text-2xl">
+                  {profile.first_name?.charAt(0)}{profile.last_name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="flex gap-2">
+                {!isOwnProfile && currentUser && (
+                  <>
+                    <Button variant="outline" size="sm">
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Message
+                    </Button>
+                    
+                    {followState === 'none' && (
+                      <Button size="sm" onClick={() => handleFollowAction('follow')}>
                         <UserPlus className="h-4 w-4 mr-2" />
-                        {requestLoading ? 'Sending...' : 'Add Partner'}
+                        Follow
                       </Button>
                     )}
                     
-                    {isPartner && (
-                      <Button size="sm" variant="outline">
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Message
+                    {followState === 'pending' && (
+                      <Button size="sm" variant="outline" disabled>
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        Pending
                       </Button>
                     )}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1">
-                <div className="space-y-4">
-                  <div>
-                    <h1 className="text-2xl font-bold">{fullName}</h1>
-                    <p className="text-muted-foreground">@{profile.username}</p>
-                  </div>
-
-                  {profile.bio && (
-                    <p className="text-sm">{profile.bio}</p>
-                  )}
-
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    {profile.location && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        {profile.location}
-                      </div>
+                    
+                    {followState === 'following' && (
+                      <Button size="sm" variant="outline">
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        Following
+                      </Button>
                     )}
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      Joined {new Date(profile.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-6">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">{goals.length}</div>
-                      <div className="text-xs text-muted-foreground">Public Goals</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        {goals.filter(g => g.status === 'completed').length}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Completed</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-orange-600">
-                        {goals.filter(g => g.status === 'active').length}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Active</div>
-                    </div>
-                  </div>
-                </div>
+                  </>
+                )}
+                
+                {isOwnProfile && (
+                  <Link href="/profile/edit">
+                    <Button variant="outline" size="sm">
+                      Edit Profile
+                    </Button>
+                  </Link>
+                )}
+                
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-2xl font-bold">
+                  {profile.first_name} {profile.last_name}
+                </h2>
+                <p className="text-muted-foreground">@{profile.username}</p>
+              </div>
+              
+              {profile.bio && (
+                <p className="text-sm leading-relaxed">{profile.bio}</p>
+              )}
+              
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                {profile.location && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {profile.location}
+                  </div>
+                )}
+                
 
-        {/* Content Tabs */}
-        <Tabs defaultValue="goals" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="goals">Public Goals</TabsTrigger>
-            <TabsTrigger value="achievements">Achievements</TabsTrigger>
+                
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  Joined {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </div>
+              </div>
+              
+              <div className="flex gap-6 text-sm">
+                <span><strong>0</strong> <span className="text-muted-foreground">Following</span></span>
+                <span><strong>0</strong> <span className="text-muted-foreground">Followers</span></span>
+              </div>
+              
+              <SocialLinks profile={{
+                instagram: profile?.instagram,
+                twitter: profile?.twitter,
+                snapchat: profile?.snapchat,
+                email: profile?.email
+              }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-4 border-b">
+          <div className="text-center py-4">
+            <div className="text-lg font-bold">{activeGoals.length}</div>
+            <div className="text-xs text-muted-foreground">Active</div>
+          </div>
+          <div className="text-center py-4">
+            <div className="text-lg font-bold">{completedGoals.length}</div>
+            <div className="text-xs text-muted-foreground">Completed</div>
+          </div>
+          <div className="text-center py-4">
+            <div className="text-lg font-bold">
+              {goals.length > 0 ? Math.round((completedGoals.length / goals.length) * 100) : 0}%
+            </div>
+            <div className="text-xs text-muted-foreground">Success</div>
+          </div>
+          <div className="text-center py-4">
+            <div className="text-lg font-bold">
+              {Math.max(...goals.map(g => g.progress || 0), 0)}%
+            </div>
+            <div className="text-xs text-muted-foreground">Best</div>
+          </div>
+        </div>
+
+        {/* Goals Tabs */}
+        <Tabs defaultValue="goals" className="space-y-0">
+          <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
+            <TabsTrigger value="goals" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3">
+              Goals
+            </TabsTrigger>
+            <TabsTrigger value="achievements" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3">
+              Achievements
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="goals" className="space-y-4">
-            {goals.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No public goals</h3>
-                  <p className="text-muted-foreground">
-                    {isOwnProfile ? "You haven't created any public goals yet." : `${fullName} hasn't shared any public goals yet.`}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {goals.map((goal) => (
-                  <Card key={goal.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg">{goal.title}</CardTitle>
-                        <Badge variant={goal.status === 'completed' ? 'default' : 'secondary'}>
-                          {goal.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {goal.description}
-                      </p>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span className="capitalize">{goal.category?.replace('_', ' ')}</span>
-                        <span>{goal.progress}% complete</span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${goal.progress}%` }}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+          <TabsContent value="goals" className="space-y-0 mt-0">
+            <GoalsList goals={goals} />
           </TabsContent>
 
-          <TabsContent value="achievements" className="space-y-4">
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Achievements</h3>
-                <p className="text-muted-foreground">
-                  Achievement system coming soon!
-                </p>
-              </CardContent>
-            </Card>
+          <TabsContent value="achievements" className="space-y-0 mt-0">
+            <div className="py-12 text-center">
+              <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No achievements to show</p>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
     </MainLayout>
+  )
+}
+
+function GoalsList({ goals }: { goals: any[] }) {
+  if (goals.length === 0) {
+    return (
+      <div className="py-12 text-center">
+        <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">No public goals to show</p>
+      </div>
+    )
+  }
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'health-fitness': return Heart
+      case 'learning': return BookOpen
+      case 'career': return Briefcase
+      case 'personal': return Star
+      default: return Target
+    }
+  }
+
+  return (
+    <div className="space-y-0">
+      {goals.map((goal) => {
+        const Icon = getCategoryIcon(goal.category)
+        const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+        const isCompleted = goal.completed_at || goal.status === 'completed'
+        
+        return (
+          <div key={goal.id} className="border-b hover:bg-muted/50 transition-colors p-4">
+            <div className="flex items-start gap-3">
+              <div className={`p-2 rounded-lg mt-1 ${
+                isSeasonalGoal 
+                  ? 'bg-amber-100 dark:bg-amber-900/30' 
+                  : isCompleted
+                    ? 'bg-green-100 dark:bg-green-900/30'
+                    : 'bg-primary/10'
+              }`}>
+                {isCompleted ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Icon className={`h-4 w-4 ${
+                    isSeasonalGoal 
+                      ? 'text-amber-600 dark:text-amber-400' 
+                      : 'text-primary'
+                  }`} />
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold line-clamp-2">{goal.title}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                      {goal.description}
+                    </p>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className="text-sm font-medium">
+                      {isCompleted ? '100%' : `${goal.progress || 0}%`}
+                    </div>
+                    <Progress 
+                      value={isCompleted ? 100 : (goal.progress || 0)} 
+                      className={`w-16 h-1.5 mt-1 ${getProgressColor(isCompleted ? 100 : (goal.progress || 0))}`} 
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="outline" className="text-xs">
+                    {goal.category}
+                  </Badge>
+                  
+                  {isSeasonalGoal && (
+                    <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                      <Star className="h-3 w-3 mr-1" />
+                      Seasonal
+                    </Badge>
+                  )}
+                  
+                  {isCompleted && (
+                    <Badge className="text-xs bg-green-600">
+                      Completed
+                    </Badge>
+                  )}
+                  
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(goal.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }

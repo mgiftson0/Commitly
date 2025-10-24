@@ -51,6 +51,7 @@ import { CategoryProgressModal } from "@/components/category-progress-modal"
 import { ACHIEVEMENTS, checkAchievements } from "@/lib/achievements"
 import { getProgressColor } from "@/lib/utils/progress-colors"
 import { authHelpers, supabase } from "@/lib/supabase-client"
+import { SocialLinks } from "@/components/profile/social-links"
 
 export default function ProfilePage() {
   const [goals, setGoals] = useState<Goal[]>([])
@@ -119,7 +120,7 @@ export default function ProfilePage() {
     loadProfile();
   }, [router]);
 
-  // Calculate category stats from real goals
+  // Calculate category stats from real goals with goal type differentiation
   const categoryStats = useMemo<CategoryStat[]>(() => {
     const categories = ['Health & Fitness', 'Learning', 'Career', 'Personal'];
     const categoryMap = {
@@ -145,17 +146,24 @@ export default function ProfilePage() {
 
     return categories.map(category => {
       const categoryGoals = goals.filter(goal => {
-        const mappedCategory = categoryMap[goal.category as keyof typeof categoryMap] || goal.category;
+        const goalCategory = goal.category || goal.goal_type || 'personal';
+        const mappedCategory = categoryMap[goalCategory as keyof typeof categoryMap] || goalCategory;
         return mappedCategory === category;
       });
 
-      const completed = categoryGoals.filter(goal => goal.completed_at).length;
+      const completed = categoryGoals.filter(goal => goal.completed_at || goal.status === 'completed').length;
       const total = categoryGoals.length;
+      
+      // Separate standard and seasonal goals
+      const standardGoals = categoryGoals.filter(g => !g.is_seasonal && g.duration_type !== 'seasonal').length;
+      const seasonalGoals = categoryGoals.filter(g => g.is_seasonal || g.duration_type === 'seasonal').length;
       
       return {
         name: category,
         completed,
         total,
+        standardGoals,
+        seasonalGoals,
         color: colorMap[category as keyof typeof colorMap],
         icon: iconMap[category as keyof typeof iconMap]
       };
@@ -308,17 +316,18 @@ export default function ProfilePage() {
                     <span>{profile.location}</span>
                   </div>
                 )}
-                {profile?.website && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full">
-                    <LinkIcon className="h-4 w-4" />
-                    <span>{profile.website}</span>
-                  </div>
-                )}
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full">
                   <Calendar className="h-4 w-4" />
                   <span>Joined {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently'}</span>
                 </div>
               </div>
+              
+              <SocialLinks profile={{
+                instagram: profile?.instagram,
+                twitter: profile?.twitter,
+                snapchat: profile?.snapchat,
+                email: profile?.email
+              }} />
 
               {/* Enhanced Stats Row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-3 border-t border-border/50">
@@ -404,7 +413,7 @@ export default function ProfilePage() {
                     Goals Overview
                   </CardTitle>
                   <Link href="/goals">
-                    <Button variant="outline" size="sm" className="text-xs border bg-background">
+                    <Button variant="outline" size="sm" className="text-[10px] h-6 px-2 border bg-background">
                       View All
                     </Button>
                   </Link>
@@ -420,89 +429,170 @@ export default function ProfilePage() {
 
                   <TabsContent value="recent" className="space-y-2 sm:space-y-3">
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                      {goals.slice(0, 6).map((goal) => (
-                        <Link key={goal.id} href={`/goals/${goal.id}`}>
-                          <div className="aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors bg-card group cursor-pointer">
-                            <div className="h-full flex flex-col">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="p-1.5 rounded-lg bg-primary/10">
-                                  <Target className="h-3 w-3 text-primary" />
+                      {goals.slice(0, 6).map((goal) => {
+                        const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+                        return (
+                          <Link key={goal.id} href={`/goals/${goal.id}`}>
+                            <div className={`aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer ${
+                              isSeasonalGoal 
+                                ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800' 
+                                : 'bg-card'
+                            }`}>
+                              <div className="h-full flex flex-col">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className={`p-1.5 rounded-lg ${
+                                    isSeasonalGoal 
+                                      ? 'bg-amber-100 dark:bg-amber-900/30' 
+                                      : 'bg-primary/10'
+                                  }`}>
+                                    <Target className={`h-3 w-3 ${
+                                      isSeasonalGoal 
+                                        ? 'text-amber-600 dark:text-amber-400' 
+                                        : 'text-primary'
+                                    }`} />
+                                  </div>
+                                  <div className="flex flex-col gap-1">
+                                    {goal.completed_at ? (
+                                      <Badge className="bg-green-600 text-[10px]">Done</Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-[10px]">Active</Badge>
+                                    )}
+                                    {isSeasonalGoal && (
+                                      <Badge variant="outline" className="text-[8px] bg-amber-50 text-amber-700 border-amber-200">
+                                        <Star className="h-2 w-2 mr-0.5" />
+                                        Seasonal
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
-                                {goal.completed_at ? (
-                                  <Badge className="bg-green-600 text-[10px]">Done</Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-[10px]">Active</Badge>
-                                )}
-                              </div>
-                              <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
-                              <div className="mt-auto pt-2">
-                                <div className="w-full bg-muted rounded-full h-1.5">
-                                  <div
-                                    className={`h-1.5 rounded-full transition-all ${goal.completed_at ? 'bg-green-500' : 'bg-blue-500'}`}
-                                    style={{ width: `${goal.completed_at ? 100 : Math.min(goal.progress || 0, 100)}%` }}
-                                  />
+                                <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
+                                <div className="mt-auto pt-2 space-y-1">
+                                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                    <span>{goal.goal_type || 'Standard'}</span>
+                                    <span>{goal.progress || 0}%</span>
+                                  </div>
+                                  <div className="w-full bg-muted rounded-full h-1.5">
+                                    <div
+                                      className={`h-1.5 rounded-full transition-all ${
+                                        goal.completed_at 
+                                          ? 'bg-green-500' 
+                                          : isSeasonalGoal 
+                                            ? 'bg-amber-500' 
+                                            : 'bg-blue-500'
+                                      }`}
+                                      style={{ width: `${goal.completed_at ? 100 : Math.min(goal.progress || 0, 100)}%` }}
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        )
+                      })}
                     </div>
                   </TabsContent>
 
                   <TabsContent value="active" className="space-y-2 sm:space-y-3">
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                      {activeGoals.slice(0, 6).map((goal) => (
-                        <Link key={goal.id} href={`/goals/${goal.id}`}>
-                          <div className="aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors bg-card group cursor-pointer">
-                            <div className="h-full flex flex-col">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="p-1.5 rounded-lg bg-primary/10">
-                                  <Target className="h-3 w-3 text-primary" />
+                      {activeGoals.slice(0, 6).map((goal) => {
+                        const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+                        return (
+                          <Link key={goal.id} href={`/goals/${goal.id}`}>
+                            <div className={`aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer ${
+                              isSeasonalGoal 
+                                ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800' 
+                                : 'bg-card'
+                            }`}>
+                              <div className="h-full flex flex-col">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className={`p-1.5 rounded-lg ${
+                                    isSeasonalGoal 
+                                      ? 'bg-amber-100 dark:bg-amber-900/30' 
+                                      : 'bg-primary/10'
+                                  }`}>
+                                    <Target className={`h-3 w-3 ${
+                                      isSeasonalGoal 
+                                        ? 'text-amber-600 dark:text-amber-400' 
+                                        : 'text-primary'
+                                    }`} />
+                                  </div>
+                                  <div className="flex flex-col gap-1">
+                                    <Badge variant="outline" className="text-[10px]">Active</Badge>
+                                    {isSeasonalGoal && (
+                                      <Badge variant="outline" className="text-[8px] bg-amber-50 text-amber-700 border-amber-200">
+                                        <Star className="h-2 w-2 mr-0.5" />
+                                        Seasonal
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
-                                <Badge variant="outline" className="text-[10px]">Active</Badge>
-                              </div>
-                              <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
-                              <div className="mt-auto pt-2">
-                                <div className="w-full bg-muted rounded-full h-1.5">
-                                  <div
-                                    className="h-1.5 rounded-full transition-all bg-blue-500"
-                                    style={{ width: `${Math.min(goal.progress || 0, 100)}%` }}
-                                  />
+                                <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
+                                <div className="mt-auto pt-2 space-y-1">
+                                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                    <span>{goal.goal_type || 'Standard'}</span>
+                                    <span>{goal.progress || 0}%</span>
+                                  </div>
+                                  <div className="w-full bg-muted rounded-full h-1.5">
+                                    <div
+                                      className={`h-1.5 rounded-full transition-all ${
+                                        isSeasonalGoal ? 'bg-amber-500' : 'bg-blue-500'
+                                      }`}
+                                      style={{ width: `${Math.min(goal.progress || 0, 100)}%` }}
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        )
+                      })}
                     </div>
                   </TabsContent>
 
                   <TabsContent value="completed" className="space-y-2 sm:space-y-3">
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                      {completedGoals.slice(0, 6).map((goal) => (
-                        <Link key={goal.id} href={`/goals/${goal.id}`}>
-                          <div className="aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors bg-card group cursor-pointer">
-                            <div className="h-full flex flex-col">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="p-1.5 rounded-lg bg-green-500/10">
-                                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      {completedGoals.slice(0, 6).map((goal) => {
+                        const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+                        return (
+                          <Link key={goal.id} href={`/goals/${goal.id}`}>
+                            <div className={`aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer ${
+                              isSeasonalGoal 
+                                ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800' 
+                                : 'bg-card'
+                            }`}>
+                              <div className="h-full flex flex-col">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="p-1.5 rounded-lg bg-green-500/10">
+                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                  </div>
+                                  <div className="flex flex-col gap-1">
+                                    <Badge className="bg-green-600 text-[10px]">Done</Badge>
+                                    {isSeasonalGoal && (
+                                      <Badge variant="outline" className="text-[8px] bg-amber-50 text-amber-700 border-amber-200">
+                                        <Star className="h-2 w-2 mr-0.5" />
+                                        Seasonal
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
-                                <Badge className="bg-green-600 text-[10px]">Done</Badge>
-                              </div>
-                              <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
-                              <div className="mt-auto pt-2">
-                                <div className="w-full bg-muted rounded-full h-1.5">
-                                  <div
-                                    className="h-1.5 rounded-full bg-green-500"
-                                    style={{ width: '100%' }}
-                                  />
+                                <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
+                                <div className="mt-auto pt-2 space-y-1">
+                                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                    <span>{goal.goal_type || 'Standard'}</span>
+                                    <span>100%</span>
+                                  </div>
+                                  <div className="w-full bg-muted rounded-full h-1.5">
+                                    <div
+                                      className="h-1.5 rounded-full bg-green-500"
+                                      style={{ width: '100%' }}
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        )
+                      })}
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -521,7 +611,7 @@ export default function ProfilePage() {
                     Recent Achievements
                   </CardTitle>
                   <Link href="/achievements">
-                    <Button variant="outline" size="sm" className="text-xs border bg-background">
+                    <Button variant="outline" size="sm" className="text-[10px] h-6 px-2 border bg-background">
                       View All
                     </Button>
                   </Link>
@@ -553,7 +643,7 @@ export default function ProfilePage() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="text-xs border bg-background"
+                    className="text-[10px] h-6 px-2 border bg-background"
                     onClick={() => setShowCategoryModal(true)}
                   >
                     View All
@@ -575,6 +665,18 @@ export default function ProfilePage() {
                           {category.completed}/{category.total}
                         </span>
                       </div>
+                      <div className="flex items-center gap-2 mb-1">
+                        {category.standardGoals > 0 && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">
+                            {category.standardGoals} Standard
+                          </Badge>
+                        )}
+                        {category.seasonalGoals > 0 && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-200">
+                            {category.seasonalGoals} Seasonal
+                          </Badge>
+                        )}
+                      </div>
                       <Progress value={percentage} className={`h-1.5 sm:h-2 ${getProgressColor(percentage)}`} />
                     </div>
                   )
@@ -588,7 +690,7 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-sm font-medium bg-muted/30 px-2 py-1 rounded-md w-fit">Recent Activity</CardTitle>
                   <Link href="/notifications">
-                    <Button variant="outline" size="sm" className="text-xs border bg-background">
+                    <Button variant="outline" size="sm" className="text-[10px] h-6 px-2 border bg-background">
                       View All
                     </Button>
                   </Link>
