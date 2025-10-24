@@ -919,76 +919,69 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Partner Requests / Close to Unlock - Mobile Conditional */}
+          {/* Partner Activities - Limited */}
           <Card className="hover-lift h-[280px] flex flex-col">
             <CardHeader className="flex-shrink-0">
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                <span className="hidden sm:inline">Partner Requests</span>
-                <span className="sm:hidden">Close to Unlock</span>
+                <Users className="h-5 w-5 text-purple-600" />
+                Partner Activities
               </CardTitle>
               <CardDescription>
-                <span className="hidden sm:inline">People who want to team up with you</span>
-                <span className="sm:hidden">Achievements you are close to unlocking</span>
+                Recent achievements from your partners
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {/* Desktop: Partner Requests */}
-                <div className="hidden sm:block">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>SM</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Sarah Martinez</p>
-                      <p className="text-xs text-muted-foreground">
-                        Wants to be your fitness partner
-                      </p>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="outline">Decline</Button>
-                      <Button size="sm">Accept</Button>
-                    </div>
-                  </div>
+            <CardContent className="flex-1 overflow-y-auto">
+              {recentActivity.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center py-4">
+                  <Users className="h-8 w-8 text-muted-foreground mb-2 opacity-50" />
+                  <p className="text-sm text-muted-foreground">No partner activities yet</p>
+                  <Link href="/partners/find">
+                    <Button variant="link" size="sm" className="mt-2">
+                      Find Partners
+                    </Button>
+                  </Link>
                 </div>
-
-                {/* Mobile: Close to Unlock Achievements */}
-                <div className="sm:hidden space-y-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/50 dark:to-orange-950/50 border border-yellow-200 dark:border-yellow-800">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Trophy className="h-4 w-4 text-yellow-600" />
-                      <span className="text-sm font-medium">Consistency Champion</span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Progress</span>
-                        <span className="font-bold">28/30</span>
+              ) : (
+                <div className="space-y-3">
+                  {recentActivity.slice(0, 3).map((activity: any) => {
+                    const Icon = activity.type === 'goal_completed' ? CheckCircle2 : 
+                                 activity.type === 'streak_milestone' ? Flame :
+                                 activity.type === 'achievement_unlocked' ? Trophy :
+                                 Target
+                    const color = activity.type === 'goal_completed' ? 'text-green-600' :
+                                  activity.type === 'streak_milestone' ? 'text-orange-600' :
+                                  activity.type === 'achievement_unlocked' ? 'text-yellow-600' :
+                                  'text-blue-600'
+                    
+                    return (
+                      <div key={activity.id} className="flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className={`p-1.5 rounded-full bg-muted flex-shrink-0`}>
+                          <Icon className={`h-3 w-3 ${color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium line-clamp-1">{activity.title}</p>
+                          <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">
+                            {activity.message}
+                          </p>
+                          <p className="text-[9px] text-muted-foreground mt-1">
+                            {new Date(activity.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                      <Progress value={93} className="h-1.5 [&>div]:bg-yellow-500" />
-                    </div>
-                  </div>
-
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Target className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium">Goal Master</span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Progress</span>
-                        <span className="font-bold">8/10</span>
-                      </div>
-                      <Progress value={80} className="h-1.5 [&>div]:bg-blue-500" />
-                    </div>
-                  </div>
+                    )
+                  })}
                 </div>
-              </div>
-              <Button variant="ghost" className="w-full mt-3 text-sm">
-                <span className="hidden sm:inline">View All Requests</span>
-                <span className="sm:hidden">View All Achievements</span>
-              </Button>
+              )}
             </CardContent>
+            {recentActivity.length > 0 && (
+              <div className="border-t p-2">
+                <Link href="/notifications">
+                  <Button variant="ghost" size="sm" className="w-full text-xs">
+                    View All Activities
+                  </Button>
+                </Link>
+              </div>
+            )}
           </Card>
         </div>
 

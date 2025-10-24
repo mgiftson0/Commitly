@@ -62,6 +62,12 @@ export function Sidebar({ className }: SidebarProps) {
       badge: stats.goals.toString()
     },
     {
+      name: "Search",
+      href: "/search",
+      icon: Search,
+      current: pathname.startsWith("/search")
+    },
+    {
       name: "Partners",
       href: "/partners",
       icon: Users,
@@ -85,8 +91,8 @@ export function Sidebar({ className }: SidebarProps) {
     },
     {
       name: "Find Partners",
-      href: "/partners/find",
-      icon: Search,
+      href: "/partners/search",
+      icon: Users,
       color: "bg-accent text-accent-foreground"
     }
   ]

@@ -1,4 +1,61 @@
-import { supabase } from './supabase-client'
+import { supabase, authHelpers } from './supabase-client'
+
+// Define ACHIEVEMENTS constant for legacy compatibility
+export const ACHIEVEMENTS = [
+  {
+    id: 'first-goal',
+    name: 'First Goal',
+    title: 'First Goal',
+    description: 'Create your first goal',
+    icon: 'target',
+    rarity: 'common',
+    condition: (goals: any[], stats: any) => ({
+      unlocked: goals.length >= 1,
+      progress: Math.min(goals.length, 1),
+      total: 1
+    })
+  },
+  {
+    id: 'goal-achiever',
+    name: 'Goal Achiever',
+    title: 'Goal Achiever',
+    description: 'Complete your first goal',
+    icon: 'trophy',
+    rarity: 'common',
+    condition: (goals: any[], stats: any) => ({
+      unlocked: goals.filter(g => g.status === 'completed' || g.completed_at).length >= 1,
+      progress: Math.min(goals.filter(g => g.status === 'completed' || g.completed_at).length, 1),
+      total: 1
+    })
+  },
+  {
+    id: 'goal-master',
+    name: 'Goal Master',
+    title: 'Goal Master',
+    description: 'Complete 10 goals',
+    icon: 'star',
+    rarity: 'rare',
+    condition: (goals: any[], stats: any) => ({
+      unlocked: goals.filter(g => g.status === 'completed' || g.completed_at).length >= 10,
+      progress: goals.filter(g => g.status === 'completed' || g.completed_at).length,
+      total: 10
+    })
+  }
+];
+
+// Export checkAchievements for legacy compatibility
+export function checkAchievements(goals: any[], userStats: any) {
+  return ACHIEVEMENTS.map(achievement => {
+    const result = achievement.condition(goals, userStats);
+    return {
+      ...achievement,
+      unlocked: result.unlocked,
+      progress: result.progress,
+      total: result.total,
+      progressPercentage: Math.round((result.progress / result.total) * 100)
+    };
+  });
+}
 
 export async function checkAndUnlockAchievements(userId: string, action: string, data?: any) {
   try {

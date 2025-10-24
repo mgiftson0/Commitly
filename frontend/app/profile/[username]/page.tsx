@@ -70,7 +70,7 @@ export default function UserProfilePage() {
           .from('goals')
           .select('*')
           .eq('user_id', profileData.id)
-          .eq('is_public', true)
+          .eq('visibility', 'public')
           .order('created_at', { ascending: false })
 
         setGoals(goalsData || [])
@@ -121,6 +121,13 @@ export default function UserProfilePage() {
           return
         }
 
+        // Get sender's profile data for notification
+        const { data: senderProfile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, username')
+          .eq('id', currentUser.id)
+          .single()
+
         const { error } = await supabase
           .from('accountability_partners')
           .insert({
@@ -133,24 +140,38 @@ export default function UserProfilePage() {
           if (error.code === '23505') {
             toast.error('Request already sent')
           } else {
+            console.error('Partner insert error:', error)
             throw error
           }
           return
         }
 
-        await supabase
+        // Create notification with proper sender info
+        const senderName = senderProfile?.first_name 
+          ? `${senderProfile.first_name} ${senderProfile.last_name || ''}`.trim()
+          : senderProfile?.username || 'Someone'
+
+        const { error: notifError } = await supabase
           .from('notifications')
           .insert({
             user_id: profile.id,
-            title: 'New Follow Request',
-            message: `${currentUser.first_name || 'Someone'} wants to follow you!`,
+            title: 'New Partner Request',
+            message: `${senderName} wants to be your accountability partner!`,
             type: 'partner_request',
             read: false,
-            data: { sender_id: currentUser.id }
+            data: { 
+              sender_id: currentUser.id,
+              sender_name: senderName,
+              sender_username: senderProfile?.username || 'user'
+            }
           })
 
+        if (notifError) {
+          console.error('Notification error:', notifError)
+        }
+
         setFollowState('pending')
-        toast.success('Follow request sent!')
+        toast.success('Partner request sent!')
       }
     } catch (error: any) {
       console.error('Follow action error:', error)
@@ -378,80 +399,78 @@ function GoalsList({ goals }: { goals: any[] }) {
   }
 
   return (
-    <div className="space-y-0">
-      {goals.map((goal) => {
-        const Icon = getCategoryIcon(goal.category)
-        const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
-        const isCompleted = goal.completed_at || goal.status === 'completed'
-        
-        return (
-          <div key={goal.id} className="border-b hover:bg-muted/50 transition-colors p-4">
-            <div className="flex items-start gap-3">
-              <div className={`p-2 rounded-lg mt-1 ${
+    <div className="p-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        {goals.map((goal) => {
+          const Icon = getCategoryIcon(goal.category)
+          const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+          const isCompleted = goal.completed_at || goal.status === 'completed'
+          
+          return (
+            <Link key={goal.id} href={`/goals/${goal.id}`}>
+              <div className={`aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer ${
                 isSeasonalGoal 
-                  ? 'bg-amber-100 dark:bg-amber-900/30' 
-                  : isCompleted
-                    ? 'bg-green-100 dark:bg-green-900/30'
-                    : 'bg-primary/10'
+                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800' 
+                  : 'bg-card'
               }`}>
-                {isCompleted ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Icon className={`h-4 w-4 ${
-                    isSeasonalGoal 
-                      ? 'text-amber-600 dark:text-amber-400' 
-                      : 'text-primary'
-                  }`} />
-                )}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold line-clamp-2">{goal.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                      {goal.description}
-                    </p>
-                  </div>
-                  
-                  <div className="text-right">
-                    <div className="text-sm font-medium">
-                      {isCompleted ? '100%' : `${goal.progress || 0}%`}
+                <div className="h-full flex flex-col">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className={`p-1.5 rounded-lg ${
+                      isSeasonalGoal 
+                        ? 'bg-amber-100 dark:bg-amber-900/30' 
+                        : isCompleted
+                          ? 'bg-green-100 dark:bg-green-900/30'
+                          : 'bg-primary/10'
+                    }`}>
+                      {isCompleted ? (
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <Icon className={`h-3 w-3 ${
+                          isSeasonalGoal 
+                            ? 'text-amber-600 dark:text-amber-400' 
+                            : 'text-primary'
+                        }`} />
+                      )}
                     </div>
-                    <Progress 
-                      value={isCompleted ? 100 : (goal.progress || 0)} 
-                      className={`w-16 h-1.5 mt-1 ${getProgressColor(isCompleted ? 100 : (goal.progress || 0))}`} 
-                    />
+                    <div className="flex flex-col gap-1">
+                      {isCompleted ? (
+                        <Badge className="bg-green-600 text-[10px]">Done</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px]">Active</Badge>
+                      )}
+                      {isSeasonalGoal && (
+                        <Badge variant="outline" className="text-[8px] bg-amber-50 text-amber-700 border-amber-200">
+                          <Star className="h-2 w-2 mr-0.5" />
+                          Seasonal
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
+                  <div className="mt-auto pt-2 space-y-1">
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>{goal.goal_type || goal.category || 'Standard'}</span>
+                      <span>{isCompleted ? 100 : (goal.progress || 0)}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${
+                          isCompleted 
+                            ? 'bg-green-500' 
+                            : isSeasonalGoal 
+                              ? 'bg-amber-500' 
+                              : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${isCompleted ? 100 : Math.min(goal.progress || 0, 100)}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-2 mt-2">
-                  <Badge variant="outline" className="text-xs">
-                    {goal.category}
-                  </Badge>
-                  
-                  {isSeasonalGoal && (
-                    <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-                      <Star className="h-3 w-3 mr-1" />
-                      Seasonal
-                    </Badge>
-                  )}
-                  
-                  {isCompleted && (
-                    <Badge className="text-xs bg-green-600">
-                      Completed
-                    </Badge>
-                  )}
-                  
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(goal.created_at).toLocaleDateString()}
-                  </span>
-                </div>
               </div>
-            </div>
-          </div>
-        )
-      })}
+            </Link>
+          )
+        })}
+      </div>
     </div>
   )
 }

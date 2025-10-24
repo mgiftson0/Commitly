@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Lock } from "lucide-react"
+import { Lock, Trophy } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface AchievementSquareProps {
@@ -10,15 +10,16 @@ interface AchievementSquareProps {
     id: string
     title: string
     description: string
-    rarity: 'common' | 'rare' | 'epic' | 'legendary'
-    icon: any
-    color: string
+    rarity?: 'common' | 'rare' | 'epic' | 'legendary'
+    icon?: any
+    color?: string
     unlocked: boolean
     progress: number
     total: number
-    progressPercentage: number
+    progressPercentage?: number
   }
   size?: 'sm' | 'md' | 'lg'
+  onClick?: () => void
 }
 
 const rarityConfig = {
@@ -56,25 +57,33 @@ const rarityConfig = {
   }
 }
 
-export function AchievementSquare({ achievement, size = 'md' }: AchievementSquareProps) {
-  const config = rarityConfig[achievement.rarity]
-  const Icon = achievement.icon
+export function AchievementSquare({ achievement, size = 'md', onClick }: AchievementSquareProps) {
+  // Ensure rarity is valid, default to 'common' if undefined
+  const validRarity = achievement.rarity && rarityConfig[achievement.rarity] 
+    ? achievement.rarity 
+    : 'common'
+  const config = rarityConfig[validRarity]
+  const Icon = achievement.icon || Trophy
   const isSmall = size === 'sm'
   const isLarge = size === 'lg'
   const isLocked = !achievement.unlocked
+  const progressPercentage = achievement.progressPercentage ?? Math.round((achievement.progress / achievement.total) * 100)
 
   return (
-    <div className={cn(
-      "relative aspect-square rounded-lg border-2 transition-all duration-200 hover:scale-105 cursor-pointer group",
-      isLocked ? config.lockedBg : config.unlockedBg,
-      config.border,
-      isLocked && "opacity-70",
-      isSmall ? "p-3 min-h-[80px]" : isLarge ? "p-6 min-h-[140px]" : "p-4 min-h-[100px]"
-    )}>
+    <div 
+      className={cn(
+        "relative aspect-square rounded-lg border-2 transition-all duration-200 hover:scale-105 cursor-pointer group",
+        isLocked ? config.lockedBg : config.unlockedBg,
+        config.border,
+        isLocked && "opacity-70",
+        isSmall ? "p-3 min-h-[80px]" : isLarge ? "p-6 min-h-[140px]" : "p-4 min-h-[100px]"
+      )}
+      onClick={onClick}
+    >
       {/* Rarity badge */}
       <div className="absolute -top-1 -right-1 z-10">
         <Badge className={cn(config.badge, "text-xs px-1 py-0.5 rounded-full")}>
-          {achievement.rarity[0].toUpperCase()}
+          {validRarity[0].toUpperCase()}
         </Badge>
       </div>
 
@@ -96,7 +105,7 @@ export function AchievementSquare({ achievement, size = 'md' }: AchievementSquar
             achievement.unlocked && config.glow
           )}>
             <Icon className={cn(
-              achievement.color,
+              achievement.color || "text-yellow-600",
               isSmall ? "h-6 w-6" : isLarge ? "h-10 w-10" : "h-8 w-8",
               isLocked && "text-gray-400",
               achievement.unlocked && "drop-shadow-sm"
@@ -120,7 +129,7 @@ export function AchievementSquare({ achievement, size = 'md' }: AchievementSquar
             {achievement.progress < achievement.total ? (
               <>
                 <Progress 
-                  value={achievement.progressPercentage} 
+                  value={progressPercentage} 
                   className="h-1"
                 />
                 <div className="text-[8px] text-center text-gray-500 mt-0.5">
@@ -151,7 +160,7 @@ export function AchievementSquare({ achievement, size = 'md' }: AchievementSquar
       </div>
 
       {/* Legendary glow effect */}
-      {achievement.rarity === 'legendary' && achievement.unlocked && (
+      {validRarity === 'legendary' && achievement.unlocked && (
         <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-orange-400/20 rounded-lg animate-pulse" />
       )}
     </div>

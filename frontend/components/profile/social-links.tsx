@@ -75,7 +75,8 @@ export function SocialLinks({ profile, isEditing = false, onChange }: SocialLink
     )
   }
 
-  const visibleLinks = socialLinks.filter(link => link.value)
+  // Filter out email and only show links with values
+  const visibleLinks = socialLinks.filter(link => link.value && link.key !== 'email')
   
   if (visibleLinks.length === 0) return null
 
@@ -91,8 +92,6 @@ export function SocialLinks({ profile, isEditing = false, onChange }: SocialLink
               return `https://twitter.com/${link.value.replace('@', '')}`
             case 'snapchat':
               return `https://snapchat.com/add/${link.value.replace('@', '')}`
-            case 'email':
-              return `mailto:${link.value}`
             default:
               return '#'
           }
@@ -102,13 +101,13 @@ export function SocialLinks({ profile, isEditing = false, onChange }: SocialLink
           <Button
             key={link.key}
             variant="outline"
-            size="sm"
+            size="icon"
             asChild
-            className="h-8 px-3"
+            className="h-9 w-9"
+            title={link.label}
           >
             <a href={getHref()} target="_blank" rel="noopener noreferrer">
-              <Icon className="h-4 w-4 mr-2" />
-              {link.label}
+              <Icon className="h-4 w-4" />
             </a>
           </Button>
         )

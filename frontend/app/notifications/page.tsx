@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { 
   Bell, 
   CheckCircle2, 
@@ -13,7 +14,7 @@ import {
   Trophy, 
   Heart,
   Trash2,
-  MarkAsRead
+  CheckCheck
 } from "lucide-react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { supabase, authHelpers } from "@/lib/supabase-client"
@@ -115,6 +116,69 @@ export default function NotificationsPage() {
     }
   }
 
+  const handlePartnerRequest = async (notificationId: string, senderId: string, action: 'accept' | 'decline') => {
+    try {
+      const user = await authHelpers.getCurrentUser()
+      if (!user) return
+
+      if (action === 'accept') {
+        // Get acceptor's profile data for notification
+        const { data: acceptorProfile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, username')
+          .eq('id', user.id)
+          .single()
+
+        const acceptorName = acceptorProfile?.first_name 
+          ? `${acceptorProfile.first_name} ${acceptorProfile.last_name || ''}`.trim()
+          : acceptorProfile?.username || 'Someone'
+
+        // Update the accountability_partners status to accepted
+        const { error: updateError } = await supabase
+          .from('accountability_partners')
+          .update({ status: 'accepted' })
+          .eq('user_id', senderId)
+          .eq('partner_id', user.id)
+          .eq('status', 'pending')
+
+        if (updateError) throw updateError
+
+        // Create notification for sender
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: senderId,
+            title: 'Partner Request Accepted',
+            message: `${acceptorName} accepted your partner request!`,
+            type: 'partner_accepted',
+            read: false,
+            data: { partner_id: user.id, partner_name: acceptorName }
+          })
+
+        toast.success('Partner request accepted!')
+      } else {
+        // Delete the pending request
+        const { error: deleteError } = await supabase
+          .from('accountability_partners')
+          .delete()
+          .eq('user_id', senderId)
+          .eq('partner_id', user.id)
+          .eq('status', 'pending')
+
+        if (deleteError) throw deleteError
+
+        toast.success('Partner request declined')
+      }
+
+      // Delete the notification
+      await deleteNotification(notificationId)
+      
+    } catch (error: any) {
+      console.error('Error handling partner request:', error)
+      toast.error(error.message || 'Failed to process request')
+    }
+  }
+
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'goal_completed': return CheckCircle2
@@ -173,7 +237,7 @@ export default function NotificationsPage() {
           </div>
           {unreadCount > 0 && (
             <Button onClick={markAllAsRead} variant="outline">
-              <MarkAsRead className="h-4 w-4 mr-2" />
+              <CheckCheck className="h-4 w-4 mr-2" />
               Mark All Read
             </Button>
           )}
@@ -256,6 +320,39 @@ export default function NotificationsPage() {
                           >
                             View Goal
                           </Button>
+                        )}
+                        
+                        {notification.type === 'partner_request' && notification.data?.sender_id && (
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="text-xs">
+                                  {notification.data.sender_name?.[0] || 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium">{notification.data.sender_name || 'User'}</p>
+                                <p className="text-xs text-muted-foreground">@{notification.data.sender_username || 'user'}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePartnerRequest(notification.id, notification.data.sender_id, 'decline')}
+                                className="flex-1"
+                              >
+                                Decline
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handlePartnerRequest(notification.id, notification.data.sender_id, 'accept')}
+                                className="flex-1"
+                              >
+                                Accept
+                              </Button>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>

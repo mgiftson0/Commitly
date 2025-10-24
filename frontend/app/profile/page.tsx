@@ -170,64 +170,6 @@ export default function ProfilePage() {
     }).filter(c => c.total > 0);
   }, [goals]);
 
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  
-  useEffect(() => {
-    const loadNotifications = async () => {
-      try {
-        const user = await authHelpers.getCurrentUser();
-        if (!user) return;
-
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('read', false)
-          .order('created_at', { ascending: false })
-          .limit(3);
-
-        if (error) throw error;
-        setNotifications(data || []);
-      } catch (error) {
-        console.error('Error loading notifications:', error);
-      }
-    };
-
-    loadNotifications();
-  }, []);
-
-  const recentActivity = useMemo(() => {
-    const iconMap = {
-      goal_completed: CheckCircle2,
-      streak_milestone: Flame,
-      partner_joined: Users,
-      goal_created: Target,
-      activity_completed: CheckCircle2,
-      encouragement_received: Heart,
-      achievement_unlocked: Trophy
-    } as const;
-
-    const colorMap = {
-      goal_completed: 'text-green-600',
-      streak_milestone: 'text-orange-600',
-      partner_joined: 'text-purple-600',
-      goal_created: 'text-blue-600',
-      activity_completed: 'text-green-600',
-      encouragement_received: 'text-pink-600',
-      achievement_unlocked: 'text-yellow-600'
-    } as const;
-
-    return notifications.map(notification => ({
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      description: notification.message,
-      time: new Date(notification.created_at).toLocaleString(),
-      icon: iconMap[notification.type] || Bell,
-      color: colorMap[notification.type] || 'text-gray-600',
-      data: notification.data
-    }));
-  }, [notifications]);
           
   // Handle celebration effect
   useEffect(() => {
@@ -618,11 +560,23 @@ export default function ProfilePage() {
                 </div>
               </CardHeader>
               <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0 h-full overflow-y-auto">
-                <div className="text-center py-4 text-gray-500">
-                  <Trophy className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs">No achievements yet</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">Complete goals to unlock achievements!</p>
-                </div>
+                {achievements.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    <Trophy className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs">No achievements yet</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Complete goals to unlock achievements!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {achievements.slice(0, 9).map((achievement) => (
+                      <AchievementSquare
+                        key={achievement.id}
+                        achievement={achievement}
+                        onClick={() => handleAchievementClick(achievement)}
+                      />
+                    ))}
+                  </div>
+                )}
                 
                 <Link href="/achievements">
                   <Button variant="outline" className="w-full text-xs sm:text-sm mt-4">
@@ -684,47 +638,6 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Recent Activity */}
-            <Card className="hover-lift h-80">
-              <CardHeader className="px-4 sm:px-6 py-1">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-sm font-medium bg-muted/30 px-2 py-1 rounded-md w-fit">Recent Activity</CardTitle>
-                  <Link href="/notifications">
-                    <Button variant="outline" size="sm" className="text-[10px] h-6 px-2 border bg-background">
-                      View All
-                    </Button>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2 sm:space-y-3 px-4 sm:px-6 pb-4 sm:pb-6 pt-0 h-full overflow-y-auto">
-                {recentActivity.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500">
-                    <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-xs">No recent activity</p>
-                  </div>
-                ) : (
-                  recentActivity.map((activity: any) => {
-                    const Icon = activity.icon
-                    return (
-                      <div key={activity.id} className="flex items-start gap-2 sm:gap-3">
-                        <div className={`p-1.5 sm:p-2 rounded-full bg-muted flex-shrink-0`}>
-                          <Icon className={`h-3 w-3 sm:h-4 sm:w-4 ${activity.color}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium line-clamp-2">{activity.title}</p>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-1">
-                            {activity.description}
-                          </p>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            {activity.time}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
