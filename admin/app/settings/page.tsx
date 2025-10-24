@@ -121,7 +121,7 @@ const SystemConfigurationPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div>
       <header className="bg-white shadow p-4 rounded-lg mb-6">
         <h1 className="text-3xl font-bold text-gray-900">
           System Configuration
