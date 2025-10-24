@@ -83,11 +83,11 @@ export default function CreateGoalPage() {
   const [templateGoalType, setTemplateGoalType] = useState<"single-activity" | "multi-activity">("single-activity");
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [selectedSingleActivity, setSelectedSingleActivity] = useState<string>("");
-  const [durationType, setDurationType] = useState<"standard" | "seasonal">("standard");
+  const durationType = 'standard';
   const [seasonalType, setSeasonalType] = useState<"annual" | "quarterly" | "biannual">("annual");
   const [seasonalYear, setSeasonalYear] = useState<number>(new Date().getFullYear());
   const [seasonalQuarter, setSeasonalQuarter] = useState<number>(Math.ceil((new Date().getMonth() + 1) / 3));
-  const [activityDueDates, setActivityDueDates] = useState<{[key: number]: string}>({});
+;
   const router = useRouter();
 
   // Load real user and partners data
@@ -272,8 +272,7 @@ export default function CreateGoalPage() {
         target_date: endCondition === "by-date" ? singleDate : null,
         is_suspended: false,
         completed_at: null,
-        duration_type: durationType,
-        schedule_type: scheduleType,
+        duration_type: 'standard',
         recurrence_pattern: scheduleType === "recurring" ? recurrencePattern : null,
         recurrence_days: scheduleType === "recurring" && recurrencePattern === "custom" ? recurrenceDays : null,
         end_condition: scheduleType === "recurring" ? endCondition : null,
@@ -1178,23 +1177,7 @@ export default function CreateGoalPage() {
                               )}
                             </div>
 
-                            {/* Activity Due Date */}
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs font-medium text-muted-foreground">
-                                Due Date (Optional)
-                              </Label>
-                              <Input
-                                type="date"
-                                value={activityDueDates[index] || ''}
-                                onChange={(e) => {
-                                  const newDueDates = { ...activityDueDates };
-                                  newDueDates[index] = e.target.value;
-                                  setActivityDueDates(newDueDates);
-                                }}
-                                className="focus-ring h-8 text-xs"
-                                min={new Date().toISOString().split("T")[0]}
-                              />
-                            </div>
+
 
                             {/* Activity Assignment (for group goals) */}
                             {goalNature === "group" && groupMembers.length > 1 && (

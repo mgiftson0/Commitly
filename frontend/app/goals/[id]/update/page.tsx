@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Target, ArrowLeft, CheckCircle2, Flame } from "lucide-react"
+import { Target, ArrowLeft, CheckCircle2, Flame, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { toast } from "sonner"
@@ -17,6 +17,7 @@ export default function UpdateGoalPage() {
   const [goal, setGoal] = useState<any>(null)
   const [activities, setActivities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [canUpdate, setCanUpdate] = useState(true)
   const router = useRouter()
   const params = useParams()
   const goalId = params.id as string
@@ -50,9 +51,12 @@ export default function UpdateGoalPage() {
       // Check if goal is completed
       if (goalData.completed_at || goalData.status === 'completed') {
         setGoal({ ...goalData, completed_at: goalData.completed_at || new Date().toISOString() })
+        setCanUpdate(false)
         setLoading(false)
         return
       }
+      
+      setCanUpdate(true)
 
       setGoal(goalData)
 
@@ -85,6 +89,11 @@ export default function UpdateGoalPage() {
   }
 
   const toggleActivity = async (activityIndex: number) => {
+    if (!canUpdate) {
+      toast.error('Goal is completed and cannot be updated')
+      return
+    }
+    
     try {
       const user = await authHelpers.getCurrentUser()
       if (!user) return
@@ -224,6 +233,20 @@ export default function UpdateGoalPage() {
 
   return (
     <MainLayout>
+      {!canUpdate && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <span className="font-medium text-green-900">Goal Completed</span>
+            </div>
+            <p className="text-sm text-green-700">
+              This goal has been completed and can no longer be updated.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -274,6 +297,7 @@ export default function UpdateGoalPage() {
                   <Checkbox
                     checked={activity.completed}
                     onCheckedChange={() => toggleActivity(index)}
+                    disabled={!canUpdate}
                   />
                   <div className="flex-1">
                     <span className={`text-sm ${activity.completed ? 'line-through text-muted-foreground' : ''}`}>
@@ -302,6 +326,7 @@ export default function UpdateGoalPage() {
                 onClick={() => toggleActivity(0)}
                 className="w-full"
                 variant={activities[0]?.completed ? "outline" : "default"}
+                disabled={!canUpdate}
               >
                 {activities[0]?.completed ? (
                   <>

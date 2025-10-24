@@ -4,6 +4,14 @@ const nextConfig = {
   outputFileTracingExcludes: {
     '*': ['../backend/**/*'],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/admin/:path*',
+        destination: 'http://localhost:3001/admin/:path*',
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

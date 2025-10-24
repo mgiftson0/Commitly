@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Save, Target } from "lucide-react"
+import { ArrowLeft, Save, Target, AlertTriangle } from "lucide-react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { supabase, authHelpers } from "@/lib/supabase-client"
 import { toast } from "sonner"
@@ -35,6 +35,25 @@ export default function EditGoalPage() {
   const [targetDate, setTargetDate] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [canEdit, setCanEdit] = useState(false)
+  const [timeRemaining, setTimeRemaining] = useState("")
+
+  const checkEditPermission = (createdAt: string, status: string) => {
+    if (status === 'completed') return false
+    const created = new Date(createdAt).getTime()
+    const now = Date.now()
+    const fiveHours = 5 * 60 * 60 * 1000
+    const timeDiff = now - created
+    
+    if (timeDiff <= fiveHours) {
+      const remaining = fiveHours - timeDiff
+      const hours = Math.floor(remaining / (60 * 60 * 1000))
+      const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000))
+      setTimeRemaining(`${hours}h ${minutes}m`)
+      return true
+    }
+    return false
+  }
 
   useEffect(() => {
     const loadGoal = async () => {
@@ -61,6 +80,9 @@ export default function EditGoalPage() {
           return
         }
 
+        const editAllowed = checkEditPermission(goalData.created_at, goalData.status)
+        setCanEdit(editAllowed)
+
         setGoal(goalData)
         setTitle(goalData.title)
         setDescription(goalData.description || '')
@@ -82,6 +104,10 @@ export default function EditGoalPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!canEdit) {
+      toast.error('Goal can no longer be edited')
+      return
+    }
     setSaving(true)
 
     try {
@@ -139,8 +165,29 @@ export default function EditGoalPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-2xl font-bold">Edit Goal</h1>
+          <div>
+            <h1 className="text-2xl font-bold">Edit Goal</h1>
+            <p className="text-sm text-muted-foreground">
+              {canEdit ? `Edit within ${timeRemaining} remaining` : 'Goal can only be edited within 5 hours of creation'}
+            </p>
+          </div>
         </div>
+
+        {!canEdit && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <span className="font-medium text-amber-900">Editing Disabled</span>
+              </div>
+              <p className="text-sm text-amber-700">
+                {goal?.status === 'completed' 
+                  ? 'This goal is completed and cannot be edited.'
+                  : 'Goals can only be edited within 5 hours of creation. Use the Update page to track progress.'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <form onSubmit={handleSave}>
           <Card>
@@ -155,6 +202,7 @@ export default function EditGoalPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter goal title"
+                  disabled={!canEdit}
                   required
                 />
               </div>
@@ -166,13 +214,14 @@ export default function EditGoalPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe your goal"
+                  disabled={!canEdit}
                   rows={3}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={setCategory}>
+                <Select value={category} onValueChange={setCategory} disabled={!canEdit}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -192,7 +241,7 @@ export default function EditGoalPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="visibility">Visibility</Label>
-                <Select value={visibility} onValueChange={setVisibility}>
+                <Select value={visibility} onValueChange={setVisibility} disabled={!canEdit}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -211,6 +260,7 @@ export default function EditGoalPage() {
                   type="date"
                   value={targetDate}
                   onChange={(e) => setTargetDate(e.target.value)}
+                  disabled={!canEdit}
                   min={new Date().toISOString().split('T')[0]}
                 />
               </div>
@@ -219,7 +269,7 @@ export default function EditGoalPage() {
                 <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={saving || !title.trim()} className="flex-1">
+                <Button type="submit" disabled={!canEdit || saving || !title.trim()} className="flex-1">
                   {saving ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />

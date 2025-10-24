@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,15 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Target, Star, Clock, Users, ArrowLeft, Lightbulb, Plus, X } from "lucide-react"
+import { Calendar, Target, Star, Clock, Users, ArrowLeft, Lightbulb, Plus, X, Lock, Globe, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { supabase, authHelpers } from "@/lib/supabase-client"
-import { seasonalGoalsApi } from "@/lib/seasonal-goals-api"
-import { cohortsApi } from "@/lib/cohorts-api"
-import { CohortBrowser } from "@/components/seasonal/cohort-browser"
 
 const SEASONAL_TEMPLATES = {
   annual: [
@@ -76,7 +73,83 @@ export default function CreateSeasonalGoalPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
   const [joinCohort, setJoinCohort] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [goalNature, setGoalNature] = useState<"personal" | "group">("personal")
+  const [visibility, setVisibility] = useState<"public" | "private" | "restricted">("public")
+  const [selectedPartners, setSelectedPartners] = useState<string[]>([])
+  const [groupMembers, setGroupMembers] = useState<string[]>([])
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [availablePartners, setAvailablePartners] = useState<any[]>([])
+
   const router = useRouter()
+
+  // Load user data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const user = await authHelpers.getCurrentUser()
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        setCurrentUser({
+          id: user.id,
+          name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'You' : 'You',
+          username: profile?.username || 'you'
+        })
+
+        const { data: partners } = await supabase
+          .from('accountability_partners')
+          .select(`
+            *,
+            partner_profile:profiles!accountability_partners_partner_id_fkey(*),
+            user_profile:profiles!accountability_partners_user_id_fkey(*)
+          `)
+          .or(`user_id.eq.${user.id},partner_id.eq.${user.id}`)
+          .eq('status', 'accepted')
+
+        const partnersList = (partners || []).map(p => {
+          const isUserInitiator = p.user_id === user.id
+          const partnerProfile = isUserInitiator ? p.partner_profile : p.user_profile
+          return {
+            id: isUserInitiator ? p.partner_id : p.user_id,
+            name: partnerProfile ? `${partnerProfile.first_name || ''} ${partnerProfile.last_name || ''}`.trim() || 'Partner' : 'Partner',
+            username: partnerProfile?.username || 'partner'
+          }
+        })
+
+        setAvailablePartners(partnersList)
+      } catch (error) {
+        console.error('Error loading data:', error)
+        router.push('/auth/login')
+      }
+    }
+
+    loadData()
+  }, [router])
+
+  // Group members management
+  useEffect(() => {
+    if (goalNature === "group" && currentUser) {
+      setGroupMembers((prev) => {
+        if (prev.includes(currentUser.id)) return prev
+        return [currentUser.id, ...prev].slice(0, 5)
+      })
+    } else {
+      setGroupMembers([])
+    }
+  }, [goalNature, currentUser])
+
+  const allGroupCandidates = useMemo(
+    () => currentUser ? [currentUser, ...availablePartners] : [],
+    [currentUser, availablePartners]
+  )
 
   const addMilestone = () => {
     setMilestones([...milestones, ""])
@@ -111,12 +184,6 @@ export default function CreateSeasonalGoalPage() {
         return
       }
 
-      // Check seasonal creation window
-      if (!seasonalGoalsApi.isCreationWindowOpen()) {
-        toast.error('Seasonal goals can only be created between December 15th and January 15th')
-        return
-      }
-
       // Create seasonal goal
       const goalData = {
         user_id: user.id,
@@ -129,9 +196,10 @@ export default function CreateSeasonalGoalPage() {
         category: category.replace('-', '_'),
         status: 'active',
         progress: 0,
-        visibility: 'public',
+        visibility,
         priority: 'high',
-        is_seasonal: true
+        is_seasonal: true,
+        target_date: null
       }
 
       const { data: newGoal, error } = await supabase
@@ -142,33 +210,37 @@ export default function CreateSeasonalGoalPage() {
 
       if (error) throw error
 
-      // Create milestones
+      // Create milestones as goal activities
       if (milestones.filter(m => m.trim()).length > 0) {
         const milestoneData = milestones
           .filter(m => m.trim())
           .map((milestone, index) => ({
             goal_id: newGoal.id,
             title: milestone.trim(),
-            order_index: index,
-            target_date: null // Will be set later based on duration
+            completed: false,
+            order_index: index
           }))
 
         await supabase
-          .from('seasonal_milestones')
+          .from('goal_activities')
           .insert(milestoneData)
       }
-      
-      // Join cohort if selected
-      if (joinCohort && selectedCohortId) {
-        try {
-          await cohortsApi.joinCohort(selectedCohortId, newGoal.id)
-        } catch (error) {
-          console.error('Failed to join cohort:', error)
-        }
-      }
+
+      // Create notification
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          title: 'Seasonal Goal Created!',
+          message: `You created a new seasonal goal: ${title}`,
+          type: 'goal_created',
+          read: false,
+          data: { goal_id: newGoal.id }
+        })
 
       toast.success('Seasonal goal created successfully!')
-      router.push('/goals/seasonal')
+      window.dispatchEvent(new CustomEvent('goalCreated', { detail: { goalId: newGoal.id } }))
+      router.push('/goals')
     } catch (error: any) {
       toast.error(error.message || 'Failed to create seasonal goal')
     } finally {
@@ -272,7 +344,7 @@ export default function CreateSeasonalGoalPage() {
 
                   {/* Title */}
                   <div className="space-y-2">
-                    <Label htmlFor="title">Goal Title</Label>
+                    <Label htmlFor="title">Goal Title <span className="text-destructive">*</span></Label>
                     <Input
                       id="title"
                       placeholder="e.g., Master Spanish Language, Complete Marathon Training"
@@ -284,7 +356,7 @@ export default function CreateSeasonalGoalPage() {
 
                   {/* Description */}
                   <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">Description <span className="text-destructive">*</span></Label>
                     <Textarea
                       id="description"
                       placeholder="Describe your seasonal commitment and what success looks like..."
@@ -295,9 +367,102 @@ export default function CreateSeasonalGoalPage() {
                     />
                   </div>
 
+                  {/* Goal Nature */}
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium">
+                      Goal Nature <span className="text-destructive">*</span>
+                    </Label>
+                    <RadioGroup
+                      value={goalNature}
+                      onValueChange={(value: string) => setGoalNature(value as "personal" | "group")}
+                    >
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${goalNature === "personal" ? "border-primary bg-primary/5" : "border-border"}`}>
+                          <RadioGroupItem value="personal" id="personal" />
+                          <div className="flex-1">
+                            <Label htmlFor="personal" className="font-medium cursor-pointer">Personal Goal</Label>
+                            <p className="text-sm text-muted-foreground">Just for you</p>
+                          </div>
+                          <Target className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${goalNature === "group" ? "border-primary bg-primary/5" : "border-border"}`}>
+                          <RadioGroupItem value="group" id="group" />
+                          <div className="flex-1">
+                            <Label htmlFor="group" className="font-medium cursor-pointer">Group Goal</Label>
+                            <p className="text-sm text-muted-foreground">Owner + up to 4 others (max 5)</p>
+                          </div>
+                          <Users className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Group Members */}
+                  {goalNature === "group" && (
+                    <div className="space-y-4 p-4 rounded-lg bg-muted/30 border-2 border-primary/20">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium">Group Members</Label>
+                          <p className="text-xs text-muted-foreground mt-1">Owner is automatically included. Add up to 4 more members (max 5 total).</p>
+                        </div>
+                        <Badge variant="outline">{groupMembers.length}/5</Badge>
+                      </div>
+                      <Select value="" onValueChange={(value) => {
+                        if (!groupMembers.includes(value) && groupMembers.length < 5) {
+                          setGroupMembers([...groupMembers, value])
+                        }
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Add a member..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allGroupCandidates.filter((p) => p.id !== currentUser?.id).filter((p) => !groupMembers.includes(p.id)).map((partner) => (
+                            <SelectItem key={partner.id} value={partner.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                  <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium">{partner.name}</div>
+                                  <div className="text-xs text-muted-foreground">@{partner.username}</div>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {groupMembers.length > 0 && (
+                        <div className="space-y-2">
+                          {groupMembers.map((memberId) => {
+                            const member = allGroupCandidates.find((p) => p.id === memberId)
+                            if (!member) return null
+                            return (
+                              <div key={memberId} className="flex items-center justify-between p-2 rounded-md bg-background border">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span className="text-sm font-medium">{member.name.charAt(0)}</span>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-medium">{member.name}</div>
+                                    <div className="text-xs text-muted-foreground">@{member.username}</div>
+                                  </div>
+                                </div>
+                                {memberId !== currentUser?.id && (
+                                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setGroupMembers(groupMembers.filter((id) => id !== memberId))}>
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Category */}
                   <div className="space-y-2">
-                    <Label>Category</Label>
+                    <Label>Category <span className="text-destructive">*</span></Label>
                     <Select value={category} onValueChange={setCategory}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
@@ -317,45 +482,147 @@ export default function CreateSeasonalGoalPage() {
                   {/* Milestones */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label>Key Milestones</Label>
+                      <Label>Key Milestones <span className="text-destructive">*</span></Label>
                       <Button type="button" variant="outline" size="sm" onClick={addMilestone}>
                         <Plus className="h-4 w-4 mr-2" />
                         Add Milestone
                       </Button>
                     </div>
+                    
+
+                    
                     <div className="space-y-3">
                       {milestones.map((milestone, index) => (
-                        <div key={index} className="flex gap-2">
-                          <Input
-                            placeholder={`Milestone ${index + 1}`}
-                            value={milestone}
-                            onChange={(e) => updateMilestone(index, e.target.value)}
-                          />
-                          {milestones.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => removeMilestone(index)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
+                        <div key={index} className="space-y-2 p-3 rounded-lg border bg-card">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder={`Milestone ${index + 1}`}
+                              value={milestone}
+                              onChange={(e) => updateMilestone(index, e.target.value)}
+                              required
+                            />
+                            {milestones.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => removeMilestone(index)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Community Options */}
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="join-cohort"
-                        checked={joinCohort}
-                        onCheckedChange={(checked) => setJoinCohort(!!checked)}
-                      />
-                      <Label htmlFor="join-cohort">Join community cohort for accountability</Label>
+                  {/* Accountability Partners (only for personal goals) */}
+                  {goalNature === "personal" && (
+                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                      <div>
+                        <Label className="text-sm font-medium">Accountability Partners</Label>
+                        <p className="text-xs text-muted-foreground mt-1">Optional: Select partners to help keep you accountable</p>
+                      </div>
+                      <Select value="" onValueChange={(value) => {
+                        if (selectedPartners.length >= 2) {
+                          toast.error("You can select up to 2 partners")
+                          return
+                        }
+                        if (!selectedPartners.includes(value)) {
+                          setSelectedPartners([...selectedPartners, value])
+                        }
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Add an accountability partner..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availablePartners.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground">
+                              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm mb-2">No accountability partners available</p>
+                              <p className="text-xs">You can add partners later from your Partners page.</p>
+                            </div>
+                          ) : (
+                            availablePartners.filter((p) => !selectedPartners.includes(p.id)).map((partner) => (
+                              <SelectItem key={partner.id} value={partner.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-medium">{partner.name}</div>
+                                    <div className="text-xs text-muted-foreground">@{partner.username}</div>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <div className="text-xs text-muted-foreground">Selected {selectedPartners.length}/2</div>
+                      {selectedPartners.length > 0 && (
+                        <div className="space-y-2">
+                          {selectedPartners.map((partnerId) => {
+                            const partner = availablePartners.find((p) => p.id === partnerId)
+                            if (!partner) return null
+                            return (
+                              <div key={partnerId} className="flex items-center justify-between p-2 rounded-md bg-background border">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
+                                  </div>
+                                  <div className="text-sm font-medium">{partner.name}</div>
+                                </div>
+                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedPartners(selectedPartners.filter((id) => id !== partnerId))}>
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
+                  )}
+
+                  {/* Visibility */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Visibility <span className="text-destructive">*</span></Label>
+                    <Select value={visibility} onValueChange={(value: string) => setVisibility(value as "private" | "restricted" | "public")}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="private">
+                          <div className="flex items-center gap-2">
+                            <Lock className="h-4 w-4" />
+                            <div>
+                              <div className="font-medium">Private</div>
+                              <div className="text-xs text-muted-foreground">Only you can see</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="restricted">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <div>
+                              <div className="font-medium">Partners Only</div>
+                              <div className="text-xs text-muted-foreground">Only your partners can see</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="public">
+                          <div className="flex items-center gap-2">
+                            <Globe className="h-4 w-4" />
+                            <div>
+                              <div className="font-medium">Public</div>
+                              <div className="text-xs text-muted-foreground">Everyone can see</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Submit */}
@@ -363,7 +630,7 @@ export default function CreateSeasonalGoalPage() {
                     <Link href="/goals/seasonal" className="flex-1">
                       <Button type="button" variant="outline" className="w-full">Cancel</Button>
                     </Link>
-                    <Button type="submit" className="flex-1" disabled={loading || !title || !description || !category}>
+                    <Button type="submit" className="flex-1" disabled={loading || !title.trim() || !description.trim() || !category || milestones.filter(m => m.trim()).length === 0}>
                       {loading ? 'Creating...' : 'Create Seasonal Goal'}
                     </Button>
                   </div>
@@ -402,35 +669,33 @@ export default function CreateSeasonalGoalPage() {
               </CardContent>
             </Card>
 
-            {/* Cohort Browser */}
-            {joinCohort && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-blue-500" />
-                    Join Cohort
-                  </CardTitle>
-                  <CardDescription>Find accountability partners</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <CohortBrowser 
-                    durationType={durationType} 
-                    onJoinCohort={setSelectedCohortId}
-                  />
-                </CardContent>
-              </Card>
-            )}
 
-            {/* Creation Window Notice */}
-            <Card className="border-amber-200 bg-amber-50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="h-4 w-4 text-amber-600" />
-                  <span className="font-medium text-amber-900">Creation Window</span>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Seasonal Goals</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-sm space-y-2">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                    <span className="text-muted-foreground">
+                      Set long-term commitments with structured milestones
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                    <span className="text-muted-foreground">
+                      Track progress over months with clear deadlines
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                    <span className="text-muted-foreground">
+                      Build accountability with partners or groups
+                    </span>
+                  </div>
                 </div>
-                <p className="text-sm text-amber-700">
-                  Seasonal goals can only be created between December 15th - January 15th for synchronized community participation.
-                </p>
               </CardContent>
             </Card>
           </div>

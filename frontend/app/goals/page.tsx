@@ -887,6 +887,12 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
     const created = new Date(createdAt).getTime()
     return (Date.now() - created) <= (5 * 60 * 60 * 1000)
   }
+  
+  const canDeleteWithin24h = (createdAt?: string, status?: string) => {
+    if (!createdAt || status === 'completed') return false
+    const created = new Date(createdAt).getTime()
+    return (Date.now() - created) <= (24 * 60 * 60 * 1000)
+  }
   const handleDelete = async (goalId: number | string, goalTitle: string) => {
     try {
       // Delete from Supabase
@@ -1035,21 +1041,36 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                         View Details
                       </DropdownMenuItem>
                       {goal.status !== 'completed' && (
-                        <DropdownMenuItem onClick={() => router.push(`/goals/${goal.id}/update`)}>
+                        <DropdownMenuItem onClick={() => {
+                          const isSeasonalGoal = (goal as any).duration_type === 'seasonal' || (goal as any).is_seasonal
+                          const updatePath = isSeasonalGoal ? `/goals/seasonal/${goal.id}/update` : `/goals/${goal.id}/update`
+                          router.push(updatePath)
+                        }}>
                           <Edit className="mr-2 h-4 w-4" />
                           Update Goal
                         </DropdownMenuItem>
                       )}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onSelect={(e) => e.preventDefault()}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Goal
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
+                      {canEditWithin5hFromCreated(goal.createdAt) && goal.status !== 'completed' && (
+                        <DropdownMenuItem onClick={() => {
+                          const isSeasonalGoal = (goal as any).duration_type === 'seasonal' || (goal as any).is_seasonal
+                          const editPath = isSeasonalGoal ? `/goals/seasonal/${goal.id}/edit` : `/goals/${goal.id}/edit`
+                          router.push(editPath)
+                        }}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit Goal
+                        </DropdownMenuItem>
+                      )}
+                      {canDeleteWithin24h(goal.createdAt, goal.status) && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onSelect={(e) => e.preventDefault()}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Goal
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Goal</AlertDialogTitle>
@@ -1067,7 +1088,8 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
-                      </AlertDialog>
+                        </AlertDialog>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}

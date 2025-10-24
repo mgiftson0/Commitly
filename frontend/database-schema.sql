@@ -43,6 +43,17 @@ ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS goal_type TEXT DEFAULT 'single
 ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN DEFAULT FALSE;
 ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
 
+-- Add seasonal goal fields
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS duration_type TEXT DEFAULT 'standard' CHECK (duration_type IN ('standard', 'annual', 'quarterly', 'biannual'));
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS seasonal_year INTEGER;
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS seasonal_quarter INTEGER CHECK (seasonal_quarter >= 1 AND seasonal_quarter <= 4);
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS dev_mode_override BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS schedule_type TEXT DEFAULT 'date' CHECK (schedule_type IN ('date', 'recurring'));
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS recurrence_pattern TEXT CHECK (recurrence_pattern IN ('daily', 'weekly', 'monthly', 'custom'));
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS recurrence_days TEXT[];
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS end_condition TEXT DEFAULT 'by-date' CHECK (end_condition IN ('ongoing', 'by-date', 'after-completions'));
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS target_completions INTEGER;
+
 -- Update notifications table structure
 ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'general';
 ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS data JSONB;
@@ -82,9 +93,13 @@ CREATE TABLE IF NOT EXISTS public.goal_activities (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   goal_id UUID REFERENCES public.goals(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
+  description TEXT,
   completed BOOLEAN DEFAULT FALSE,
   order_index INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+  due_date DATE,
+  assigned_to UUID REFERENCES auth.users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
 -- Encouragements table
