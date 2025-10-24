@@ -132,16 +132,54 @@ export default function UpdateSeasonalGoalPage() {
         .eq('goal_id', goalId)
 
       // Create notification
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: goal.user_id,
-          title: 'Goal Completed! 🎉',
-          message: `Congratulations! You completed your seasonal goal: ${goal.title}`,
-          type: 'goal_completed',
-          read: false,
-          data: { goal_id: goalId }
-        })
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: goal.user_id,
+            title: 'Seasonal Goal Completed! 🎆',
+            message: `Congratulations! You completed your seasonal goal: ${goal.title}`,
+            type: 'seasonal_goal_completed',
+            read: false,
+            data: { goal_id: goalId, duration_type: goal.duration_type }
+          })
+      } catch (notifError) {
+        console.error('Failed to create notification:', notifError)
+      }
+
+      // Check for completion achievements
+      try {
+        const { data: completedSeasonalGoals } = await supabase
+          .from('goals')
+          .select('id', { count: 'exact' })
+          .eq('user_id', goal.user_id)
+          .eq('is_seasonal', true)
+          .eq('status', 'completed')
+        
+        if (completedSeasonalGoals === 1) {
+          await supabase
+            .from('user_achievements')
+            .insert({
+              user_id: goal.user_id,
+              achievement_type: 'seasonal_achiever',
+              unlocked_at: new Date().toISOString(),
+              data: { goal_id: goalId, duration_type: goal.duration_type }
+            })
+        }
+        
+        if (goal.duration_type === 'annual' && completedSeasonalGoals >= 2) {
+          await supabase
+            .from('user_achievements')
+            .insert({
+              user_id: goal.user_id,
+              achievement_type: 'year_transformer',
+              unlocked_at: new Date().toISOString(),
+              data: { completed_annual_goals: completedSeasonalGoals }
+            })
+        }
+      } catch (achievementError) {
+        console.error('Failed to check completion achievements:', achievementError)
+      }
 
       toast.success('Congratulations! Goal marked as completed!')
       window.dispatchEvent(new CustomEvent('goalUpdated', { detail: { goalId } }))

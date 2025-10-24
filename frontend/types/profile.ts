@@ -23,6 +23,7 @@ export interface Goal {
   title: string;
   description: string;
   category: string;
+  goal_type?: string;
   deadline?: string;
   progress: number;
   completed_at?: string;
@@ -31,6 +32,11 @@ export interface Goal {
   user_id: string;
   is_public: boolean;
   partner_id?: string;
+  is_seasonal?: boolean;
+  duration_type?: string;
+  status?: string;
+  streak?: number;
+  is_suspended?: boolean;
 }
 
 export interface Notification {
@@ -40,6 +46,7 @@ export interface Notification {
   message: string;
   user_id: string;
   created_at: string;
+  read: boolean;
   read_at?: string;
   data?: any;
 }
@@ -63,6 +70,8 @@ export interface CategoryStat {
   name: string;
   completed: number;
   total: number;
+  standardGoals?: number;
+  seasonalGoals?: number;
   color: string;
   icon: React.ComponentType;
 }

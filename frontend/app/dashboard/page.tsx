@@ -104,7 +104,7 @@ export default function DashboardPage() {
     return deadlines
   }, [goals])
 
-  // Calculate category progress from real goals
+  // Calculate category progress from real goals with goal type differentiation
   const categoryProgress = useMemo(() => {
     const categories = ['Health & Fitness', 'Learning', 'Career', 'Personal']
     const iconMap = {
@@ -121,16 +121,25 @@ export default function DashboardPage() {
     }
     
     return categories.map(category => {
-      const categoryGoals = goals.filter(g => g.category === category.toLowerCase().replace(' & ', '-').replace(' ', '-'))
-      const completed = categoryGoals.filter(g => g.completed_at).length
+      const categoryGoals = goals.filter(g => {
+        const goalCategory = g.category || g.goal_type || 'personal'
+        return goalCategory === category.toLowerCase().replace(' & ', '-').replace(' ', '-')
+      })
+      const completed = categoryGoals.filter(g => g.completed_at || g.status === 'completed').length
       const total = categoryGoals.length
       const progress = total > 0 ? Math.round((completed / total) * 100) : 0
+      
+      // Include seasonal and standard goals
+      const standardGoals = categoryGoals.filter(g => !g.is_seasonal && g.duration_type !== 'seasonal').length
+      const seasonalGoals = categoryGoals.filter(g => g.is_seasonal || g.duration_type === 'seasonal').length
       
       return {
         name: category,
         completed,
         total,
         progress,
+        standardGoals,
+        seasonalGoals,
         color: colorMap[category as keyof typeof colorMap],
         icon: iconMap[category as keyof typeof iconMap]
       }
@@ -553,39 +562,60 @@ export default function DashboardPage() {
                   {activeGoals
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .slice(0, 3)
-                    .map((goal) => (
-                      <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full" onClick={() => {
-                        console.log('Clicking goal:', goal)
-                        console.log('Goal ID:', goal.id, 'Type:', typeof goal.id)
-                        if (goal.id && goal.id !== 'undefined' && goal.id !== 'null' && !isNaN(goal.id)) {
-                          router.push(`/goals/${goal.id}`)
-                        } else {
-                          console.error('Invalid goal ID:', goal.id, 'Full goal object:', goal)
-                        }
-                      }}>
-                        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
-                          <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <h4 className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">{goal.title}</h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {goal.goal_type}
-                            </Badge>
-                            {goal.streak > 0 && (
-                              <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
-                                <Flame className="h-3 w-3 text-orange-500 dark:text-orange-400" />
-                                <span>{goal.streak}d</span>
-                              </div>
-                            )}
+                    .map((goal) => {
+                      const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+                      return (
+                        <div key={goal.id} className={`flex items-center gap-3 p-3 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full ${
+                          isSeasonalGoal 
+                            ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800' 
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                        }`} onClick={() => {
+                          console.log('Clicking goal:', goal)
+                          console.log('Goal ID:', goal.id, 'Type:', typeof goal.id)
+                          if (goal.id && goal.id !== 'undefined' && goal.id !== 'null' && !isNaN(goal.id)) {
+                            router.push(`/goals/${goal.id}`)
+                          } else {
+                            console.error('Invalid goal ID:', goal.id, 'Full goal object:', goal)
+                          }
+                        }}>
+                          <div className={`p-2 rounded-lg flex-shrink-0 ${
+                            isSeasonalGoal 
+                              ? 'bg-amber-100 dark:bg-amber-900/30' 
+                              : 'bg-blue-100 dark:bg-blue-900/30'
+                          }`}>
+                            <Target className={`h-4 w-4 ${
+                              isSeasonalGoal 
+                                ? 'text-amber-600 dark:text-amber-400' 
+                                : 'text-blue-600 dark:text-blue-400'
+                            }`} />
+                          </div>
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <h4 className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">{goal.title}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-xs">
+                                {goal.goal_type || 'Standard'}
+                              </Badge>
+                              {isSeasonalGoal && (
+                                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                                  <Star className="h-3 w-3 mr-1" />
+                                  Seasonal
+                                </Badge>
+                              )}
+                              {goal.streak > 0 && (
+                                <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
+                                  <Flame className="h-3 w-3 text-orange-500 dark:text-orange-400" />
+                                  <span>{goal.streak}d</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0 flex flex-col justify-center">
+                            <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{goal.progress || 0}%</div>
+                            <Progress value={goal.progress || 0} className={`w-16 h-1.5 mt-1 ${getProgressColor(goal.progress || 0)}`} />
                           </div>
                         </div>
-                        <div className="text-right flex-shrink-0 flex flex-col justify-center">
-                          <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{goal.progress}%</div>
-                          <Progress value={goal.progress} className={`w-16 h-1.5 mt-1 ${getProgressColor(goal.progress)}`} />
-                        </div>
-                      </div>
-                    ))
+                      )
+                    })
                   }
                 </div>
               )}
@@ -664,7 +694,7 @@ export default function DashboardPage() {
               </div>
               <Button
                 variant="ghost"
-                className="w-full text-sm h-10 flex-shrink-0 mb-2 border border-slate-200 dark:border-slate-700"
+                className="w-full text-xs h-8 flex-shrink-0 mb-2 border border-slate-200 dark:border-slate-700"
                 onClick={() => router.push('/notifications')}
               >
                 View All Activity
@@ -807,6 +837,18 @@ export default function DashboardPage() {
                             <span className="text-sm text-muted-foreground">
                               {category.completed || 0}/{category.total || 0}
                             </span>
+                          </div>
+                          <div className="flex items-center gap-2 mb-1">
+                            {category.standardGoals > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                {category.standardGoals} Standard
+                              </Badge>
+                            )}
+                            {category.seasonalGoals > 0 && (
+                              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                                {category.seasonalGoals} Seasonal
+                              </Badge>
+                            )}
                           </div>
                           <Progress value={category.progress} className={`h-2 ${getProgressColor(category.progress)}`} />
                         </div>

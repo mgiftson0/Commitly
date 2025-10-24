@@ -30,24 +30,24 @@ export default function AchievementsPage() {
       };
 
       const checkedAchievements = checkAchievements(goals, userStats);
-      setAchievements(checkedAchievements);
+      setAchievements(checkedAchievements || []);
     } catch {
       setAchievements(
-        ACHIEVEMENTS.map((a) => ({
+        (ACHIEVEMENTS || []).map((a) => ({
           ...a,
           unlocked: false,
           progress: 0,
-          total: a.condition([], {}).total,
+          total: a.condition ? a.condition([], {}).total : 0,
           progressPercentage: 0,
         })),
       );
     }
   };
 
-  const unlockedCount = achievements.filter((a) => a.unlocked).length;
-  const totalCount = achievements.length;
+  const unlockedCount = (achievements || []).filter((a) => a.unlocked).length;
+  const totalCount = (achievements || []).length;
 
-  const rarityCount = achievements.reduce(
+  const rarityCount = (achievements || []).reduce(
     (acc, achievement) => {
       if (achievement.unlocked) {
         acc[achievement.rarity] = (acc[achievement.rarity] || 0) + 1;
@@ -89,7 +89,7 @@ export default function AchievementsPage() {
 
         {/* Achievement Grid */}
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
-          {achievements.map((achievement) => (
+          {(achievements || []).map((achievement) => (
             <AchievementSquare
               key={achievement.id}
               achievement={achievement}
