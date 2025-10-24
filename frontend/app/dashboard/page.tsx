@@ -104,7 +104,7 @@ export default function DashboardPage() {
     return deadlines
   }, [goals])
 
-  // Calculate category progress from real goals with goal type differentiation
+  // Calculate category progress from real goals with combined progress
   const categoryProgress = useMemo(() => {
     const categories = ['Health & Fitness', 'Learning', 'Career', 'Personal']
     const iconMap = {
@@ -125,9 +125,18 @@ export default function DashboardPage() {
         const goalCategory = g.category || g.goal_type || 'personal'
         return goalCategory === category.toLowerCase().replace(' & ', '-').replace(' ', '-')
       })
+      
+      // Calculate combined progress for all goals in category
+      const totalProgress = categoryGoals.reduce((sum, goal) => {
+        if (goal.completed_at || goal.status === 'completed') {
+          return sum + 100
+        }
+        return sum + (goal.progress || 0)
+      }, 0)
+      
+      const averageProgress = categoryGoals.length > 0 ? Math.round(totalProgress / categoryGoals.length) : 0
       const completed = categoryGoals.filter(g => g.completed_at || g.status === 'completed').length
       const total = categoryGoals.length
-      const progress = total > 0 ? Math.round((completed / total) * 100) : 0
       
       // Include seasonal and standard goals
       const standardGoals = categoryGoals.filter(g => !g.is_seasonal && g.duration_type !== 'seasonal').length
@@ -137,7 +146,7 @@ export default function DashboardPage() {
         name: category,
         completed,
         total,
-        progress,
+        progress: averageProgress,
         standardGoals,
         seasonalGoals,
         color: colorMap[category as keyof typeof colorMap],

@@ -1,392 +1,384 @@
-import { addActivity } from "./activity-tracker";
+import { supabase } from './supabase-client'
 
 export interface StreakData {
-  personalStreak: number;
-  groupStreak: number;
-  overallStreak: number;
-  lastUpdated: string;
+  goalId: string
+  userId: string
+  currentStreak: number
+  longestStreak: number
+  lastActivityDate: string
+  streakType: 'individual' | 'group' | 'partner' | 'seasonal'
 }
 
-export interface GoalStreak {
-  goalId: string;
-  personalStreak: number;
-  groupStreak?: number;
-  lastCompletionDate?: string;
-  groupStreakContribution?: boolean;
+export interface ActivityData {
+  goalId: string
+  userId: string
+  activityDate: string
+  completed: boolean
+  notes?: string
 }
-
-export interface StreakSettings {
-  multiActivityThreshold: number; // 0.6 = 60%
-  overallStreakQuota: number; // 0.5 = 50% of active goals
-  groupStreakThreshold: number; // 0.6 = 60% of group members
-  gracePeriodHours: number; // 24 = 1 day grace period
-}
-
-const DEFAULT_SETTINGS: StreakSettings = {
-  multiActivityThreshold: 0.6,
-  overallStreakQuota: 0.5,
-  groupStreakThreshold: 0.6,
-  gracePeriodHours: 24,
-};
 
 export class StreakSystem {
-  private settings: StreakSettings;
+  // Individual goal streak logic
+  static async updateIndividualStreak(goalId: string, userId: string, completed: boolean): Promise<StreakData> {
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Get current streak data
+    const { data: currentStreak } = await supabase
+      .from('goal_streaks')
+      .select('*')
+      .eq('goal_id', goalId)
+      .eq('user_id', userId)
+      .eq('streak_type', 'individual')
+      .single()
 
-  constructor(settings: Partial<StreakSettings> = {}) {
-    this.settings = { ...DEFAULT_SETTINGS, ...settings };
-  }
+    // Record today's activity
+    await supabase
+      .from('goal_activities')
+      .upsert({
+        goal_id: goalId,
+        user_id: userId,
+        activity_date: today,
+        completed
+      })
 
-  // Check if goal's daily requirement is met
-  checkGoalDailyRequirement(goal: any): boolean {
-    const today = new Date().toDateString();
-
-    if (goal.type === "single-activity") {
-      return (
-        goal.completedAt && new Date(goal.completedAt).toDateString() === today
-      );
+    if (!currentStreak) {
+      // Create new streak record
+      const newStreak = {
+        goal_id: goalId,
+        user_id: userId,
+        current_streak: completed ? 1 : 0,
+        longest_streak: completed ? 1 : 0,
+        last_activity_date: today,
+        streak_type: 'individual'
+      }
+      
+      await supabase.from('goal_streaks').insert(newStreak)
+      return newStreak as StreakData
     }
 
-    if (goal.type === "multi-activity") {
-      const completedToday =
-        goal.activities?.filter(
-          (activity: any) =>
-            activity.completed &&
-            activity.completedAt &&
-            new Date(activity.completedAt).toDateString() === today,
-        ).length || 0;
+    // Calculate new streak
+    const lastDate = new Date(currentStreak.last_activity_date)
+    const todayDate = new Date(today)
+    const daysDiff = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
 
-      const threshold = Math.ceil(
-        goal.activities.length * this.settings.multiActivityThreshold,
-      );
-      return completedToday >= threshold;
-    }
-
-    return false;
-  }
-
-  // Check if user contributed to group goal today
-  checkGroupContribution(goal: any, userId: string): boolean {
-    if (!goal.isGroupGoal) return false;
-
-    const today = new Date().toDateString();
-    const userActivities =
-      goal.activities?.filter((activity: any) =>
-        activity.assigned_members?.includes(userId),
-      ) || [];
-
-    const completedToday = userActivities.filter(
-      (activity: any) =>
-        activity.completed &&
-        activity.completedAt &&
-        new Date(activity.completedAt).toDateString() === today,
-    ).length;
-
-    return completedToday > 0;
-  }
-
-  // Calculate group streak for a goal
-  calculateGroupStreak(goal: any): number {
-    if (!goal.isGroupGoal) return 0;
-
-    const today = new Date().toDateString();
-    const totalMembers = goal.groupMembers?.length || 0;
-
-    if (totalMembers === 0) return 0;
-
-    // Count members who completed their assigned activities today
-    const membersCompleted = goal.groupMembers.filter((member: any) => {
-      const memberActivities =
-        goal.activities?.filter((activity: any) =>
-          activity.assigned_members?.includes(member.id),
-        ) || [];
-
-      return memberActivities.some(
-        (activity: any) =>
-          activity.completed &&
-          activity.completedAt &&
-          new Date(activity.completedAt).toDateString() === today,
-      );
-    }).length;
-
-    const participationRate = membersCompleted / totalMembers;
-    const groupStreakContinues =
-      participationRate >= this.settings.groupStreakThreshold;
-
-    // Get current group streak from localStorage or goal data
-    const currentGroupStreak = goal.groupStreak || 0;
-
-    return groupStreakContinues ? currentGroupStreak + 1 : 0;
-  }
-
-  // Update individual goal streak
-  updateGoalStreak(goal: any, userId: string): GoalStreak {
-    const today = new Date().toDateString();
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
-
-    const dailyRequirementMet = this.checkGoalDailyRequirement(goal);
-    const groupContribution = this.checkGroupContribution(goal, userId);
-
-    let personalStreak = goal.personalStreak || 0;
-    let groupStreak = goal.groupStreak || 0;
-
-    // Update personal streak
-    if (dailyRequirementMet) {
-      const lastCompletion = goal.lastCompletionDate;
-      if (!lastCompletion || lastCompletion === yesterday) {
-        personalStreak += 1;
-      } else if (lastCompletion !== today) {
-        personalStreak = 1; // Start new streak
+    let newCurrentStreak = currentStreak.current_streak
+    
+    if (completed) {
+      if (daysDiff === 1) {
+        // Consecutive day
+        newCurrentStreak += 1
+      } else if (daysDiff === 0) {
+        // Same day update
+        newCurrentStreak = Math.max(1, currentStreak.current_streak)
+      } else {
+        // Gap in days - reset streak
+        newCurrentStreak = 1
       }
     } else {
-      // Check if grace period applies
-      const lastCompletion = goal.lastCompletionDate;
-      if (lastCompletion !== today && lastCompletion !== yesterday) {
-        personalStreak = 0;
+      if (daysDiff >= 1) {
+        // Missed day - reset streak
+        newCurrentStreak = 0
       }
     }
 
-    // Update group streak
-    if (goal.isGroupGoal) {
-      groupStreak = this.calculateGroupStreak(goal);
+    const newLongestStreak = Math.max(currentStreak.longest_streak, newCurrentStreak)
+
+    // Update streak record
+    const updatedStreak = {
+      current_streak: newCurrentStreak,
+      longest_streak: newLongestStreak,
+      last_activity_date: today
     }
 
-    // Trigger notifications
-    this.triggerStreakNotifications(goal, personalStreak, groupStreak, userId);
+    await supabase
+      .from('goal_streaks')
+      .update(updatedStreak)
+      .eq('goal_id', goalId)
+      .eq('user_id', userId)
+      .eq('streak_type', 'individual')
 
     return {
-      goalId: goal.id,
-      personalStreak,
-      groupStreak: goal.isGroupGoal ? groupStreak : undefined,
-      lastCompletionDate: dailyRequirementMet ? today : goal.lastCompletionDate,
-      groupStreakContribution: goal.isGroupGoal ? groupContribution : undefined,
-    };
+      goalId,
+      userId,
+      currentStreak: newCurrentStreak,
+      longestStreak: newLongestStreak,
+      lastActivityDate: today,
+      streakType: 'individual'
+    }
   }
 
-  // Calculate overall user streak
-  calculateOverallStreak(goals: any[], userId: string): StreakData {
-    const today = new Date().toDateString();
-    const activeGoals = goals.filter(
-      (g) => g.status === "active" && !g.completedAt,
-    );
+  // Group goal streak logic
+  static async updateGroupStreak(goalId: string, userId: string, completed: boolean): Promise<void> {
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Update individual streak within group
+    await this.updateIndividualStreak(goalId, userId, completed)
+    
+    // Get all group members
+    const { data: goal } = await supabase
+      .from('goals')
+      .select('*, goal_members(*)')
+      .eq('id', goalId)
+      .single()
 
-    if (activeGoals.length === 0) {
-      return {
-        personalStreak: 0,
-        groupStreak: 0,
-        overallStreak: 0,
-        lastUpdated: today,
-      };
+    if (!goal?.goal_members) return
+
+    // Check if all members completed today
+    const { data: todayActivities } = await supabase
+      .from('goal_activities')
+      .select('user_id, completed')
+      .eq('goal_id', goalId)
+      .eq('activity_date', today)
+
+    const memberIds = goal.goal_members.map((m: any) => m.user_id)
+    const completedMembers = todayActivities?.filter(a => a.completed).map(a => a.user_id) || []
+    
+    const allCompleted = memberIds.every(id => completedMembers.includes(id))
+    const participationRate = completedMembers.length / memberIds.length
+
+    // Update group streak based on participation threshold (80%)
+    if (participationRate >= 0.8) {
+      await this.updateGroupCollectiveStreak(goalId, true)
+    } else {
+      await this.updateGroupCollectiveStreak(goalId, false)
+    }
+  }
+
+  // Group collective streak
+  static async updateGroupCollectiveStreak(goalId: string, achieved: boolean): Promise<void> {
+    const today = new Date().toISOString().split('T')[0]
+    
+    const { data: groupStreak } = await supabase
+      .from('goal_streaks')
+      .select('*')
+      .eq('goal_id', goalId)
+      .eq('streak_type', 'group')
+      .single()
+
+    if (!groupStreak) {
+      await supabase.from('goal_streaks').insert({
+        goal_id: goalId,
+        user_id: null, // Group streak has no specific user
+        current_streak: achieved ? 1 : 0,
+        longest_streak: achieved ? 1 : 0,
+        last_activity_date: today,
+        streak_type: 'group'
+      })
+      return
     }
 
-    // Count goals where daily requirement is met
-    const personalGoalsMet = activeGoals.filter(
-      (g) => !g.isGroupGoal && this.checkGoalDailyRequirement(g),
-    ).length;
+    const lastDate = new Date(groupStreak.last_activity_date)
+    const todayDate = new Date(today)
+    const daysDiff = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
 
-    const groupGoalsMet = activeGoals.filter(
-      (g) => g.isGroupGoal && this.checkGroupContribution(g, userId),
-    ).length;
+    let newCurrentStreak = groupStreak.current_streak
 
-    const totalGoalsMet = personalGoalsMet + groupGoalsMet;
-    const dailyQuota = Math.ceil(
-      activeGoals.length * this.settings.overallStreakQuota,
-    );
-
-    // Get current streaks from localStorage
-    const currentStreaks = this.getCurrentStreaks();
-
-    // Calculate new streaks
-    const personalStreaks = activeGoals
-      .filter((g) => !g.isGroupGoal)
-      .map((g) => g.personalStreak || 0);
-    const groupStreaks = activeGoals
-      .filter((g) => g.isGroupGoal)
-      .map((g) => g.groupStreak || 0);
-
-    const personalStreak =
-      personalStreaks.length > 0 ? Math.max(...personalStreaks) : 0;
-    const groupStreak = groupStreaks.length > 0 ? Math.max(...groupStreaks) : 0;
-
-    // Update overall streak
-    let overallStreak = currentStreaks.overallStreak;
-    if (totalGoalsMet >= dailyQuota) {
-      const yesterday = new Date(
-        Date.now() - 24 * 60 * 60 * 1000,
-      ).toDateString();
-      if (
-        currentStreaks.lastUpdated === yesterday ||
-        currentStreaks.lastUpdated === today
-      ) {
-        overallStreak =
-          currentStreaks.lastUpdated === today
-            ? overallStreak
-            : overallStreak + 1;
+    if (achieved) {
+      if (daysDiff === 1) {
+        newCurrentStreak += 1
+      } else if (daysDiff === 0) {
+        newCurrentStreak = Math.max(1, groupStreak.current_streak)
       } else {
-        overallStreak = 1; // Start new overall streak
+        newCurrentStreak = 1
       }
     } else {
-      overallStreak = 0; // Break overall streak
-    }
-
-    const newStreakData: StreakData = {
-      personalStreak,
-      groupStreak,
-      overallStreak,
-      lastUpdated: today,
-    };
-
-    // Save to localStorage
-    this.saveStreakData(newStreakData);
-
-    return newStreakData;
-  }
-
-  // Trigger streak notifications
-  private triggerStreakNotifications(
-    goal: any,
-    personalStreak: number,
-    groupStreak: number,
-    userId: string,
-  ) {
-    const previousPersonalStreak = goal.personalStreak || 0;
-    const previousGroupStreak = goal.groupStreak || 0;
-
-    // Personal streak notifications
-    if (personalStreak === 1 && previousPersonalStreak === 0) {
-      addActivity({
-        type: "streak_milestone",
-        title: "Streak Started! 🔥",
-        message: `You started a streak for "${goal.title}"`,
-        goalId: goal.id,
-      });
-    } else if (
-      personalStreak > previousPersonalStreak &&
-      [3, 7, 14, 30, 100].includes(personalStreak)
-    ) {
-      addActivity({
-        type: "streak_milestone",
-        title: `${personalStreak}-Day Streak! 🏆`,
-        message: `Amazing! You've maintained "${goal.title}" for ${personalStreak} days`,
-        goalId: goal.id,
-      });
-    } else if (personalStreak === 0 && previousPersonalStreak > 0) {
-      addActivity({
-        type: "streak_milestone",
-        title: "Streak Ended 💔",
-        message: `Your ${previousPersonalStreak}-day streak for "${goal.title}" has ended. Start again tomorrow!`,
-        goalId: goal.id,
-      });
-    }
-
-    // Group streak notifications
-    if (goal.isGroupGoal && groupStreak > previousGroupStreak) {
-      if (groupStreak === 1) {
-        addActivity({
-          type: "streak_milestone",
-          title: "Group Streak Started! 👥🔥",
-          message: `Your group started a streak for "${goal.title}"`,
-          goalId: goal.id,
-        });
-      } else if ([3, 7, 14, 30].includes(groupStreak)) {
-        addActivity({
-          type: "streak_milestone",
-          title: `${groupStreak}-Day Group Streak! 🎉`,
-          message: `Your group has maintained "${goal.title}" for ${groupStreak} days together!`,
-          goalId: goal.id,
-        });
+      if (daysDiff >= 1) {
+        newCurrentStreak = 0
       }
     }
+
+    await supabase
+      .from('goal_streaks')
+      .update({
+        current_streak: newCurrentStreak,
+        longest_streak: Math.max(groupStreak.longest_streak, newCurrentStreak),
+        last_activity_date: today
+      })
+      .eq('goal_id', goalId)
+      .eq('streak_type', 'group')
   }
 
-  // Get current streak data from localStorage
-  private getCurrentStreaks(): StreakData {
-    try {
-      const stored = localStorage.getItem("userStreaks");
-      return stored
-        ? JSON.parse(stored)
-        : {
-            personalStreak: 0,
-            groupStreak: 0,
-            overallStreak: 0,
-            lastUpdated: new Date().toDateString(),
-          };
-    } catch {
-      return {
-        personalStreak: 0,
-        groupStreak: 0,
-        overallStreak: 0,
-        lastUpdated: new Date().toDateString(),
-      };
+  // Seasonal goal streak (weekly-based)
+  static async updateSeasonalStreak(goalId: string, userId: string, milestoneCompleted: boolean): Promise<void> {
+    const today = new Date()
+    const weekStart = new Date(today.setDate(today.getDate() - today.getDay())).toISOString().split('T')[0]
+    
+    // Record weekly milestone completion
+    await supabase
+      .from('goal_activities')
+      .upsert({
+        goal_id: goalId,
+        user_id: userId,
+        activity_date: weekStart,
+        completed: milestoneCompleted,
+        notes: 'Weekly milestone'
+      })
+
+    // Update weekly streak
+    const { data: seasonalStreak } = await supabase
+      .from('goal_streaks')
+      .select('*')
+      .eq('goal_id', goalId)
+      .eq('user_id', userId)
+      .eq('streak_type', 'seasonal')
+      .single()
+
+    if (!seasonalStreak) {
+      await supabase.from('goal_streaks').insert({
+        goal_id: goalId,
+        user_id: userId,
+        current_streak: milestoneCompleted ? 1 : 0,
+        longest_streak: milestoneCompleted ? 1 : 0,
+        last_activity_date: weekStart,
+        streak_type: 'seasonal'
+      })
+      return
     }
-  }
 
-  // Save streak data to localStorage
-  private saveStreakData(streakData: StreakData) {
-    try {
-      localStorage.setItem("userStreaks", JSON.stringify(streakData));
-    } catch (error) {
-      console.error("Failed to save streak data:", error);
+    // Calculate weekly streak
+    const lastWeek = new Date(seasonalStreak.last_activity_date)
+    const currentWeek = new Date(weekStart)
+    const weeksDiff = Math.floor((currentWeek.getTime() - lastWeek.getTime()) / (1000 * 60 * 60 * 24 * 7))
+
+    let newCurrentStreak = seasonalStreak.current_streak
+
+    if (milestoneCompleted) {
+      if (weeksDiff === 1) {
+        newCurrentStreak += 1
+      } else if (weeksDiff === 0) {
+        newCurrentStreak = Math.max(1, seasonalStreak.current_streak)
+      } else {
+        newCurrentStreak = 1
+      }
+    } else {
+      if (weeksDiff >= 1) {
+        newCurrentStreak = 0
+      }
     }
+
+    await supabase
+      .from('goal_streaks')
+      .update({
+        current_streak: newCurrentStreak,
+        longest_streak: Math.max(seasonalStreak.longest_streak, newCurrentStreak),
+        last_activity_date: weekStart
+      })
+      .eq('goal_id', goalId)
+      .eq('user_id', userId)
+      .eq('streak_type', 'seasonal')
   }
 
-  // Check for at-risk streaks (call this periodically)
-  checkAtRiskStreaks(goals: any[], userId: string) {
-    const currentHour = new Date().getHours();
-    if (currentHour !== 22) return; // Only check at 10 PM
+  // Partner streak logic
+  static async updatePartnerStreak(goalId: string, userId: string, partnerId: string, completed: boolean): Promise<void> {
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Update individual streaks first
+    await this.updateIndividualStreak(goalId, userId, completed)
+    
+    // Check if partner also completed today
+    const { data: partnerActivity } = await supabase
+      .from('goal_activities')
+      .select('completed')
+      .eq('goal_id', goalId)
+      .eq('user_id', partnerId)
+      .eq('activity_date', today)
+      .single()
 
-    const today = new Date().toDateString();
-    const activeGoals = goals.filter(
-      (g) => g.status === "active" && !g.completedAt,
-    );
+    const bothCompleted = completed && partnerActivity?.completed
 
-    activeGoals.forEach((goal) => {
-      const hasPersonalStreak = (goal.personalStreak || 0) > 0;
-      const dailyRequirementMet = this.checkGoalDailyRequirement(goal);
+    // Update mutual streak
+    const partnerStreakId = `${goalId}-${Math.min(userId, partnerId)}-${Math.max(userId, partnerId)}`
+    
+    const { data: mutualStreak } = await supabase
+      .from('goal_streaks')
+      .select('*')
+      .eq('goal_id', goalId)
+      .eq('streak_type', 'partner')
+      .single()
 
-      if (hasPersonalStreak && !dailyRequirementMet) {
-        addActivity({
-          type: "streak_milestone",
-          title: "Streak at Risk! ⚠️",
-          message: `Your ${goal.personalStreak}-day streak for "${goal.title}" is at risk. Complete it before midnight!`,
-          goalId: goal.id,
-        });
+    if (!mutualStreak) {
+      await supabase.from('goal_streaks').insert({
+        goal_id: goalId,
+        user_id: partnerStreakId, // Use combined ID for partner streaks
+        current_streak: bothCompleted ? 1 : 0,
+        longest_streak: bothCompleted ? 1 : 0,
+        last_activity_date: today,
+        streak_type: 'partner'
+      })
+      return
+    }
+
+    // Calculate mutual streak
+    const lastDate = new Date(mutualStreak.last_activity_date)
+    const todayDate = new Date(today)
+    const daysDiff = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+
+    let newCurrentStreak = mutualStreak.current_streak
+
+    if (bothCompleted) {
+      if (daysDiff === 1) {
+        newCurrentStreak += 1
+      } else if (daysDiff === 0) {
+        newCurrentStreak = Math.max(1, mutualStreak.current_streak)
+      } else {
+        newCurrentStreak = 1
       }
-
-      if (goal.isGroupGoal) {
-        const groupContribution = this.checkGroupContribution(goal, userId);
-        const hasGroupStreak = (goal.groupStreak || 0) > 0;
-
-        if (hasGroupStreak && !groupContribution) {
-          addActivity({
-            type: "streak_milestone",
-            title: "Group Streak at Risk! 👥⚠️",
-            message: `The group's ${goal.groupStreak}-day streak for "${goal.title}" needs your contribution!`,
-            goalId: goal.id,
-          });
-        }
+    } else {
+      if (daysDiff >= 1) {
+        newCurrentStreak = 0
       }
-    });
+    }
+
+    await supabase
+      .from('goal_streaks')
+      .update({
+        current_streak: newCurrentStreak,
+        longest_streak: Math.max(mutualStreak.longest_streak, newCurrentStreak),
+        last_activity_date: today
+      })
+      .eq('goal_id', goalId)
+      .eq('streak_type', 'partner')
   }
-}
 
-// Export singleton instance
-export const streakSystem = new StreakSystem();
+  // Get streak data for display
+  static async getStreakData(goalId: string, userId?: string): Promise<StreakData[]> {
+    let query = supabase
+      .from('goal_streaks')
+      .select('*')
+      .eq('goal_id', goalId)
 
-// Helper functions for easy access
-export function updateGoalStreak(goal: any, userId: string = "mock-user-id") {
-  return streakSystem.updateGoalStreak(goal, userId);
-}
+    if (userId) {
+      query = query.or(`user_id.eq.${userId},streak_type.eq.group,streak_type.eq.partner`)
+    }
 
-export function calculateOverallStreak(
-  goals: any[],
-  userId: string = "mock-user-id",
-) {
-  return streakSystem.calculateOverallStreak(goals, userId);
-}
+    const { data } = await query
+    
+    return (data || []).map(streak => ({
+      goalId: streak.goal_id,
+      userId: streak.user_id,
+      currentStreak: streak.current_streak,
+      longestStreak: streak.longest_streak,
+      lastActivityDate: streak.last_activity_date,
+      streakType: streak.streak_type
+    }))
+  }
 
-export function checkAtRiskStreaks(
-  goals: any[],
-  userId: string = "mock-user-id",
-) {
-  return streakSystem.checkAtRiskStreaks(goals, userId);
+  // Check if user can maintain streak (grace period logic)
+  static async checkStreakGracePeriod(goalId: string, userId: string): Promise<boolean> {
+    const { data: streak } = await supabase
+      .from('goal_streaks')
+      .select('last_activity_date, current_streak')
+      .eq('goal_id', goalId)
+      .eq('user_id', userId)
+      .single()
+
+    if (!streak || streak.current_streak === 0) return false
+
+    const lastDate = new Date(streak.last_activity_date)
+    const today = new Date()
+    const daysDiff = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+
+    // Allow 1 day grace period for streaks > 7 days
+    return daysDiff <= 1 && streak.current_streak >= 7
+  }
 }

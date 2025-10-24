@@ -70,6 +70,7 @@ export interface CategoryStat {
   name: string;
   completed: number;
   total: number;
+  progress?: number;
   standardGoals?: number;
   seasonalGoals?: number;
   color: string;

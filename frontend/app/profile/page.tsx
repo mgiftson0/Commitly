@@ -52,6 +52,8 @@ import { ACHIEVEMENTS, checkAchievements } from "@/lib/achievements"
 import { getProgressColor } from "@/lib/utils/progress-colors"
 import { authHelpers, supabase } from "@/lib/supabase-client"
 import { SocialLinks } from "@/components/profile/social-links"
+import { getUserStreakStats, getUserStreaks } from "@/lib/streak-manager"
+import { StreakStats } from "@/components/streaks/streak-badge"
 
 export default function ProfilePage() {
   const [goals, setGoals] = useState<Goal[]>([])
@@ -61,6 +63,8 @@ export default function ProfilePage() {
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null)
   const [showCelebration, setShowCelebration] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [streakStats, setStreakStats] = useState<any>(null)
+  const [topStreaks, setTopStreaks] = useState<any[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -109,6 +113,14 @@ export default function ProfilePage() {
           setAchievements([]);
         }
 
+        // Load streak stats
+        const stats = await getUserStreakStats()
+        setStreakStats(stats)
+
+        // Load top streaks
+        const streaks = await getUserStreaks()
+        setTopStreaks(streaks.slice(0, 5)) // Top 5 streaks
+
       } catch (error: any) {
         console.error('Error loading profile:', error);
         toast.error('Failed to load profile data');
@@ -120,7 +132,7 @@ export default function ProfilePage() {
     loadProfile();
   }, [router]);
 
-  // Calculate category stats from real goals with goal type differentiation
+  // Calculate category stats from real goals with combined progress
   const categoryStats = useMemo<CategoryStat[]>(() => {
     const categories = ['Health & Fitness', 'Learning', 'Career', 'Personal'];
     const categoryMap = {
@@ -151,6 +163,15 @@ export default function ProfilePage() {
         return mappedCategory === category;
       });
 
+      // Calculate combined progress for all goals in category
+      const totalProgress = categoryGoals.reduce((sum, goal) => {
+        if (goal.completed_at || goal.status === 'completed') {
+          return sum + 100
+        }
+        return sum + (goal.progress || 0)
+      }, 0)
+      
+      const averageProgress = categoryGoals.length > 0 ? Math.round(totalProgress / categoryGoals.length) : 0
       const completed = categoryGoals.filter(goal => goal.completed_at || goal.status === 'completed').length;
       const total = categoryGoals.length;
       
@@ -162,6 +183,7 @@ export default function ProfilePage() {
         name: category,
         completed,
         total,
+        progress: averageProgress,
         standardGoals,
         seasonalGoals,
         color: colorMap[category as keyof typeof colorMap],
@@ -320,11 +342,10 @@ export default function ProfilePage() {
                 <Flame className="h-4 w-4 text-orange-600" />
               </div>
               <div>
-                <p className="text-base sm:text-lg md:text-xl font-bold">{(() => {
-                  const maxStreak = goals.reduce((max, goal) => Math.max(max, goal.progress || 0), 0);
-                  return Math.floor(maxStreak);
-                })()}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Streak</p>
+                <p className="text-base sm:text-lg md:text-xl font-bold">
+                  {streakStats?.best_current_streak || 0}
+                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Best Streak</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -342,6 +363,41 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Streak Stats Card */}
+        {streakStats && streakStats.active_goals_with_streaks > 0 && (
+          <Card className="border-orange-200 dark:border-orange-900 bg-gradient-to-br from-orange-50/50 to-background dark:from-orange-950/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Flame className="h-5 w-5 text-orange-500" />
+                Your Streaks
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StreakStats
+                currentStreak={streakStats.best_current_streak || 0}
+                longestStreak={streakStats.personal_best_streak || 0}
+                totalCompletions={streakStats.lifetime_completions || 0}
+              />
+              {topStreaks.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Top Active Streaks</p>
+                  {topStreaks.map((streak: any) => (
+                    <div key={streak.goal_id} className="flex items-center justify-between p-2 rounded-lg bg-background/50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{streak.goals?.title || 'Goal'}</p>
+                        <p className="text-xs text-muted-foreground">{streak.total_completions} completions</p>
+                      </div>
+                      <Badge className="bg-orange-500 text-white">
+                        🔥 {streak.current_streak}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Main Content */}
@@ -631,7 +687,7 @@ export default function ProfilePage() {
                           </Badge>
                         )}
                       </div>
-                      <Progress value={percentage} className={`h-1.5 sm:h-2 ${getProgressColor(percentage)}`} />
+                      <Progress value={category.progress || percentage} className={`h-1.5 sm:h-2 ${getProgressColor(category.progress || percentage)}`} />
                     </div>
                   )
                 })}

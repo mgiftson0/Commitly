@@ -32,6 +32,9 @@ import { authHelpers, supabase } from "@/lib/supabase-client"
 import { toast } from "sonner"
 import { getProgressColor } from "@/lib/utils/progress-colors"
 import { SocialLinks } from "@/components/profile/social-links"
+import { getGoalStreak } from "@/lib/streak-manager"
+import { StreakBadge } from "@/components/streaks/streak-badge"
+import { Flame } from "lucide-react"
 
 export default function UserProfilePage() {
   const params = useParams()
@@ -40,9 +43,12 @@ export default function UserProfilePage() {
   
   const [profile, setProfile] = useState<any>(null)
   const [goals, setGoals] = useState<any[]>([])
+  const [goalsWithStreaks, setGoalsWithStreaks] = useState<any[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [followState, setFollowState] = useState<'none' | 'pending' | 'following' | 'followers'>('none')
   const [loading, setLoading] = useState(true)
+  const [followingCount, setFollowingCount] = useState(0)
+  const [followersCount, setFollowersCount] = useState(0)
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -74,6 +80,33 @@ export default function UserProfilePage() {
           .order('created_at', { ascending: false })
 
         setGoals(goalsData || [])
+
+        // Load streaks for public goals
+        if (goalsData && goalsData.length > 0) {
+          const goalsWithStreakData = await Promise.all(
+            goalsData.map(async (goal) => {
+              const streak = await getGoalStreak(goal.id, profileData.id)
+              return { ...goal, streak }
+            })
+          )
+          setGoalsWithStreaks(goalsWithStreakData)
+        }
+
+        // Load follow counts
+        const { data: followingData } = await supabase
+          .from('accountability_partners')
+          .select('id')
+          .eq('user_id', profileData.id)
+          .eq('status', 'accepted')
+        
+        const { data: followersData } = await supabase
+          .from('accountability_partners')
+          .select('id')
+          .eq('partner_id', profileData.id)
+          .eq('status', 'accepted')
+        
+        setFollowingCount(followingData?.length || 0)
+        setFollowersCount(followersData?.length || 0)
 
         // Check follow relationship if user is logged in
         if (user && user.id !== profileData.id) {
@@ -151,27 +184,52 @@ export default function UserProfilePage() {
           ? `${senderProfile.first_name} ${senderProfile.last_name || ''}`.trim()
           : senderProfile?.username || 'Someone'
 
-        const { error: notifError } = await supabase
+        // Check if notification already exists to avoid 409 conflict
+        const { data: existingNotif } = await supabase
           .from('notifications')
-          .insert({
-            user_id: profile.id,
-            title: 'New Partner Request',
-            message: `${senderName} wants to be your accountability partner!`,
-            type: 'partner_request',
-            read: false,
-            data: { 
-              sender_id: currentUser.id,
-              sender_name: senderName,
-              sender_username: senderProfile?.username || 'user'
-            }
-          })
+          .select('id')
+          .eq('user_id', profile.id)
+          .eq('type', 'partner_request')
+          .eq('data->>sender_id', currentUser.id)
+          .maybeSingle()
 
-        if (notifError) {
-          console.error('Notification error:', notifError)
+        if (!existingNotif) {
+          const { error: notifError } = await supabase
+            .from('notifications')
+            .insert({
+              user_id: profile.id,
+              title: 'New Partner Request',
+              message: `${senderName} wants to be your accountability partner!`,
+              type: 'partner_request',
+              read: false,
+              data: { 
+                sender_id: currentUser.id,
+                sender_name: senderName,
+                sender_username: senderProfile?.username || 'user'
+              }
+            })
+
+          if (notifError) {
+            console.error('Notification error:', notifError)
+          }
         }
 
         setFollowState('pending')
         toast.success('Partner request sent!')
+      } else if (action === 'unfollow') {
+        // Delete the partnership
+        const { error } = await supabase
+          .from('accountability_partners')
+          .delete()
+          .or(`and(user_id.eq.${currentUser.id},partner_id.eq.${profile.id}),and(user_id.eq.${profile.id},partner_id.eq.${currentUser.id})`)
+
+        if (error) {
+          console.error('Unfollow error:', error)
+          throw error
+        }
+
+        setFollowState('none')
+        toast.success('Unfollowed successfully!')
       }
     } catch (error: any) {
       console.error('Follow action error:', error)
@@ -262,7 +320,7 @@ export default function UserProfilePage() {
                     )}
                     
                     {followState === 'following' && (
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={() => handleFollowAction('unfollow')}>
                         <UserCheck className="h-4 w-4 mr-2" />
                         Following
                       </Button>
@@ -313,8 +371,8 @@ export default function UserProfilePage() {
               </div>
               
               <div className="flex gap-6 text-sm">
-                <span><strong>0</strong> <span className="text-muted-foreground">Following</span></span>
-                <span><strong>0</strong> <span className="text-muted-foreground">Followers</span></span>
+                <span><strong>{followingCount}</strong> <span className="text-muted-foreground">Following</span></span>
+                <span><strong>{followersCount}</strong> <span className="text-muted-foreground">Followers</span></span>
               </div>
               
               <SocialLinks profile={{
@@ -448,6 +506,11 @@ function GoalsList({ goals }: { goals: any[] }) {
                   </div>
                   <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
                   <div className="mt-auto pt-2 space-y-1">
+                    {goal.streak && goal.streak.current_streak > 0 && (
+                      <div className="flex justify-center mb-1">
+                        <StreakBadge streak={goal.streak.current_streak} size="sm" showLabel={false} />
+                      </div>
+                    )}
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                       <span>{goal.goal_type || goal.category || 'Standard'}</span>
                       <span>{isCompleted ? 100 : (goal.progress || 0)}%</span>

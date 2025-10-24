@@ -2,8 +2,22 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Lock, Trophy } from "lucide-react"
+import { Lock, Trophy, Target, Star, Flame, Award, Zap, Heart, Users, TrendingUp, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+// Map string icon names to Lucide React components
+const iconMap: Record<string, any> = {
+  trophy: Trophy,
+  target: Target,
+  star: Star,
+  flame: Flame,
+  award: Award,
+  zap: Zap,
+  heart: Heart,
+  users: Users,
+  'trending-up': TrendingUp,
+  'check-circle': CheckCircle2,
+}
 
 interface AchievementSquareProps {
   achievement: {
@@ -63,7 +77,15 @@ export function AchievementSquare({ achievement, size = 'md', onClick }: Achieve
     ? achievement.rarity 
     : 'common'
   const config = rarityConfig[validRarity]
-  const Icon = achievement.icon || Trophy
+  
+  // Get icon component - handle both string and component types
+  let Icon = Trophy; // default
+  if (typeof achievement.icon === 'string') {
+    Icon = iconMap[achievement.icon] || Trophy;
+  } else if (achievement.icon) {
+    Icon = achievement.icon;
+  }
+  
   const isSmall = size === 'sm'
   const isLarge = size === 'lg'
   const isLocked = !achievement.unlocked

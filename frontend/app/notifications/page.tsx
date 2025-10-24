@@ -185,6 +185,7 @@ export default function NotificationsPage() {
       case 'goal_created': return Target
       case 'achievement_unlocked': return Trophy
       case 'partner_request': return Users
+      case 'goal_partner_request': return Users
       case 'encouragement_received': return Heart
       default: return Bell
     }
@@ -196,6 +197,7 @@ export default function NotificationsPage() {
       case 'goal_created': return 'text-blue-600'
       case 'achievement_unlocked': return 'text-yellow-600'
       case 'partner_request': return 'text-purple-600'
+      case 'goal_partner_request': return 'text-blue-600'
       case 'encouragement_received': return 'text-pink-600'
       default: return 'text-gray-600'
     }
@@ -352,6 +354,19 @@ export default function NotificationsPage() {
                                 Accept
                               </Button>
                             </div>
+                          </div>
+                        )}
+                        
+                        {notification.type === 'goal_partner_request' && notification.data?.requester_id && notification.data?.goal_id && (
+                          <div className="mt-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={() => router.push(`/goals/${notification.data.goal_id}`)}
+                            >
+                              View Goal & Respond
+                            </Button>
                           </div>
                         )}
                       </div>
