@@ -55,6 +55,7 @@ import { SocialLinks } from "@/components/profile/social-links"
 import { ShareProfile } from "@/components/profile/share-profile"
 import { getUserStreakStats, getUserStreaks } from "@/lib/streak-manager"
 import { StreakStats } from "@/components/streaks/streak-badge"
+import { FollowersModal } from "@/components/profile/followers-modal"
 
 export default function ProfilePage() {
   const [goals, setGoals] = useState<Goal[]>([])
@@ -66,6 +67,8 @@ export default function ProfilePage() {
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [streakStats, setStreakStats] = useState<any>(null)
   const [topStreaks, setTopStreaks] = useState<any[]>([])
+  const [showFollowersModal, setShowFollowersModal] = useState(false)
+  const [followersModalTab, setFollowersModalTab] = useState<'followers' | 'following'>('followers')
   const router = useRouter()
 
   useEffect(() => {
@@ -257,7 +260,8 @@ export default function ProfilePage() {
                 </Link>
                 <ShareProfile 
                   username={profile?.username || 'user'} 
-                  displayName={profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'User' : 'User'} 
+                  displayName={profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'User' : 'User'}
+                  profilePicture={profile?.profile_picture_url}
                 />
               </div>
             </div>
@@ -300,18 +304,26 @@ export default function ProfilePage() {
 
               {/* Enhanced Stats Row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-3 border-t border-border/50">
-                <Link href="/followers">
-                  <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                    <div className="font-bold text-lg sm:text-xl text-primary">{profile?.followers_count || 0}</div>
-                    <div className="text-xs sm:text-sm text-muted-foreground">Followers</div>
-                  </div>
-                </Link>
-                <Link href="/following">
-                  <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                    <div className="font-bold text-lg sm:text-xl text-primary">{profile?.following_count || 0}</div>
-                    <div className="text-xs sm:text-sm text-muted-foreground">Following</div>
-                  </div>
-                </Link>
+                <div 
+                  className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setFollowersModalTab('followers')
+                    setShowFollowersModal(true)
+                  }}
+                >
+                  <div className="font-bold text-lg sm:text-xl text-primary">{profile?.followers_count || 0}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Followers</div>
+                </div>
+                <div 
+                  className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => {
+                    setFollowersModalTab('following')
+                    setShowFollowersModal(true)
+                  }}
+                >
+                  <div className="font-bold text-lg sm:text-xl text-primary">{profile?.following_count || 0}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Following</div>
+                </div>
                 <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="font-bold text-lg sm:text-xl text-primary">{goals.length}</div>
                   <div className="text-xs sm:text-sm text-muted-foreground">Goals</div>
@@ -450,9 +462,14 @@ export default function ProfilePage() {
                           if (isGroupGoal) return <Users className="h-3 w-3 text-purple-600" />
                           return <Target className="h-3 w-3 text-blue-600" />
                         }
+                        const getGoalCardStyle = () => {
+                          if (isSeasonalGoal) return "border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-background"
+                          if (isGroupGoal) return "border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50/50 to-white dark:from-purple-950/20 dark:to-background"
+                          return ""
+                        }
                         return (
                           <Link key={goal.id} href={`/goals/${goal.id}`}>
-                            <div className="aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer bg-card">
+                            <div className={`aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer bg-card ${getGoalCardStyle()}`}>
                               <div className="h-full flex flex-col">
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-1">
@@ -698,6 +715,14 @@ export default function ProfilePage() {
         open={showCategoryModal}
         onOpenChange={setShowCategoryModal}
         categoryStats={categoryStats}
+      />
+      
+      {/* Followers Modal */}
+      <FollowersModal
+        open={showFollowersModal}
+        onOpenChange={setShowFollowersModal}
+        userId={profile?.id || ''}
+        initialTab={followersModalTab}
       />
       
       {/* Celebration Animation */}

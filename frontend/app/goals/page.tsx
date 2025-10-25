@@ -841,10 +841,20 @@ export default function GoalsPage() {
           </TabsContent>
 
           <TabsContent value="partner-goals" className="space-y-4">
-            <GoalsGrid goals={partnerGoals} router={router} isPartnerView={true} onGoalDeleted={() => {
-              const updatedGoals = JSON.parse(localStorage.getItem('goals') || '[]')
-              setRealGoals(updatedGoals)
-            }} />
+            {partnerGoals.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No partner goals found</p>
+                  <p className="text-sm text-muted-foreground mt-2">Partner goals will appear here when you're added as an accountability partner</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <GoalsGrid goals={partnerGoals} router={router} isPartnerView={true} onGoalDeleted={() => {
+                const updatedGoals = JSON.parse(localStorage.getItem('goals') || '[]')
+                setRealGoals(updatedGoals)
+              }} />
+            )}
           </TabsContent>
 
           <TabsContent value="active" className="space-y-4">

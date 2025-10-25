@@ -924,6 +924,20 @@ export default function CreateGoalPage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="startDate" className="text-sm font-medium">
+                            Start Date <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="startDate"
+                            type="date"
+                            value={singleDate}
+                            onChange={(e) => setSingleDate(e.target.value)}
+                            className="focus-ring"
+                            min={new Date().toISOString().split("T")[0]}
+                            required
+                          />
+                        </div>
                         <div className="grid gap-4 sm:grid-cols-3">
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">

@@ -6,18 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Target, ArrowLeft, CheckCircle2, Flame, AlertTriangle } from "lucide-react"
+import { Target, ArrowLeft, CheckCircle2, Flame, AlertTriangle, Edit, Pause, Play } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { supabase, authHelpers } from "@/lib/supabase-client"
+import { SuspendResumeDialog } from "@/components/goals/suspend-resume-dialog"
+import { ActivityCompletionDialog } from "@/components/goals/activity-completion-dialog"
 
 export default function UpdateGoalPage() {
   const [goal, setGoal] = useState<any>(null)
   const [activities, setActivities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [canUpdate, setCanUpdate] = useState(true)
+  const [canEdit, setCanEdit] = useState(false)
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false)
   const router = useRouter()
   const params = useParams()
   const goalId = params.id as string
@@ -52,9 +56,16 @@ export default function UpdateGoalPage() {
       if (goalData.completed_at || goalData.status === 'completed') {
         setGoal({ ...goalData, completed_at: goalData.completed_at || new Date().toISOString() })
         setCanUpdate(false)
+        setCanEdit(false)
         setLoading(false)
         return
       }
+      
+      // Check if goal can be edited (within 5 hours)
+      const created = new Date(goalData.created_at).getTime()
+      const now = Date.now()
+      const fiveHours = 5 * 60 * 60 * 1000
+      setCanEdit((now - created) <= fiveHours)
       
       setCanUpdate(true)
 
@@ -283,12 +294,28 @@ export default function UpdateGoalPage() {
             <h1 className="text-3xl font-bold">Update Goal Progress</h1>
             <p className="text-muted-foreground">Mark activities as completed to track your progress</p>
           </div>
-          <Link href={`/goals/${goalId}`}>
-            <Button variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Goal
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            {canEdit && (
+              <Link href={`/goals/${goalId}/edit`}>
+                <Button variant="outline" size="sm">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Goal
+                </Button>
+              </Link>
+            )}
+            <SuspendResumeDialog
+              goalId={goalId}
+              goalTitle={goal.title}
+              isSuspended={goal.status === 'paused' || goal.is_suspended}
+              onStatusChange={loadGoalData}
+            />
+            <Link href={`/goals/${goalId}`}>
+              <Button variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Goal
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <Card>
@@ -316,10 +343,20 @@ export default function UpdateGoalPage() {
           </CardContent>
         </Card>
 
-        {goal.type === 'multi-activity' && (
+        {goal.goal_type === 'multi-activity' && (
           <Card>
             <CardHeader>
-              <CardTitle>Activities</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Activities</CardTitle>
+                <Button 
+                  onClick={() => setShowCompletionDialog(true)}
+                  disabled={!canUpdate}
+                  size="sm"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Confirm Completion
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
               {activities.map((activity, index) => (
@@ -346,14 +383,14 @@ export default function UpdateGoalPage() {
           </Card>
         )}
 
-        {goal.type === 'single-activity' && (
+        {goal.goal_type === 'single-activity' && (
           <Card>
             <CardHeader>
               <CardTitle>Mark as Complete</CardTitle>
             </CardHeader>
             <CardContent>
               <Button
-                onClick={() => toggleActivity(0)}
+                onClick={() => setShowCompletionDialog(true)}
                 className="w-full"
                 variant={activities[0]?.completed ? "outline" : "default"}
                 disabled={!canUpdate}
@@ -373,6 +410,14 @@ export default function UpdateGoalPage() {
             </CardContent>
           </Card>
         )}
+        <ActivityCompletionDialog
+          open={showCompletionDialog}
+          onOpenChange={setShowCompletionDialog}
+          goalId={goalId}
+          goalTitle={goal.title}
+          activities={activities.map(a => ({ id: a.id, title: a.title, completed: a.completed }))}
+          onComplete={loadGoalData}
+        />
       </div>
     </MainLayout>
   )

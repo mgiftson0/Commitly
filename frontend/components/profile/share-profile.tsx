@@ -11,9 +11,10 @@ import { toast } from "sonner"
 interface ShareProfileProps {
   username: string
   displayName: string
+  profilePicture?: string
 }
 
-export function ShareProfile({ username, displayName }: ShareProfileProps) {
+export function ShareProfile({ username, displayName, profilePicture }: ShareProfileProps) {
   const [copied, setCopied] = useState(false)
   const profileUrl = `${window.location.origin}/profile/${username}`
   
@@ -55,7 +56,12 @@ export function ShareProfile({ username, displayName }: ShareProfileProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Share Profile</DialogTitle>
+          <DialogTitle className="flex items-center gap-3">
+            {profilePicture && (
+              <img src={profilePicture} alt={displayName} className="w-8 h-8 rounded-full" />
+            )}
+            Share {displayName}'s Profile
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex items-center space-x-2">

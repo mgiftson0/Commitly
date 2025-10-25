@@ -38,6 +38,7 @@ import { StreakBadge } from "@/components/streaks/streak-badge"
 import { UnfollowDialog } from "@/components/ui/unfollow-dialog"
 import { ShareProfile } from "@/components/profile/share-profile"
 import { Flame } from "lucide-react"
+import { FollowersModal } from "@/components/profile/followers-modal"
 
 export default function UserProfilePage() {
   const params = useParams()
@@ -53,6 +54,8 @@ export default function UserProfilePage() {
   const [followingCount, setFollowingCount] = useState(0)
   const [followersCount, setFollowersCount] = useState(0)
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false)
+  const [showFollowersModal, setShowFollowersModal] = useState(false)
+  const [followersModalTab, setFollowersModalTab] = useState<'followers' | 'following'>('followers')
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -365,10 +368,7 @@ export default function UserProfilePage() {
                   </Link>
                 )}
                 
-                <ShareProfile 
-                  username={profile.username} 
-                  displayName={`${profile.first_name} ${profile.last_name}`} 
-                />
+
                 <Button variant="ghost" size="icon">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -404,8 +404,24 @@ export default function UserProfilePage() {
               </div>
               
               <div className="flex gap-6 text-sm">
-                <span><strong>{followingCount}</strong> <span className="text-muted-foreground">Following</span></span>
-                <span><strong>{followersCount}</strong> <span className="text-muted-foreground">Followers</span></span>
+                <span 
+                  className="cursor-pointer hover:underline"
+                  onClick={() => {
+                    setFollowersModalTab('following')
+                    setShowFollowersModal(true)
+                  }}
+                >
+                  <strong>{followingCount}</strong> <span className="text-muted-foreground">Following</span>
+                </span>
+                <span 
+                  className="cursor-pointer hover:underline"
+                  onClick={() => {
+                    setFollowersModalTab('followers')
+                    setShowFollowersModal(true)
+                  }}
+                >
+                  <strong>{followersCount}</strong> <span className="text-muted-foreground">Followers</span>
+                </span>
               </div>
               
               <SocialLinks profile={{
@@ -465,6 +481,13 @@ export default function UserProfilePage() {
           </TabsContent>
         </Tabs>
         
+        <FollowersModal
+          open={showFollowersModal}
+          onOpenChange={setShowFollowersModal}
+          userId={profile.id}
+          initialTab={followersModalTab}
+        />
+        
         <UnfollowDialog
           open={showUnfollowDialog}
           onOpenChange={setShowUnfollowDialog}
@@ -511,10 +534,16 @@ function GoalsList({ goals }: { goals: any[] }) {
       if (isGroupGoal) return <Users className="h-4 w-4 text-purple-600" />
       return <Target className="h-4 w-4 text-blue-600" />
     }
+    
+    const getGoalCardStyle = () => {
+      if (isSeasonalGoal) return "border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-background"
+      if (isGroupGoal) return "border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50/50 to-white dark:from-purple-950/20 dark:to-background"
+      return ""
+    }
 
     return (
       <Link href={`/goals/${goal.id}`}>
-        <div className="aspect-[4/3] p-4 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer bg-card">
+        <div className={`aspect-[4/3] p-4 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer bg-card ${getGoalCardStyle()}`}>
           <div className="h-full flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
