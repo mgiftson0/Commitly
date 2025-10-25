@@ -34,7 +34,7 @@ const mockApiKeys: ApiKey[] = [
     name: "SMS OTP Gateway",
     key: "pk_***********xyz",
     service: "Twilio",
-    expiresAt: null,
+    expiresAt: undefined,
     isActive: true,
   },
   {
@@ -96,7 +96,8 @@ const DeveloperControlsPage = () => {
   const handleApiKeyChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setNewApiKeyFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,

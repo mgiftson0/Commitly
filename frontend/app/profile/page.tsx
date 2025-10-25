@@ -52,6 +52,7 @@ import { ACHIEVEMENTS, checkAchievements } from "@/lib/achievements"
 import { getProgressColor, getProgressBarColor } from "@/lib/utils/progress-colors"
 import { authHelpers, supabase } from "@/lib/supabase-client"
 import { SocialLinks } from "@/components/profile/social-links"
+import { ShareProfile } from "@/components/profile/share-profile"
 import { getUserStreakStats, getUserStreaks } from "@/lib/streak-manager"
 import { StreakStats } from "@/components/streaks/streak-badge"
 
@@ -254,6 +255,10 @@ export default function ProfilePage() {
                     <span className="hidden sm:inline">Edit Profile</span>
                   </Button>
                 </Link>
+                <ShareProfile 
+                  username={profile?.username || 'user'} 
+                  displayName={profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'User' : 'User'} 
+                />
               </div>
             </div>
 
@@ -295,14 +300,18 @@ export default function ProfilePage() {
 
               {/* Enhanced Stats Row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-3 border-t border-border/50">
-                <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="font-bold text-lg sm:text-xl text-primary">{profile?.followers_count || 0}</div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Followers</div>
-                </div>
-                <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="font-bold text-lg sm:text-xl text-primary">{profile?.following_count || 0}</div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Following</div>
-                </div>
+                <Link href="/followers">
+                  <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                    <div className="font-bold text-lg sm:text-xl text-primary">{profile?.followers_count || 0}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">Followers</div>
+                  </div>
+                </Link>
+                <Link href="/following">
+                  <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                    <div className="font-bold text-lg sm:text-xl text-primary">{profile?.following_count || 0}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">Following</div>
+                  </div>
+                </Link>
                 <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="font-bold text-lg sm:text-xl text-primary">{goals.length}</div>
                   <div className="text-xs sm:text-sm text-muted-foreground">Goals</div>

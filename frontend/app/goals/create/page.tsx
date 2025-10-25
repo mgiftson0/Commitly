@@ -62,7 +62,7 @@ export default function CreateGoalPage() {
   const [description, setDescription] = useState("");
   const [goalNature, setGoalNature] = useState<"personal" | "group">("personal");
   const [goalType, setGoalType] = useState<"single-activity" | "multi-activity">("single-activity");
-  const [visibility, setVisibility] = useState<"public" | "private" | "restricted">("private");
+  const [visibility, setVisibility] = useState<"public" | "private" | "followers" | "accountability_partners">("private");
   const [activities, setActivities] = useState<string[]>([""]);
   const [recurrencePattern, setRecurrencePattern] = useState("daily");
   const [recurrenceDays, setRecurrenceDays] = useState<string[]>([]);
@@ -1345,7 +1345,7 @@ export default function CreateGoalPage() {
                       value={visibility}
                       onValueChange={(value: string) =>
                         setVisibility(
-                          value as "private" | "restricted" | "public",
+                          value as "private" | "followers" | "accountability_partners" | "public",
                         )
                       }
                     >
@@ -1364,11 +1364,22 @@ export default function CreateGoalPage() {
                             </div>
                           </div>
                         </SelectItem>
-                        <SelectItem value="restricted">
+                        <SelectItem value="followers">
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
                             <div>
-                              <div className="font-medium">Partners Only</div>
+                              <div className="font-medium">Followers</div>
+                              <div className="text-xs text-muted-foreground">
+                                Your followers can see
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="accountability_partners">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <div>
+                              <div className="font-medium">Accountability Partners</div>
                               <div className="text-xs text-muted-foreground">
                                 Only your partners can see
                               </div>

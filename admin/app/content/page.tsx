@@ -191,7 +191,8 @@ const ContentManagementPage = () => {
   const handleFeaturedGoalChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setFeaturedGoalFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -240,7 +241,8 @@ const ContentManagementPage = () => {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setTestimonialFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -290,7 +292,8 @@ const ContentManagementPage = () => {
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >,
   ) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setKycFieldFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,

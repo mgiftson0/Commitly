@@ -36,6 +36,7 @@ import { SocialLinks } from "@/components/profile/social-links"
 import { getGoalStreak } from "@/lib/streak-manager"
 import { StreakBadge } from "@/components/streaks/streak-badge"
 import { UnfollowDialog } from "@/components/ui/unfollow-dialog"
+import { ShareProfile } from "@/components/profile/share-profile"
 import { Flame } from "lucide-react"
 
 export default function UserProfilePage() {
@@ -364,6 +365,10 @@ export default function UserProfilePage() {
                   </Link>
                 )}
                 
+                <ShareProfile 
+                  username={profile.username} 
+                  displayName={`${profile.first_name} ${profile.last_name}`} 
+                />
                 <Button variant="ghost" size="icon">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
