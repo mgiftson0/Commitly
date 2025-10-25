@@ -92,36 +92,21 @@ export default function UserProfilePage() {
           setGoalsWithStreaks(goalsWithStreakData)
         }
 
-        // Load follow counts
-        const { data: followingData } = await supabase
-          .from('accountability_partners')
-          .select('id')
-          .eq('user_id', profileData.id)
-          .eq('status', 'accepted')
-        
-        const { data: followersData } = await supabase
-          .from('accountability_partners')
-          .select('id')
-          .eq('partner_id', profileData.id)
-          .eq('status', 'accepted')
-        
-        setFollowingCount(followingData?.length || 0)
-        setFollowersCount(followersData?.length || 0)
+        // Load follow counts from profile (cached counts)
+        setFollowingCount(profileData.following_count || 0)
+        setFollowersCount(profileData.followers_count || 0)
 
         // Check follow relationship if user is logged in
         if (user && user.id !== profileData.id) {
           const { data: followData } = await supabase
-            .from('accountability_partners')
-            .select('status, user_id, partner_id')
-            .or(`and(user_id.eq.${user.id},partner_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},partner_id.eq.${user.id})`)
+            .from('follows')
+            .select('status')
+            .eq('follower_id', user.id)
+            .eq('following_id', profileData.id)
             .maybeSingle()
 
           if (followData) {
-            if (followData.user_id === user.id) {
-              setFollowState(followData.status === 'accepted' ? 'following' : 'pending')
-            } else {
-              setFollowState(followData.status === 'accepted' ? 'following' : 'followers')
-            }
+            setFollowState(followData.status === 'accepted' ? 'following' : 'pending')
           }
         }
       } catch (error) {
@@ -142,18 +127,6 @@ export default function UserProfilePage() {
 
     try {
       if (action === 'follow') {
-        // Check if both users exist in profiles table
-        const { data: currentUserExists } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', currentUser.id)
-          .single()
-
-        if (!currentUserExists) {
-          toast.error('Your profile not found')
-          return
-        }
-
         // Get sender's profile data for notification
         const { data: senderProfile } = await supabase
           .from('profiles')
@@ -161,67 +134,73 @@ export default function UserProfilePage() {
           .eq('id', currentUser.id)
           .single()
 
+        // Insert follow relationship
+        const followStatus = profile.is_private ? 'pending' : 'accepted'
         const { error } = await supabase
-          .from('accountability_partners')
+          .from('follows')
           .insert({
-            user_id: currentUser.id,
-            partner_id: profile.id,
-            status: 'pending'
+            follower_id: currentUser.id,
+            following_id: profile.id,
+            status: followStatus
           })
 
         if (error) {
           if (error.code === '23505') {
-            toast.error('Request already sent')
+            toast.error('Already following or request sent')
           } else {
-            console.error('Partner insert error:', error)
+            console.error('Follow error:', error)
             throw error
           }
           return
         }
 
-        // Create notification with proper sender info
+        // Create notification
         const senderName = senderProfile?.first_name 
           ? `${senderProfile.first_name} ${senderProfile.last_name || ''}`.trim()
           : senderProfile?.username || 'Someone'
 
-        // Check if notification already exists to avoid 409 conflict
-        const { data: existingNotif } = await supabase
+        const notificationType = profile.is_private ? 'follow_request' : 'new_follower'
+        const notificationMessage = profile.is_private 
+          ? `${senderName} wants to follow you!`
+          : `${senderName} started following you!`
+
+        const { error: notifError } = await supabase
           .from('notifications')
-          .select('id')
-          .eq('user_id', profile.id)
-          .eq('type', 'partner_request')
-          .eq('data->>sender_id', currentUser.id)
-          .maybeSingle()
+          .insert({
+            user_id: profile.id,
+            related_user_id: currentUser.id,
+            title: profile.is_private ? 'New Follow Request' : 'New Follower',
+            message: notificationMessage,
+            type: notificationType,
+            is_read: false,
+            data: { 
+              sender_id: currentUser.id,
+              sender_name: senderName,
+              sender_username: senderProfile?.username || 'user'
+            }
+          })
 
-        if (!existingNotif) {
-          const { error: notifError } = await supabase
-            .from('notifications')
-            .insert({
-              user_id: profile.id,
-              title: 'New Partner Request',
-              message: `${senderName} wants to be your accountability partner!`,
-              type: 'partner_request',
-              read: false,
-              data: { 
-                sender_id: currentUser.id,
-                sender_name: senderName,
-                sender_username: senderProfile?.username || 'user'
-              }
-            })
-
-          if (notifError) {
-            console.error('Notification error:', notifError)
-          }
+        if (notifError) {
+          console.error('Notification error:', notifError)
         }
 
-        setFollowState('pending')
-        toast.success('Partner request sent!')
+        setFollowState(followStatus === 'accepted' ? 'following' : 'pending')
+        
+        // Update local counts if accepted immediately
+        if (followStatus === 'accepted') {
+          setFollowersCount(prev => prev + 1)
+          toast.success('Following successfully!')
+        } else {
+          toast.success('Follow request sent!')
+        }
+        
       } else if (action === 'unfollow') {
-        // Delete the partnership
+        // Delete the follow relationship
         const { error } = await supabase
-          .from('accountability_partners')
+          .from('follows')
           .delete()
-          .or(`and(user_id.eq.${currentUser.id},partner_id.eq.${profile.id}),and(user_id.eq.${profile.id},partner_id.eq.${currentUser.id})`)
+          .eq('follower_id', currentUser.id)
+          .eq('following_id', profile.id)
 
         if (error) {
           console.error('Unfollow error:', error)
@@ -229,6 +208,7 @@ export default function UserProfilePage() {
         }
 
         setFollowState('none')
+        setFollowersCount(prev => Math.max(0, prev - 1))
         toast.success('Unfollowed successfully!')
       }
     } catch (error: any) {
