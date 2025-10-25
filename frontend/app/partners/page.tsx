@@ -150,6 +150,7 @@ export default function PartnersPage() {
   const [requests, setRequests] = useState<any[]>([])
   const [discover, setDiscover] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
   const [encouragementModal, setEncouragementModal] = useState<{open: boolean, partnerId: string, partnerName: string}>({open: false, partnerId: '', partnerName: ''})
 
   const handleRequestAction = async (requestId: string, action: 'accept' | 'decline') => {
@@ -238,6 +239,15 @@ export default function PartnersPage() {
       try {
         const user = await authHelpers.getCurrentUser()
         if (!user) return
+
+        // Load current user profile with follow counts
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('followers_count, following_count')
+          .eq('id', user.id)
+          .single()
+        
+        setCurrentUserProfile(userProfile)
 
         // Load partners
         const { data: partnersData } = await supabase
@@ -340,7 +350,7 @@ export default function PartnersPage() {
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-bold">Connect</h1>
               <div className="hidden sm:flex items-center gap-6 text-sm text-muted-foreground">
-                <span>{partners.length} Following</span>
+                <span>{currentUserProfile?.following_count || 0} Following</span>
                 <span>{requests.length} Requests</span>
               </div>
             </div>
@@ -365,8 +375,12 @@ export default function PartnersPage() {
         <div className="border-b">
           <div className="grid grid-cols-4 text-center py-3">
             <div>
-              <div className="text-lg font-bold">{partners.filter(p => p.status === 'active').length}</div>
+              <div className="text-lg font-bold">{currentUserProfile?.following_count || 0}</div>
               <div className="text-xs text-muted-foreground">Following</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold">{currentUserProfile?.followers_count || 0}</div>
+              <div className="text-xs text-muted-foreground">Followers</div>
             </div>
             <div>
               <div className="text-lg font-bold">{requests.length}</div>
@@ -375,10 +389,6 @@ export default function PartnersPage() {
             <div>
               <div className="text-lg font-bold">{partners.reduce((sum, p) => sum + p.sharedGoals, 0)}</div>
               <div className="text-xs text-muted-foreground">Goals</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold">92%</div>
-              <div className="text-xs text-muted-foreground">Success</div>
             </div>
           </div>
         </div>

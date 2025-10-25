@@ -113,26 +113,49 @@ export default function CreateGoalPage() {
           username: profile?.username || 'you'
         })
 
-        // Get accountability partners (mutual connections)
-        const { data: partners } = await supabase
-          .from('accountability_partners')
+        // Get mutual follows (people who follow each other)
+        const { data: mutualFollows } = await supabase
+          .from('follows')
           .select(`
-            *,
-            partner_profile:profiles!accountability_partners_partner_id_fkey(*),
-            user_profile:profiles!accountability_partners_user_id_fkey(*)
+            follower_profile:profiles!follows_follower_id_fkey(*),
+            following_profile:profiles!follows_following_id_fkey(*)
           `)
-          .or(`user_id.eq.${user.id},partner_id.eq.${user.id}`)
-          .eq('status', 'accepted')
+          .or(`and(follower_id.eq.${user.id},status.eq.accepted),and(following_id.eq.${user.id},status.eq.accepted)`)
 
-        const partnersList = (partners || []).map(p => {
-          const isUserInitiator = p.user_id === user.id
-          const partnerProfile = isUserInitiator ? p.partner_profile : p.user_profile
-          return {
-            id: isUserInitiator ? p.partner_id : p.user_id,
-            name: partnerProfile ? `${partnerProfile.first_name || ''} ${partnerProfile.last_name || ''}`.trim() || 'Partner' : 'Partner',
-            username: partnerProfile?.username || 'partner'
+        // Find mutual connections (users who follow each other)
+        const mutualPartners = new Map()
+        
+        if (mutualFollows) {
+          for (const follow of mutualFollows) {
+            const otherUserId = follow.follower_profile?.id === user.id 
+              ? follow.following_profile?.id 
+              : follow.follower_profile?.id
+            const otherProfile = follow.follower_profile?.id === user.id 
+              ? follow.following_profile 
+              : follow.follower_profile
+            
+            if (otherUserId && otherProfile) {
+              // Check if this is mutual (both follow each other)
+              const { data: reverseFollow } = await supabase
+                .from('follows')
+                .select('id')
+                .eq('follower_id', otherUserId)
+                .eq('following_id', user.id)
+                .eq('status', 'accepted')
+                .maybeSingle()
+              
+              if (reverseFollow) {
+                mutualPartners.set(otherUserId, {
+                  id: otherUserId,
+                  name: `${otherProfile.first_name || ''} ${otherProfile.last_name || ''}`.trim() || 'Partner',
+                  username: otherProfile.username || 'partner'
+                })
+              }
+            }
           }
-        })
+        }
+        
+        const partnersList = Array.from(mutualPartners.values())
 
         setAvailablePartners(partnersList)
       } catch (error) {

@@ -296,11 +296,11 @@ export default function ProfilePage() {
               {/* Enhanced Stats Row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-3 border-t border-border/50">
                 <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="font-bold text-lg sm:text-xl text-primary">0</div>
+                  <div className="font-bold text-lg sm:text-xl text-primary">{profile?.followers_count || 0}</div>
                   <div className="text-xs sm:text-sm text-muted-foreground">Followers</div>
                 </div>
                 <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="font-bold text-lg sm:text-xl text-primary">0</div>
+                  <div className="font-bold text-lg sm:text-xl text-primary">{profile?.following_count || 0}</div>
                   <div className="text-xs sm:text-sm text-muted-foreground">Following</div>
                 </div>
                 <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">

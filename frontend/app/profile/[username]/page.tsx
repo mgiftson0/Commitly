@@ -34,6 +34,8 @@ import { getProgressColor } from "@/lib/utils/progress-colors"
 import { SocialLinks } from "@/components/profile/social-links"
 import { getGoalStreak } from "@/lib/streak-manager"
 import { StreakBadge } from "@/components/streaks/streak-badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { UnfollowDialog } from "@/components/ui/unfollow-dialog"
 import { Flame } from "lucide-react"
 
 export default function UserProfilePage() {
@@ -45,10 +47,11 @@ export default function UserProfilePage() {
   const [goals, setGoals] = useState<any[]>([])
   const [goalsWithStreaks, setGoalsWithStreaks] = useState<any[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
-  const [followState, setFollowState] = useState<'none' | 'pending' | 'following' | 'followers'>('none')
+  const [followState, setFollowState] = useState<'none' | 'pending' | 'following' | 'mutual'>('none')
   const [loading, setLoading] = useState(true)
   const [followingCount, setFollowingCount] = useState(0)
   const [followersCount, setFollowersCount] = useState(0)
+  const [showUnfollowDialog, setShowUnfollowDialog] = useState(false)
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -92,9 +95,16 @@ export default function UserProfilePage() {
           setGoalsWithStreaks(goalsWithStreakData)
         }
 
-        // Load follow counts from profile (cached counts)
-        setFollowingCount(profileData.following_count || 0)
-        setFollowersCount(profileData.followers_count || 0)
+        // Force fresh follow counts
+        const { data: freshCounts } = await supabase
+          .from('profiles')
+          .select('followers_count, following_count')
+          .eq('id', profileData.id)
+          .single()
+        
+        console.log('Profile counts for', profileData.username, ':', freshCounts)
+        setFollowingCount(freshCounts?.following_count || 0)
+        setFollowersCount(freshCounts?.followers_count || 0)
 
         // Check follow relationship if user is logged in
         if (user && user.id !== profileData.id) {
@@ -105,8 +115,19 @@ export default function UserProfilePage() {
             .eq('following_id', profileData.id)
             .maybeSingle()
 
-          if (followData) {
-            setFollowState(followData.status === 'accepted' ? 'following' : 'pending')
+          if (followData && followData.status === 'accepted') {
+            // Check if it's mutual (they follow back)
+            const { data: reverseFollow } = await supabase
+              .from('follows')
+              .select('status')
+              .eq('follower_id', profileData.id)
+              .eq('following_id', user.id)
+              .eq('status', 'accepted')
+              .maybeSingle()
+            
+            setFollowState(reverseFollow ? 'mutual' : 'following')
+          } else if (followData) {
+            setFollowState('pending')
           }
         }
       } catch (error) {
@@ -186,9 +207,19 @@ export default function UserProfilePage() {
 
         setFollowState(followStatus === 'accepted' ? 'following' : 'pending')
         
+        // Refresh profile data to get updated counts
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .select('followers_count, following_count')
+          .eq('id', profile.id)
+          .single()
+        
+        if (updatedProfile) {
+          setFollowersCount(updatedProfile.followers_count || 0)
+        }
+        
         // Update local counts if accepted immediately
         if (followStatus === 'accepted') {
-          setFollowersCount(prev => prev + 1)
           toast.success('Following successfully!')
         } else {
           toast.success('Follow request sent!')
@@ -207,8 +238,18 @@ export default function UserProfilePage() {
           throw error
         }
 
+        // Refresh profile data to get updated counts
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .select('followers_count, following_count')
+          .eq('id', profile.id)
+          .single()
+        
+        if (updatedProfile) {
+          setFollowersCount(updatedProfile.followers_count || 0)
+        }
+        
         setFollowState('none')
-        setFollowersCount(prev => Math.max(0, prev - 1))
         toast.success('Unfollowed successfully!')
       }
     } catch (error: any) {
@@ -300,9 +341,16 @@ export default function UserProfilePage() {
                     )}
                     
                     {followState === 'following' && (
-                      <Button size="sm" variant="outline" onClick={() => handleFollowAction('unfollow')}>
+                      <Button size="sm" variant="outline" onClick={() => setShowUnfollowDialog(true)}>
                         <UserCheck className="h-4 w-4 mr-2" />
                         Following
+                      </Button>
+                    )}
+                    
+                    {followState === 'mutual' && (
+                      <Button size="sm" variant="outline" onClick={() => setShowUnfollowDialog(true)}>
+                        <Users className="h-4 w-4 mr-2" />
+                        Mutual
                       </Button>
                     )}
                   </>
@@ -411,6 +459,16 @@ export default function UserProfilePage() {
             </div>
           </TabsContent>
         </Tabs>
+        
+        <UnfollowDialog
+          open={showUnfollowDialog}
+          onOpenChange={setShowUnfollowDialog}
+          onConfirm={() => {
+            handleFollowAction('unfollow')
+            setShowUnfollowDialog(false)
+          }}
+          userName={profile.first_name || profile.username}
+        />
       </div>
     </MainLayout>
   )
@@ -426,94 +484,93 @@ function GoalsList({ goals }: { goals: any[] }) {
     )
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'health-fitness': return Heart
-      case 'learning': return BookOpen
-      case 'career': return Briefcase
-      case 'personal': return Star
-      default: return Target
+  const activeGoals = goals.filter(g => !g.completed_at && g.status !== 'paused')
+  const completedGoals = goals.filter(g => g.completed_at || g.status === 'completed')
+  const pausedGoals = goals.filter(g => g.status === 'paused')
+
+  const GoalCard = ({ goal }: { goal: any }) => {
+    const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+    const isGroupGoal = goal.goal_nature === 'group'
+    const isCompleted = goal.completed_at || goal.status === 'completed'
+    const isPaused = goal.status === 'paused'
+    const progress = isCompleted ? 100 : (goal.progress || 0)
+    
+    const getStatusIcon = () => {
+      if (isCompleted) return <CheckCircle2 className="h-4 w-4 text-green-600" />
+      if (isPaused) return <Clock className="h-4 w-4 text-yellow-600" />
+      return <Target className="h-4 w-4 text-blue-600" />
     }
+    
+    const getGoalTypeIcon = () => {
+      if (isSeasonalGoal) return <Star className="h-4 w-4 text-amber-600" />
+      if (isGroupGoal) return <Users className="h-4 w-4 text-purple-600" />
+      return <Target className="h-4 w-4 text-blue-600" />
+    }
+
+    return (
+      <Link href={`/goals/${goal.id}`}>
+        <div className="aspect-[4/3] p-4 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer bg-card">
+          <div className="h-full flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded bg-muted">
+                  {getStatusIcon()}
+                </div>
+                <div className="p-1.5 rounded bg-muted">
+                  {getGoalTypeIcon()}
+                </div>
+              </div>
+              {goal.streak && goal.streak.current_streak > 0 && (
+                <Badge className="bg-orange-500 text-white text-xs px-2">
+                  🔥{goal.streak.current_streak}
+                </Badge>
+              )}
+            </div>
+            <h4 className="font-medium text-sm line-clamp-2 flex-1 leading-tight mb-3">{goal.title}</h4>
+            <div className="mt-auto space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{progress}%</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    progress <= 30 ? 'bg-red-500' : progress <= 70 ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}
+                  style={{ width: `${Math.min(progress, 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    )
   }
 
   return (
-    <div className="p-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {goals.map((goal) => {
-          const Icon = getCategoryIcon(goal.category)
-          const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
-          const isCompleted = goal.completed_at || goal.status === 'completed'
-          
-          return (
-            <Link key={goal.id} href={`/goals/${goal.id}`}>
-              <div className={`aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer ${
-                isSeasonalGoal 
-                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800' 
-                  : 'bg-card'
-              }`}>
-                <div className="h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className={`p-1.5 rounded-lg ${
-                      isSeasonalGoal 
-                        ? 'bg-amber-100 dark:bg-amber-900/30' 
-                        : isCompleted
-                          ? 'bg-green-100 dark:bg-green-900/30'
-                          : 'bg-primary/10'
-                    }`}>
-                      {isCompleted ? (
-                        <CheckCircle2 className="h-3 w-3 text-green-600" />
-                      ) : (
-                        <Icon className={`h-3 w-3 ${
-                          isSeasonalGoal 
-                            ? 'text-amber-600 dark:text-amber-400' 
-                            : 'text-primary'
-                        }`} />
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      {isCompleted ? (
-                        <Badge className="bg-green-600 text-[10px]">Done</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px]">Active</Badge>
-                      )}
-                      {isSeasonalGoal && (
-                        <Badge variant="outline" className="text-[8px] bg-amber-50 text-amber-700 border-amber-200">
-                          <Star className="h-2 w-2 mr-0.5" />
-                          Seasonal
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
-                  <div className="mt-auto pt-2 space-y-1">
-                    {goal.streak && goal.streak.current_streak > 0 && (
-                      <div className="flex justify-center mb-1">
-                        <StreakBadge streak={goal.streak.current_streak} size="sm" showLabel={false} />
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                      <span>{goal.goal_type || goal.category || 'Standard'}</span>
-                      <span>{isCompleted ? 100 : (goal.progress || 0)}%</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-1.5">
-                      <div
-                        className={`h-1.5 rounded-full transition-all ${
-                          isCompleted 
-                            ? 'bg-green-500' 
-                            : isSeasonalGoal 
-                              ? 'bg-amber-500' 
-                              : 'bg-blue-500'
-                        }`}
-                        style={{ width: `${isCompleted ? 100 : Math.min(goal.progress || 0, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          )
-        })}
-      </div>
-    </div>
+    <Tabs defaultValue="active" className="space-y-4">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="active">Active ({activeGoals.length})</TabsTrigger>
+        <TabsTrigger value="completed">Completed ({completedGoals.length})</TabsTrigger>
+        <TabsTrigger value="paused">Paused ({pausedGoals.length})</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="active">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+          {activeGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
+        </div>
+      </TabsContent>
+      
+      <TabsContent value="completed">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+          {completedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
+        </div>
+      </TabsContent>
+      
+      <TabsContent value="paused">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+          {pausedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
+        </div>
+      </TabsContent>
+    </Tabs>
   )
 }
