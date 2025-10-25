@@ -417,15 +417,16 @@ const isAccountabilityPartner = (goal: typeof mockGoals[0], currentUserId: strin
 // Get goal card styling based on type
 const getGoalCardStyle = (goal: typeof mockGoals[0]) => {
   if ((goal as any).is_seasonal || (goal as any).duration_type === 'seasonal') {
-    return "border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-background"
+    return "ring-1 ring-amber-200/50 hover:ring-amber-300/70 shadow-amber-100/50 hover:shadow-amber-200/60 bg-gradient-to-br from-amber-50/60 via-white to-amber-50/30 dark:from-amber-950/30 dark:via-background dark:to-amber-950/20"
   }
   if (goal.isGroupGoal) {
-    return "border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50/50 to-white dark:from-purple-950/20 dark:to-background"
+    return "ring-1 ring-purple-200/50 hover:ring-purple-300/70 shadow-purple-100/50 hover:shadow-purple-200/60 bg-gradient-to-br from-purple-50/60 via-white to-purple-50/30 dark:from-purple-950/30 dark:via-background dark:to-purple-950/20"
   }
   if (goal.isForked) {
-    return "border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-background"
+    return "ring-1 ring-blue-200/50 hover:ring-blue-300/70 shadow-blue-100/50 hover:shadow-blue-200/60 bg-gradient-to-br from-blue-50/60 via-white to-blue-50/30 dark:from-blue-950/30 dark:via-background dark:to-blue-950/20"
   }
-  return ""
+  // Default enhanced styling
+  return "ring-1 ring-border/50 hover:ring-primary/30 shadow-slate-100/50 hover:shadow-slate-200/60"
 }
 
 export default function GoalsPage() {
@@ -991,39 +992,39 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {goals.map((goal, index) => (
-        <Card key={`${goal.id}-${index}-${goal.title.replace(/\s+/g, '-').toLowerCase()}`} className={`hover-lift group ${getGoalCardStyle(goal)}`}>
+        <Card key={`${goal.id}-${index}-${goal.title.replace(/\s+/g, '-').toLowerCase()}`} className={`hover-lift group transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 border-0 shadow-lg bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm ${getGoalCardStyle(goal)}`}>
           <CardHeader className="pb-3">
             {/* Requests handled in Notifications. Status shown below. */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
                 {getTypeIcon(goal.type)}
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
                   {goal.type}
                 </Badge>
                 {((goal as any).is_seasonal || (goal as any).duration_type === 'seasonal') && (
-                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-sm hover:shadow-amber-200/50 transition-all duration-200">
                     <Star className="h-3 w-3 mr-1" />
                     Seasonal
                   </Badge>
                 )}
                 {goal.isGroupGoal && (
-                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200 shadow-sm hover:shadow-purple-200/50 transition-all duration-200">
                     <Users className="h-3 w-3 mr-1" />
                     Group
                   </Badge>
                 )}
                 {/* Recurrence badge if available */}
                 {(goal as any).recurrencePattern && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-blue-200/50 hover:border-blue-300/70 transition-colors duration-200">
                     <Calendar className="h-3 w-3 mr-1" />
                     {formatRecurrence(goal)}
                   </Badge>
                 )}
                 {/* Only show forked badge if user owns the goal */}
                 {goal.isForked && isGoalOwner(goal) && (
-                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 shadow-sm hover:shadow-blue-200/50 transition-all duration-200">
                     <GitFork className="h-3 w-3 mr-1" />
                     Forked
                   </Badge>
@@ -1157,7 +1158,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                   <Crown className="h-4 w-4 text-purple-600" />
                 )}
                 {isPartnerView && (
-                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 shadow-sm hover:shadow-green-200/50 transition-all duration-200">
                     <User className="h-3 w-3 mr-1" />
                     Partner
                   </Badge>
@@ -1199,7 +1200,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 <span className="text-muted-foreground">Progress</span>
                 <span className="font-medium">{goal.progress}%</span>
               </div>
-              <Progress value={goal.progress} className={`h-2 ${getProgressColor(goal.progress)}`} />
+              <Progress value={goal.progress} className={`h-3 rounded-full bg-gradient-to-r from-muted/50 to-muted/30 border border-border/30 shadow-inner ${getProgressColor(goal.progress)}`} />
             </div>
 
             {/* Stats - Different for partner goals */}
@@ -1298,7 +1299,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 hover-lift"
+                    className="flex-1 hover-lift hover:bg-primary hover:text-primary-foreground transition-all duration-200 shadow-sm hover:shadow-md"
                     onClick={() => handleViewDetails(goal.id, goal)}
                   >
                     <Eye className="h-3 w-3 mr-1" />
@@ -1306,7 +1307,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                   </Button>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex-1 hover-lift">
+                      <Button variant="outline" size="sm" className="flex-1 hover-lift hover:bg-accent hover:text-accent-foreground transition-all duration-200 shadow-sm hover:shadow-md">
                         <MessageCircle className="h-3 w-3 mr-1" />
                         Encourage
                       </Button>
