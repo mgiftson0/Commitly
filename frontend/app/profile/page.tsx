@@ -49,7 +49,7 @@ import { AchievementModal } from "@/components/achievements/achievement-modal"
 import { Celebration } from "@/components/achievements/celebration"
 import { CategoryProgressModal } from "@/components/category-progress-modal"
 import { ACHIEVEMENTS, checkAchievements } from "@/lib/achievements"
-import { getProgressColor } from "@/lib/utils/progress-colors"
+import { getProgressColor, getProgressBarColor } from "@/lib/utils/progress-colors"
 import { authHelpers, supabase } from "@/lib/supabase-client"
 import { SocialLinks } from "@/components/profile/social-links"
 import { getUserStreakStats, getUserStreaks } from "@/lib/streak-manager"
@@ -429,56 +429,46 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                       {goals.slice(0, 6).map((goal) => {
                         const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+                        const isGroupGoal = goal.goal_nature === 'group'
+                        const progress = goal.completed_at ? 100 : (goal.progress || 0)
+                        const getStatusIcon = () => {
+                          if (goal.completed_at) return <CheckCircle2 className="h-3 w-3 text-green-600" />
+                          if (goal.status === 'paused') return <Clock className="h-3 w-3 text-yellow-600" />
+                          return <Target className="h-3 w-3 text-blue-600" />
+                        }
+                        const getGoalTypeIcon = () => {
+                          if (isSeasonalGoal) return <Star className="h-3 w-3 text-amber-600" />
+                          if (isGroupGoal) return <Users className="h-3 w-3 text-purple-600" />
+                          return <Target className="h-3 w-3 text-blue-600" />
+                        }
                         return (
                           <Link key={goal.id} href={`/goals/${goal.id}`}>
-                            <div className={`aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer ${
-                              isSeasonalGoal 
-                                ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800' 
-                                : 'bg-card'
-                            }`}>
+                            <div className="aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer bg-card">
                               <div className="h-full flex flex-col">
                                 <div className="flex items-center justify-between mb-2">
-                                  <div className={`p-1.5 rounded-lg ${
-                                    isSeasonalGoal 
-                                      ? 'bg-amber-100 dark:bg-amber-900/30' 
-                                      : 'bg-primary/10'
-                                  }`}>
-                                    <Target className={`h-3 w-3 ${
-                                      isSeasonalGoal 
-                                        ? 'text-amber-600 dark:text-amber-400' 
-                                        : 'text-primary'
-                                    }`} />
+                                  <div className="flex items-center gap-1">
+                                    <div className="p-1 rounded bg-muted">
+                                      {getStatusIcon()}
+                                    </div>
+                                    <div className="p-1 rounded bg-muted">
+                                      {getGoalTypeIcon()}
+                                    </div>
                                   </div>
-                                  <div className="flex flex-col gap-1">
-                                    {goal.completed_at ? (
-                                      <Badge className="bg-green-600 text-[10px]">Done</Badge>
-                                    ) : (
-                                      <Badge variant="outline" className="text-[10px]">Active</Badge>
-                                    )}
-                                    {isSeasonalGoal && (
-                                      <Badge variant="outline" className="text-[8px] bg-amber-50 text-amber-700 border-amber-200">
-                                        <Star className="h-2 w-2 mr-0.5" />
-                                        Seasonal
-                                      </Badge>
-                                    )}
-                                  </div>
+                                  {goal.streak && goal.streak > 0 && (
+                                    <Badge className="bg-orange-500 text-white text-[8px] px-1">
+                                      🔥{goal.streak}
+                                    </Badge>
+                                  )}
                                 </div>
                                 <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
                                 <div className="mt-auto pt-2 space-y-1">
                                   <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                                    <span>{goal.goal_type || 'Standard'}</span>
-                                    <span>{goal.progress || 0}%</span>
+                                    <span>{progress}%</span>
                                   </div>
                                   <div className="w-full bg-muted rounded-full h-1.5">
                                     <div
-                                      className={`h-1.5 rounded-full transition-all ${
-                                        goal.completed_at 
-                                          ? 'bg-green-500' 
-                                          : isSeasonalGoal 
-                                            ? 'bg-amber-500' 
-                                            : 'bg-blue-500'
-                                      }`}
-                                      style={{ width: `${goal.completed_at ? 100 : Math.min(goal.progress || 0, 100)}%` }}
+                                      className={`h-1.5 rounded-full transition-all ${progress <= 30 ? 'bg-red-500' : progress <= 70 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                                      style={{ width: `${Math.min(progress, 100)}%` }}
                                     />
                                   </div>
                                 </div>
@@ -675,18 +665,7 @@ export default function ProfilePage() {
                           {category.completed}/{category.total}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 mb-1">
-                        {category.standardGoals > 0 && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0">
-                            {category.standardGoals} Standard
-                          </Badge>
-                        )}
-                        {category.seasonalGoals > 0 && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-200">
-                            {category.seasonalGoals} Seasonal
-                          </Badge>
-                        )}
-                      </div>
+
                       <Progress value={category.progress || percentage} className={`h-1.5 sm:h-2 ${getProgressColor(category.progress || percentage)}`} />
                     </div>
                   )

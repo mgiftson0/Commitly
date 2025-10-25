@@ -24,17 +24,17 @@ import {
   Briefcase,
   CheckCircle2,
   Users,
-  MoreHorizontal
+  MoreHorizontal,
+  Clock
 } from "lucide-react"
 import Link from "next/link"
 import { MainLayout } from "@/components/layout/main-layout"
 import { authHelpers, supabase } from "@/lib/supabase-client"
 import { toast } from "sonner"
-import { getProgressColor } from "@/lib/utils/progress-colors"
+
 import { SocialLinks } from "@/components/profile/social-links"
 import { getGoalStreak } from "@/lib/streak-manager"
 import { StreakBadge } from "@/components/streaks/streak-badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UnfollowDialog } from "@/components/ui/unfollow-dialog"
 import { Flame } from "lucide-react"
 

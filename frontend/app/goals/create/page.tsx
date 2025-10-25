@@ -113,49 +113,30 @@ export default function CreateGoalPage() {
           username: profile?.username || 'you'
         })
 
-        // Get mutual follows (people who follow each other)
-        const { data: mutualFollows } = await supabase
+        // Get mutual follows - users who follow each other
+        const { data: myFollowing } = await supabase
           .from('follows')
-          .select(`
-            follower_profile:profiles!follows_follower_id_fkey(*),
-            following_profile:profiles!follows_following_id_fkey(*)
-          `)
-          .or(`and(follower_id.eq.${user.id},status.eq.accepted),and(following_id.eq.${user.id},status.eq.accepted)`)
+          .select('following_id, following_profile:profiles!follows_following_id_fkey(*)')
+          .eq('follower_id', user.id)
+          .eq('status', 'accepted')
 
-        // Find mutual connections (users who follow each other)
-        const mutualPartners = new Map()
+        const { data: myFollowers } = await supabase
+          .from('follows')
+          .select('follower_id, follower_profile:profiles!follows_follower_id_fkey(*)')
+          .eq('following_id', user.id)
+          .eq('status', 'accepted')
+
+        // Find mutual connections
+        const followingIds = new Set(myFollowing?.map(f => f.following_id) || [])
+        const followerIds = new Set(myFollowers?.map(f => f.follower_id) || [])
         
-        if (mutualFollows) {
-          for (const follow of mutualFollows) {
-            const otherUserId = follow.follower_profile?.id === user.id 
-              ? follow.following_profile?.id 
-              : follow.follower_profile?.id
-            const otherProfile = follow.follower_profile?.id === user.id 
-              ? follow.following_profile 
-              : follow.follower_profile
-            
-            if (otherUserId && otherProfile) {
-              // Check if this is mutual (both follow each other)
-              const { data: reverseFollow } = await supabase
-                .from('follows')
-                .select('id')
-                .eq('follower_id', otherUserId)
-                .eq('following_id', user.id)
-                .eq('status', 'accepted')
-                .maybeSingle()
-              
-              if (reverseFollow) {
-                mutualPartners.set(otherUserId, {
-                  id: otherUserId,
-                  name: `${otherProfile.first_name || ''} ${otherProfile.last_name || ''}`.trim() || 'Partner',
-                  username: otherProfile.username || 'partner'
-                })
-              }
-            }
-          }
-        }
-        
-        const partnersList = Array.from(mutualPartners.values())
+        const partnersList = (myFollowing || []).filter(f => 
+          followerIds.has(f.following_id)
+        ).map(f => ({
+          id: f.following_id,
+          name: `${f.following_profile?.first_name || ''} ${f.following_profile?.last_name || ''}`.trim() || 'Partner',
+          username: f.following_profile?.username || 'partner'
+        }))
 
         setAvailablePartners(partnersList)
       } catch (error) {
