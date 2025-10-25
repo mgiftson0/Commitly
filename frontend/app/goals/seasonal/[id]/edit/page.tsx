@@ -194,12 +194,10 @@ export default function EditSeasonalGoalPage() {
               {canEdit ? `Edit within ${timeRemaining} remaining` : 'Goal can only be edited within 5 hours of creation'}
             </p>
           </div>
-          <Link href="/goals">
-            <Button variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
+          <Button variant="outline" onClick={() => router.push('/goals')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Goals
+          </Button>
         </div>
 
         {!canEdit && (

@@ -252,9 +252,9 @@ export default function GoalDetailPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <Button variant="outline" onClick={() => router.back()}>
+          <Button variant="outline" onClick={() => router.push('/goals')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            Back to Goals
           </Button>
           
           {isOwner && (
@@ -269,7 +269,7 @@ export default function GoalDetailPage() {
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Goal
                 </DropdownMenuItem>
-                {goal.status !== 'completed' && (
+                {goal.status !== 'completed' && goal.status !== 'pending' && (
                   <DropdownMenuItem onClick={completeGoal}>
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Mark Complete
@@ -424,7 +424,7 @@ export default function GoalDetailPage() {
                     <Checkbox
                       checked={activity.completed}
                       onCheckedChange={(checked) => toggleActivity(activity.id, !!checked)}
-                      disabled={!isOwner || goal.status === 'completed'}
+                      disabled={!isOwner || goal.status === 'completed' || goal.status === 'pending'}
                     />
                     <span className={`flex-1 ${activity.completed ? 'line-through text-muted-foreground' : ''}`}>
                       {activity.title}

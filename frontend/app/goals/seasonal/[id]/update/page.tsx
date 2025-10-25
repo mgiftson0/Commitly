@@ -216,12 +216,10 @@ export default function UpdateSeasonalGoalPage() {
             <h1 className="text-3xl font-bold tracking-tight">Update Seasonal Goal</h1>
             <p className="text-muted-foreground">Track your progress and mark milestones as complete</p>
           </div>
-          <Link href="/goals">
-            <Button variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
+          <Button variant="outline" onClick={() => router.push('/goals')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Goals
+          </Button>
         </div>
 
         {!canUpdate && (

@@ -188,6 +188,10 @@ export default function GroupGoalDetailPage() {
             <p className="text-muted-foreground">Collaborate with your group to complete this goal.</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push('/goals')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Goals
+            </Button>
             <Link href={`/goals/${goal.id}/edit`}>
               <Button variant="outline" className="hover-lift" disabled={!canEditWithin5h} title={!canEditWithin5h ? 'Editing period ended (5 hours)' : undefined}>
                 <Edit className="h-4 w-4 mr-2" />

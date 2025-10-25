@@ -526,6 +526,7 @@ function GoalsList({ goals }: { goals: any[] }) {
     const getStatusIcon = () => {
       if (isCompleted) return <CheckCircle2 className="h-4 w-4 text-green-600" />
       if (isPaused) return <Clock className="h-4 w-4 text-yellow-600" />
+      if (goal.status === 'pending') return <Clock className="h-4 w-4 text-blue-600" />
       return <Target className="h-4 w-4 text-blue-600" />
     }
     

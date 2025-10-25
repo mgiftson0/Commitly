@@ -133,12 +133,10 @@ export default function PartnerGoalDetailPage() {
             <p className="text-muted-foreground">You are an accountability partner for this goal.</p>
           </div>
           <div className="flex gap-2">
-            <Link href="/goals">
-              <Button variant="outline" className="hover-lift">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Goals
-              </Button>
-            </Link>
+            <Button variant="outline" onClick={() => router.push('/goals')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Goals
+            </Button>
           </div>
         </div>
 

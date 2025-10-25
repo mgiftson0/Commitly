@@ -455,6 +455,7 @@ export default function ProfilePage() {
                         const getStatusIcon = () => {
                           if (goal.completed_at) return <CheckCircle2 className="h-3 w-3 text-green-600" />
                           if (goal.status === 'paused') return <Clock className="h-3 w-3 text-yellow-600" />
+                          if (goal.status === 'pending') return <Clock className="h-3 w-3 text-blue-600" />
                           return <Target className="h-3 w-3 text-blue-600" />
                         }
                         const getGoalTypeIcon = () => {

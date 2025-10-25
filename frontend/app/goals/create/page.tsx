@@ -73,6 +73,8 @@ export default function CreateGoalPage() {
   const [singleActivity, setSingleActivity] = useState("");
   const [scheduleType, setScheduleType] = useState<"date" | "recurring">("date");
   const [singleDate, setSingleDate] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [endCondition, setEndCondition] = useState<"ongoing" | "by-date" | "after-completions">("by-date");
   const [targetCompletions, setTargetCompletions] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -262,22 +264,51 @@ export default function CreateGoalPage() {
 
 
 
-      // Prepare goal data for database - ensure user_id matches auth.users table
+      // Determine goal status based on start date
+      const goalStartDate = scheduleType === "date" ? startDate : startDate
+      const goalEndDate = scheduleType === "date" ? singleDate : (endCondition === "by-date" ? endDate : null)
+      const today = new Date().toISOString().split('T')[0]
+      const goalStatus = goalStartDate && goalStartDate > today ? 'pending' : 'active'
+      
+      // Validate start date is not more than 2 months in future
+      if (goalStartDate) {
+        const startDateObj = new Date(goalStartDate)
+        const twoMonthsFromNow = new Date()
+        twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2)
+        
+        if (startDateObj > twoMonthsFromNow) {
+          toast.error('Start date cannot be more than 2 months in the future')
+          return
+        }
+      }
+      
+      // Validate end date is after start date
+      if (goalStartDate && goalEndDate && goalEndDate <= goalStartDate) {
+        toast.error('End date must be after start date')
+        return
+      }
+
+      // Prepare goal data for database
       const goalData = {
-        user_id: authUser.id, // This should match auth.users(id)
+        user_id: authUser.id,
         title: title || "Untitled Goal",
         description,
         goal_type: goalType,
         visibility,
-        status: "active",
+        status: goalStatus,
         progress: 0,
         category: category.replace('-', '_'),
         priority: "medium",
-        target_date: endCondition === "by-date" ? singleDate : null,
+        start_date: goalStartDate || null,
+        target_date: goalEndDate,
         is_suspended: false,
         completed_at: null,
         duration_type: 'standard',
-
+        schedule_type: scheduleType,
+        recurrence_pattern: scheduleType === "recurring" ? recurrencePattern : null,
+        recurrence_days: scheduleType === "recurring" && recurrencePattern === "custom" ? recurrenceDays : null,
+        end_condition: scheduleType === "recurring" ? endCondition : null,
+        target_completions: endCondition === "after-completions" ? parseInt(targetCompletions) : null
       }
 
       console.log('Creating goal with user_id:', authUser.id)
@@ -904,23 +935,39 @@ export default function CreateGoalPage() {
                     </RadioGroup>
 
                     {scheduleType === "date" ? (
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="singleDate"
-                          className="text-sm font-medium"
-                        >
-                          Select Date{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="singleDate"
-                          type="date"
-                          value={singleDate}
-                          onChange={(e) => setSingleDate(e.target.value)}
-                          className="focus-ring"
-                          min={new Date().toISOString().split("T")[0]}
-                          required
-                        />
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="specificStartDate" className="text-sm font-medium">
+                            Start Date <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="specificStartDate"
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="focus-ring"
+                            min={new Date().toISOString().split("T")[0]}
+                            max={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="specificEndDate" className="text-sm font-medium">
+                            End Date <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="specificEndDate"
+                            type="date"
+                            value={singleDate}
+                            onChange={(e) => setSingleDate(e.target.value)}
+                            className="focus-ring"
+                            min={startDate || new Date().toISOString().split("T")[0]}
+                            required
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Start date maximum 2 months from today. Goal will be pending if start date is in the future.
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -931,12 +978,16 @@ export default function CreateGoalPage() {
                           <Input
                             id="startDate"
                             type="date"
-                            value={singleDate}
-                            onChange={(e) => setSingleDate(e.target.value)}
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
                             className="focus-ring"
                             min={new Date().toISOString().split("T")[0]}
+                            max={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
                             required
                           />
+                          <p className="text-xs text-muted-foreground">
+                            Maximum 2 months from today. Goal will be pending if start date is in the future.
+                          </p>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-3">
                           <div className="space-y-2">
@@ -1015,17 +1066,10 @@ export default function CreateGoalPage() {
                               <Input
                                 id="recurringDue"
                                 type="date"
-                                value={singleDate}
-                                onChange={(e) => setSingleDate(e.target.value)}
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
                                 className="focus-ring"
-                                min={new Date().toISOString().split("T")[0]}
-                                max={
-                                  new Date(
-                                    Date.now() + 60 * 24 * 60 * 60 * 1000,
-                                  )
-                                    .toISOString()
-                                    .split("T")[0]
-                                }
+                                min={startDate || new Date().toISOString().split("T")[0]}
                                 required
                               />
                             </div>
@@ -1439,13 +1483,14 @@ export default function CreateGoalPage() {
                           !singleActivity.trim()) ||
                         (goalType === "multi-activity" &&
                           activities.filter((a) => a.trim()).length < 2) ||
-                        (scheduleType === "date" && !singleDate) ||
+                        (scheduleType === "date" && (!startDate || !singleDate)) ||
+                        (scheduleType === "recurring" && !startDate) ||
                         (scheduleType === "recurring" &&
                           recurrencePattern === "custom" &&
                           recurrenceDays.length === 0) ||
                         (scheduleType === "recurring" &&
                           endCondition === "by-date" &&
-                          !singleDate) ||
+                          !endDate) ||
                         (scheduleType === "recurring" &&
                           endCondition === "after-completions" &&
                           !targetCompletions)

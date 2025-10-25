@@ -346,6 +346,7 @@ const getStatusColor = (status: string) => {
     case "active": return "bg-green-500"
     case "completed": return "bg-blue-500"
     case "paused": return "bg-yellow-500"
+    case "pending": return "bg-orange-500"
     default: return "bg-gray-500"
   }
 }
@@ -637,7 +638,8 @@ export default function GoalsPage() {
     total: allGoals.length,
     active: allGoals.filter(g => g.status === "active").length,
     completed: allGoals.filter(g => g.status === "completed").length,
-    paused: allGoals.filter(g => g.status === "paused").length
+    paused: allGoals.filter(g => g.status === "paused").length,
+    pending: allGoals.filter(g => g.status === "pending").length
   }
 
   return (
@@ -669,7 +671,7 @@ export default function GoalsPage() {
 
         {/* Stats Cards - Dashboard Style */}
         <div className="border rounded-lg p-3 sm:p-4 bg-card">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-2 rounded-full bg-primary/10">
                 <Target className="h-4 w-4 text-primary" />
@@ -704,6 +706,15 @@ export default function GoalsPage() {
               <div>
                 <p className="text-base sm:text-lg md:text-xl font-bold">{stats.paused}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Paused</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-full bg-blue-500/10">
+                <Clock className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-base sm:text-lg md:text-xl font-bold">{stats.pending}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Pending</p>
               </div>
             </div>
           </div>
@@ -781,12 +792,13 @@ export default function GoalsPage() {
 
         {/* Goals Tabs */}
         <Tabs defaultValue="all" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="all">All Goals ({sortedGoals.length})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="all">All ({sortedGoals.length})</TabsTrigger>
             <TabsTrigger value="my-goals">My Goals ({userGoals.length})</TabsTrigger>
-            <TabsTrigger value="partner-goals">Partner Goals ({partnerGoals.length})</TabsTrigger>
+            <TabsTrigger value="partner-goals">Partners ({partnerGoals.length})</TabsTrigger>
             <TabsTrigger value="active">Active ({stats.active})</TabsTrigger>
-            <TabsTrigger value="completed">Completed ({stats.completed})</TabsTrigger>
+            <TabsTrigger value="pending">Pending ({stats.pending})</TabsTrigger>
+            <TabsTrigger value="completed">Done ({stats.completed})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-6">
@@ -864,6 +876,13 @@ export default function GoalsPage() {
             }} />
           </TabsContent>
 
+          <TabsContent value="pending" className="space-y-4">
+            <GoalsGrid goals={sortedGoals.filter(g => g.status === "pending")} router={router} onGoalDeleted={() => {
+              const updatedGoals = JSON.parse(localStorage.getItem('goals') || '[]')
+              setRealGoals(updatedGoals)
+            }} />
+          </TabsContent>
+          
           <TabsContent value="completed" className="space-y-4">
             <GoalsGrid goals={sortedGoals.filter(g => g.status === "completed")} router={router} onGoalDeleted={() => {
               const updatedGoals = JSON.parse(localStorage.getItem('goals') || '[]')
@@ -902,8 +921,17 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const canEditWithin5hFromCreated = (createdAt?: string) => {
+  const canEditWithin5hFromCreated = (createdAt?: string, status?: string, startDate?: string) => {
     if (!createdAt) return false
+    
+    if (status === 'pending' && startDate) {
+      // For pending goals, allow edit until 5 hours before start date
+      const startDateTime = new Date(startDate).getTime()
+      const fiveHoursBeforeStart = startDateTime - (5 * 60 * 60 * 1000)
+      return Date.now() <= fiveHoursBeforeStart
+    }
+    
+    // For active goals, allow edit within 5 hours of creation
     const created = new Date(createdAt).getTime()
     return (Date.now() - created) <= (5 * 60 * 60 * 1000)
   }
@@ -1076,7 +1104,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                           Update Goal
                         </DropdownMenuItem>
                       )}
-                      {canEditWithin5hFromCreated(goal.createdAt) && goal.status !== 'completed' && (
+                      {canEditWithin5hFromCreated(goal.createdAt, goal.status, goal.start_date) && goal.status !== 'completed' && (
                         <DropdownMenuItem onClick={() => {
                           const isSeasonalGoal = (goal as any).duration_type === 'seasonal' || (goal as any).is_seasonal
                           const editPath = isSeasonalGoal ? `/goals/seasonal/${goal.id}/edit` : `/goals/${goal.id}/edit`

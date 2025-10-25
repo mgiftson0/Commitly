@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Target, ArrowLeft, CheckCircle2, Flame, AlertTriangle, Edit, Pause, Play } from "lucide-react"
+import { Target, ArrowLeft, CheckCircle2, Flame, AlertTriangle, Edit, Pause, Play, Clock } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { toast } from "sonner"
@@ -61,13 +61,26 @@ export default function UpdateGoalPage() {
         return
       }
       
-      // Check if goal can be edited (within 5 hours)
-      const created = new Date(goalData.created_at).getTime()
-      const now = Date.now()
-      const fiveHours = 5 * 60 * 60 * 1000
-      setCanEdit((now - created) <= fiveHours)
+      // Check if goal is pending (start date in future)
+      const today = new Date().toISOString().split('T')[0]
+      const startDate = goalData.start_date ? goalData.start_date.split('T')[0] : null
+      const isPending = goalData.status === 'pending' || (startDate && startDate > today)
       
-      setCanUpdate(true)
+      // For pending goals, allow edit until 5 hours before start date
+      // For active goals, allow edit within 5 hours of creation
+      let editAllowed = false
+      if (isPending && startDate) {
+        const startDateTime = new Date(startDate).getTime()
+        const fiveHoursBeforeStart = startDateTime - (5 * 60 * 60 * 1000)
+        editAllowed = Date.now() <= fiveHoursBeforeStart
+      } else {
+        const created = new Date(goalData.created_at).getTime()
+        const fiveHours = 5 * 60 * 60 * 1000
+        editAllowed = (Date.now() - created) <= fiveHours
+      }
+      
+      setCanEdit(editAllowed)
+      setCanUpdate(true) // Allow activity updates for pending goals
 
       setGoal(goalData)
 
@@ -100,7 +113,7 @@ export default function UpdateGoalPage() {
   }
 
   const toggleActivity = async (activityIndex: number) => {
-    if (!canUpdate) {
+    if (goal.status === 'completed' || goal.completed_at) {
       toast.error('Goal is completed and cannot be updated')
       return
     }
@@ -274,7 +287,7 @@ export default function UpdateGoalPage() {
 
   return (
     <MainLayout>
-      {!canUpdate && (
+      {!canUpdate && goal.status === 'completed' && (
         <Card className="border-green-200 bg-green-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -287,12 +300,31 @@ export default function UpdateGoalPage() {
           </CardContent>
         </Card>
       )}
+      
+      {goal.status === 'pending' && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-4 w-4 text-blue-600" />
+              <span className="font-medium text-blue-900">Goal Pending</span>
+            </div>
+            <p className="text-sm text-blue-700">
+              This goal will become active on {goal.start_date ? new Date(goal.start_date).toLocaleDateString() : 'the start date'}. You can still edit activities and dates.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Update Goal Progress</h1>
-            <p className="text-muted-foreground">Mark activities as completed to track your progress</p>
+            <p className="text-muted-foreground">
+              {goal.status === 'pending' 
+                ? 'Goal is pending - you can edit activities and dates'
+                : 'Mark activities as completed to track your progress'
+              }
+            </p>
           </div>
           <div className="flex gap-2">
             {canEdit && (
@@ -309,12 +341,10 @@ export default function UpdateGoalPage() {
               isSuspended={goal.status === 'paused' || goal.is_suspended}
               onStatusChange={loadGoalData}
             />
-            <Link href={`/goals/${goalId}`}>
-              <Button variant="outline">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Goal
-              </Button>
-            </Link>
+            <Button variant="outline" onClick={() => router.push('/goals')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Goals
+            </Button>
           </div>
         </div>
 
@@ -350,7 +380,7 @@ export default function UpdateGoalPage() {
                 <CardTitle>Activities</CardTitle>
                 <Button 
                   onClick={() => setShowCompletionDialog(true)}
-                  disabled={!canUpdate}
+                  disabled={!canUpdate || goal.status === 'pending'}
                   size="sm"
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -364,7 +394,7 @@ export default function UpdateGoalPage() {
                   <Checkbox
                     checked={activity.completed}
                     onCheckedChange={() => toggleActivity(index)}
-                    disabled={!canUpdate}
+                    disabled={goal.status === 'pending'}
                   />
                   <div className="flex-1">
                     <span className={`text-sm ${activity.completed ? 'line-through text-muted-foreground' : ''}`}>
@@ -393,7 +423,7 @@ export default function UpdateGoalPage() {
                 onClick={() => setShowCompletionDialog(true)}
                 className="w-full"
                 variant={activities[0]?.completed ? "outline" : "default"}
-                disabled={!canUpdate}
+                disabled={goal.status === 'pending'}
               >
                 {activities[0]?.completed ? (
                   <>
