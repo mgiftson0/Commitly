@@ -11,7 +11,6 @@ import {
   Phone,
   MapPin,
   MessageCircle,
-  Clock,
   Send,
   Building,
   Users,
@@ -120,7 +119,7 @@ export default function ContactPage() {
           </h1>
           <p className="text-base sm:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto">
             Have a question, need support, or want to explore partnership opportunities?
-            We'd love to hear from you.
+            We&apos;d love to hear from you.
           </p>
         </div>
       </section>
@@ -155,7 +154,7 @@ export default function ContactPage() {
             <CardHeader>
               <CardTitle className="text-xl sm:text-2xl">Send us a Message</CardTitle>
               <CardDescription>
-                Fill out the form below and we'll get back to you as soon as possible.
+                Fill out the form below and we&apos;ll get back to you as soon as possible.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -230,7 +229,7 @@ export default function ContactPage() {
               Our Offices
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
-              Visit us at one of our global offices. We're always happy to meet in person.
+              Visit us at one of our global offices. We&apos;re always happy to meet in person.
             </p>
           </div>
 

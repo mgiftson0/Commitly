@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,13 +11,14 @@ import { ArrowLeft, Plus, X, Save, Clock } from "lucide-react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { supabase, authHelpers } from "@/lib/supabase-client"
 import { toast } from "sonner"
+import type { Database } from "@/types/supabase"
 
 export default function EditGoalPage() {
   const params = useParams()
   const router = useRouter()
   const goalId = params.id as string
-  const [goal, setGoal] = useState<any>(null)
-  const [activities, setActivities] = useState<any[]>([])
+  const [goal, setGoal] = useState<Database['public']['Tables']['goals']['Row'] | null>(null)
+  const [activities, setActivities] = useState<Database['public']['Tables']['goal_activities']['Row'][]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [canEdit, setCanEdit] = useState(false)
@@ -28,9 +29,9 @@ export default function EditGoalPage() {
 
   useEffect(() => {
     loadGoalData()
-  }, [goalId])
+  }, [loadGoalData])
 
-  const loadGoalData = async () => {
+  const loadGoalData = useCallback(async () => {
     try {
       const user = await authHelpers.getCurrentUser()
       if (!user) {
@@ -95,7 +96,7 @@ export default function EditGoalPage() {
       toast.error('Failed to load goal')
       router.push('/goals')
     }
-  }
+  }, [goalId, router])
 
   const addActivity = () => {
     setActivities([...activities, { title: '', order_index: activities.length }])
@@ -321,7 +322,7 @@ export default function EditGoalPage() {
               ))}
               {activities.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No activities added yet. Click "Add Activity" to get started.
+                  No activities added yet. Click &ldquo;Add Activity&rdquo; to get started.
                 </p>
               )}
             </CardContent>

@@ -110,9 +110,9 @@ export default function AboutPage() {
             Our <span className="text-primary">Mission</span>
           </h1>
           <p className="text-base sm:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed">
-            We're on a mission to empower millions of people to achieve their goals through accountability,
+            We&apos;re on a mission to empower millions of people to achieve their goals through accountability,
             community, and intelligent goal-tracking tools. Every achievement starts with a single step,
-            and we're here to guide you every step of the way.
+            and we&apos;re here to guide you every step of the way.
           </p>
           <div className="flex justify-center">
             <Link href="/auth/signup">
@@ -171,7 +171,7 @@ export default function AboutPage() {
                 <div className="text-center p-8">
                   <Quote className="h-12 w-12 text-primary mx-auto mb-4" />
                   <p className="text-lg italic text-muted-foreground mb-4">
-                    "The best way to predict the future is to create it."
+                    &ldquo;The best way to predict the future is to create it.&rdquo;
                   </p>
                   <p className="font-semibold">- Peter Drucker</p>
                 </div>
@@ -255,7 +255,7 @@ export default function AboutPage() {
               Meet Our Team
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
-              The passionate individuals behind Commitly's mission.
+              The passionate individuals behind Commitly&apos;s mission.
             </p>
           </div>
 
@@ -289,7 +289,7 @@ export default function AboutPage() {
             Join Our Mission
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8">
-            Be part of a community that's transforming how people achieve their goals worldwide.
+            Be part of a community that&apos;s transforming how people achieve their goals worldwide.
           </p>
           <Link href="/auth/signup">
             <Button size="lg" className="px-8">
