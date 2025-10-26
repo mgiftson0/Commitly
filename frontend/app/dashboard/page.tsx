@@ -551,7 +551,7 @@ export default function DashboardPage() {
 
         <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-2 2xl:justify-center">
           {/* Active Goals */}
-          <Card className="hover-lift h-auto w-full flex flex-col">
+          <Card className="hover-lift h-auto w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-yellow-400/50">
             <CardHeader className="flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
@@ -648,7 +648,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Recent Activity - Matches Active Goals Styling */}
-          <Card className="hover-lift h-auto w-full flex flex-col">
+          <Card className="hover-lift h-auto w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-blue-400/50">
             <CardHeader className="flex-shrink-0 pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
@@ -725,7 +725,7 @@ export default function DashboardPage() {
 
         <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-2 2xl:justify-center">
           {/* Upcoming Deadlines - Matches Recent Activity */}
-          <Card className="hover-lift h-auto w-full flex flex-col">
+          <Card className="hover-lift h-auto w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-orange-400/50">
             <CardHeader className="flex-shrink-0 pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Upcoming Deadlines</CardTitle>
@@ -809,7 +809,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Category Progress */}
-          <Card className="hover-lift h-auto w-full flex flex-col">
+          <Card className="hover-lift h-auto w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-purple-400/50">
             <CardHeader className="px-4 sm:px-6 py-1">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="flex items-center gap-2 text-sm font-medium bg-muted/30 px-2 py-1 rounded-md w-fit">
@@ -890,7 +890,7 @@ export default function DashboardPage() {
         {/* Quick Actions & Partner Requests */}
         <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-2 2xl:justify-center">
           {/* Quick Actions - Responsive 2x2 Grid */}
-          <Card className="hover-lift h-[400px] w-full flex flex-col">
+          <Card className="hover-lift h-[400px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-green-400/50">
             <CardHeader className="flex-shrink-0 pb-2">
               <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                 <Zap className="h-4 w-4 text-blue-600" />
@@ -949,7 +949,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Partner Activities - Matches Recent Activity */}
-          <Card className="hover-lift h-[400px] w-full flex flex-col">
+          <Card className="hover-lift h-[400px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-teal-400/50">
             <CardHeader className="flex-shrink-0 pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Partner Activities</CardTitle>
