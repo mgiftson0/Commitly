@@ -172,7 +172,7 @@ export default function DashboardPage() {
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(5)
+          .limit(3)
 
         console.log('Loaded notifications:', notifications)
 
@@ -631,114 +631,117 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Recent Activity - Notification Page Styling */}
+          {/* Recent Activity - Matches Active Goals Styling */}
           <Card className="hover-lift h-[400px] w-full flex flex-col">
-            <CardHeader className="flex-shrink-0">
-              <CardTitle className="flex items-center gap-2">
-                <Bell className={`h-5 w-5 transition-transform duration-200 ${bellShake ? 'animate-bounce' : ''}`} />
-                Recent Activity
-              </CardTitle>
-              <CardDescription>
+            <CardHeader className="flex-shrink-0 pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className={`h-5 w-5 transition-transform duration-200 ${bellShake ? 'animate-bounce' : ''}`} />
+                  Recent Activity
+                </CardTitle>
+                <Link href="/notifications">
+                  <Button variant="ghost" size="sm" className="h-8">
+                    View All
+                    <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+              <CardDescription className="pt-1">
                 Your latest achievements and updates
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col p-4">
-              <div className="flex-1 overflow-y-auto mb-4">
-                {recentActivity.length === 0 ? (
-                  <div className="text-center py-8 flex-1">
-                    <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-4">
-                      No recent activity yet. Complete some goals to see your progress here!
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {recentActivity.map((activity: any) => {
-                      const Icon = activity.icon
-                      const getNotificationColor = (type: string) => {
-                        if (type === 'goal_completed') return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
-                        if (type === 'streak_milestone') return 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950'
-                        if (type === 'partner_joined') return 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950'
-                        if (type === 'goal_created') return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
-                        if (type === 'activity_completed') return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
-                        if (type === 'encouragement_received') return 'border-pink-200 bg-pink-50 dark:border-pink-800 dark:bg-pink-950'
-                        return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
-                      }
-                      return (
-                        <div
-                          key={activity.id}
-                          className={`p-3 rounded-lg border transition-all cursor-pointer hover:bg-accent/50 ${getNotificationColor(activity.type)} ${activity.goalId ? 'hover:border-primary/50' : ''}`}
-                          onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 mt-0.5">
-                              <div className="p-1.5 rounded-full bg-background/80">
-                                <Icon className={`h-4 w-4 ${activity.color}`} />
-                              </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-medium text-sm">{activity.title}</h3>
-                              </div>
-                              <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                                {activity.description}
-                              </p>
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">
-                                  {activity.time}
-                                </span>
-                                {activity.goalId && (
-                                  <span className="text-xs text-primary font-medium">
-                                    View Goal →
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+            <CardContent className="pb-4">
+              {recentActivity.length === 0 ? (
+                <div className="text-center py-6">
+                  <Bell className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm">
+                    No recent activity yet. Complete some goals to see your progress here!
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {recentActivity.slice(0, 3).map((activity: any) => {
+                    const Icon = activity.icon
+                    const getNotificationColor = (type: string) => {
+                      if (type === 'goal_completed') return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                      if (type === 'streak_milestone') return 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'
+                      if (type === 'partner_joined') return 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800'
+                      if (type === 'goal_created') return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+                      if (type === 'activity_completed') return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                      if (type === 'encouragement_received') return 'bg-pink-50 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800'
+                      return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+                    }
+                    return (
+                      <div
+                        key={activity.id}
+                        className={`flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}`}
+                        onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
+                      >
+                        <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5">
+                          <Icon className={`h-3.5 w-3.5 ${activity.color}`} />
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                className="w-full text-xs h-8 flex-shrink-0 mb-2 border border-slate-200 dark:border-slate-700"
-                onClick={() => router.push('/notifications')}
-              >
-                View All Activity
-              </Button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{activity.title}</h4>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 whitespace-nowrap">
+                              {activity.time}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2">
+                            {activity.description}
+                          </p>
+                          {activity.goalId && (
+                            <div className="mt-1">
+                              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                View Goal →
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-[450px_350px] 2xl:justify-center">
-          {/* Upcoming Deadlines */}
-          <Card className="hover-lift h-[350px] flex flex-col">
-            <CardHeader className="flex-shrink-0">
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Upcoming Deadlines
-              </CardTitle>
-              <CardDescription>
+        <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-2 2xl:justify-center">
+          {/* Upcoming Deadlines - Matches Recent Activity */}
+          <Card className="hover-lift h-auto w-full flex flex-col">
+            <CardHeader className="flex-shrink-0 pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Upcoming Deadlines</CardTitle>
+                <Button variant="ghost" size="sm" className="h-8">
+                  View All
+                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              </div>
+              <CardDescription className="pt-1">
                 Goals that need your attention
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto">
-              <div className="space-y-4">
-                {upcomingDeadlines.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">No upcoming deadlines</p>
-                ) : (
-                  upcomingDeadlines.map((goal: any) => {
+            <CardContent className="pb-4">
+              {upcomingDeadlines.length === 0 ? (
+                <div className="text-center py-6">
+                  <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm">
+                    No upcoming deadlines
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {upcomingDeadlines.slice(0, 3).map((goal: any) => {
                     const dueDate = new Date(goal.dueDate)
                     const today = new Date()
                     const diffTime = dueDate.getTime() - today.getTime()
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
                     
                     const getUrgencyColor = () => {
-                      if (diffDays < 0) return 'bg-red-100 border-red-300 dark:bg-red-950 dark:border-red-800'
-                      if (diffDays <= 3) return 'bg-red-50 border-red-200 dark:bg-red-950/50 dark:border-red-800/50'
-                      if (diffDays <= 7) return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/50 dark:border-yellow-800/50'
+                      if (diffDays < 0) return 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800'
+                      if (diffDays <= 3) return 'bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800'
+                      if (diffDays <= 7) return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800'
                       return 'bg-card border-border'
                     }
                     
@@ -746,55 +749,61 @@ export default function DashboardPage() {
                       if (diffDays < 0) return 'Overdue'
                       if (diffDays === 0) return 'Due Today'
                       if (diffDays === 1) return 'Due Tomorrow'
-                      return `Due in ${diffDays} days`
+                      return `${diffDays} days left`
                     }
                     
                     return (
-                      <div key={goal.id} className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${getUrgencyColor()}`} onClick={() => {
-                        if (goal.id && goal.id !== 'undefined' && goal.id !== 'null' && !isNaN(goal.id)) {
-                          router.push(`/goals/${goal.id}`)
-                        } else {
-                          console.error('Invalid deadline goal ID:', goal.id)
-                        }
-                      }}>
-                        <div className="p-2 rounded-lg bg-background/50">
-                          <Target className="h-4 w-4 text-primary" />
+                      <div 
+                        key={goal.id} 
+                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${getUrgencyColor()}`} 
+                        onClick={() => goal.id && router.push(`/goals/${goal.id}`)}
+                      >
+                        <div className="p-1.5 rounded bg-white dark:bg-slate-800/50">
+                          <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm">{goal.title}</h4>
-                          <p className="text-xs text-muted-foreground">
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{goal.title}</h4>
+                            <Badge 
+                              variant={goal.priority === 'high' ? 'destructive' : goal.priority === 'medium' ? 'default' : 'secondary'} 
+                              className="text-xs h-5"
+                            >
+                              {goal.priority}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">
                             {getDueDateText()}
                           </p>
-                          <Progress value={goal.progress} className={`w-full h-1.5 mt-2 ${getProgressColor(goal.progress)}`} />
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {goal.progress}% complete
+                            </span>
+                            <Progress 
+                              value={goal.progress} 
+                              className={`flex-1 h-2 ${getProgressColor(goal.progress)}`} 
+                            />
+                          </div>
                         </div>
-                        <Badge variant={goal.priority === 'high' ? 'destructive' : goal.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
-                          {goal.priority}
-                        </Badge>
                       </div>
                     )
-                  })
-                )}
-              </div>
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Category Progress */}
-          <Card className="hover-lift h-[350px] flex flex-col">
-            <CardHeader className="flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Category Progress
-                  </CardTitle>
-                  <CardDescription>
-                    How you&apos;re doing across different areas
-                  </CardDescription>
-                </div>
+          <Card className="hover-lift h-auto w-full flex flex-col">
+            <CardHeader className="px-4 sm:px-6 py-1">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium bg-muted/30 px-2 py-1 rounded-md w-fit">
+                  <TrendingUp className="h-3 w-3 text-primary" />
+                  Category Progress
+                </CardTitle>
                 {categoryProgress.length > 3 && (
                   <Dialog open={showCategoryModal} onOpenChange={setShowCategoryModal}>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="outline" size="sm" className="text-[10px] h-6 px-2 border bg-background">
                         View All
                       </Button>
                     </DialogTrigger>
@@ -802,22 +811,22 @@ export default function DashboardPage() {
                       <DialogHeader>
                         <DialogTitle>All Category Progress</DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-4 max-h-96 overflow-y-auto">
+                      <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                         {categoryProgress.map((category) => {
                           const Icon = category.icon
                           return (
                             <div key={category.name} className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg ${category.color.replace('bg-', 'bg-').replace('-500', '-100')}`}>
-                                <Icon className={`h-4 w-4 ${category.color.replace('bg-', 'text-')}`} />
+                              <div className={`p-1.5 rounded-lg ${category.color.replace('bg-', 'bg-').replace('-500', '-100')}`}>
+                                <Icon className={`h-3.5 w-3.5 ${category.color.replace('bg-', 'text-')}`} />
                               </div>
                               <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-sm font-medium">{category.name}</span>
-                                  <span className="text-sm text-muted-foreground">
+                                  <span className="text-xs text-muted-foreground">
                                     {category.completed || 0}/{category.total || 0}
                                   </span>
                                 </div>
-                                <Progress value={category.progress} className={`h-2 ${getProgressColor(category.progress)}`} />
+                                <Progress value={category.progress} className={`h-1.5 ${getProgressColor(category.progress)}`} />
                               </div>
                             </div>
                           )
@@ -828,153 +837,172 @@ export default function DashboardPage() {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto">
-              <div className="space-y-4">
-                {categoryProgress.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">No goals created yet</p>
-                ) : (
-                  categoryProgress.slice(0, 3).map((category) => {
+            <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6 pt-0 h-full overflow-y-auto">
+              {categoryProgress.length === 0 ? (
+                <div className="text-center py-6">
+                  <TrendingUp className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm">
+                    No goals created yet
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5 sm:space-y-2">
+                  {categoryProgress.slice(0, 3).map((category) => {
                     const Icon = category.icon
                     return (
-                      <div key={category.name} className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${category.color.replace('bg-', 'bg-').replace('-500', '-100')}`}>
-                          <Icon className={`h-4 w-4 ${category.color.replace('bg-', 'text-')}`} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium">{category.name}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {category.completed || 0}/{category.total || 0}
-                            </span>
+                      <div key={category.name} className="space-y-1.5 sm:space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Icon className={`h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 ${category.color.replace('bg-', 'text-')}`} />
+                            <span className="text-xs sm:text-sm font-medium truncate">{category.name}</span>
                           </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            {category.standardGoals > 0 && (
-                              <Badge variant="outline" className="text-xs">
-                                {category.standardGoals} Standard
-                              </Badge>
-                            )}
-                            {category.seasonalGoals > 0 && (
-                              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-                                {category.seasonalGoals} Seasonal
-                              </Badge>
-                            )}
-                          </div>
-                          <Progress value={category.progress} className={`h-2 ${getProgressColor(category.progress)}`} />
+                          <span className="text-xs sm:text-sm text-muted-foreground flex-shrink-0">
+                            {category.completed || 0}/{category.total || 0}
+                          </span>
                         </div>
+
+                        <Progress value={category.progress || 0} className={`h-1.5 sm:h-2 ${getProgressColor(category.progress || 0)}`} />
                       </div>
                     )
-                  })
-                )}
-              </div>
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
         {/* Quick Actions & Partner Requests */}
-        <div className="w-full max-w-2xl mx-auto grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-2 2xl:justify-center">
           {/* Quick Actions - Responsive 2x2 Grid */}
-          <Card className="hover-lift h-auto flex flex-col">
+          <Card className="hover-lift h-[400px] w-full flex flex-col">
             <CardHeader className="flex-shrink-0 pb-2">
               <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                 <Zap className="h-4 w-4 text-blue-600" />
                 Quick Actions
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-2 sm:gap-3 p-2 sm:p-4">
+            <CardContent className="grid grid-cols-2 gap-1 sm:gap-2 p-1 sm:p-2 pb-2">
               <Link href="/goals/create" className="block">
-                <div className="aspect-square p-2 rounded-lg sm:rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all hover:scale-105 cursor-pointer shadow-md">
-                  <div className="h-full flex flex-col items-center justify-center text-center gap-1">
-                    <div className="p-1.5 sm:p-2 bg-white/20 rounded-full">
-                      <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                <div className="aspect-square p-1.5 rounded-lg sm:rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all hover:scale-105 cursor-pointer shadow-md">
+                  <div className="h-full flex flex-col items-center justify-center text-center gap-0.5">
+                    <div className="p-1 sm:p-1.5 bg-white/20 rounded-full">
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                     </div>
-                    <div className="text-[10px] sm:text-xs font-bold leading-tight">CREATE</div>
-                    <div className="text-[8px] sm:text-[10px] opacity-90">New Goal</div>
+                    <div className="text-[9px] sm:text-xs font-bold leading-tight">CREATE</div>
+                    <div className="text-[7px] sm:text-[10px] opacity-90">New Goal</div>
                   </div>
                 </div>
               </Link>
               <Link href="/partners/find">
-                <div className="aspect-square p-2 sm:p-3 rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-all hover:scale-105 cursor-pointer shadow-lg overflow-hidden">
+                <div className="aspect-square p-1.5 sm:p-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-all hover:scale-105 cursor-pointer shadow-lg overflow-hidden">
                   <div className="h-full flex flex-col items-center justify-center text-center">
-                    <div className="p-2 bg-white/20 rounded-full mb-2">
-                      <Users className="h-6 w-6" />
+                    <div className="p-1.5 sm:p-2 bg-white/20 rounded-full mb-1">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <div className="text-xs font-bold leading-tight">PARTNERS</div>
-                    <div className="text-[10px] opacity-90 font-medium">Find Help</div>
+                    <div className="text-[9px] sm:text-xs font-bold leading-tight">PARTNERS</div>
+                    <div className="text-[7px] sm:text-[10px] opacity-90 font-medium">Find Help</div>
                   </div>
                 </div>
               </Link>
               <Link href="/goals">
-                <div className="aspect-square p-2 sm:p-3 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-all hover:scale-105 cursor-pointer shadow-lg overflow-hidden">
+                <div className="aspect-square p-1.5 sm:p-2 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-all hover:scale-105 cursor-pointer shadow-lg overflow-hidden">
                   <div className="h-full flex flex-col items-center justify-center text-center">
-                    <div className="p-2 bg-white/20 rounded-full mb-2">
-                      <Target className="h-6 w-6" />
+                    <div className="p-1.5 sm:p-2 bg-white/20 rounded-full mb-1">
+                      <Target className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <div className="text-xs font-bold leading-tight">BROWSE</div>
-                    <div className="text-[10px] opacity-90 font-medium">All Goals</div>
+                    <div className="text-[9px] sm:text-xs font-bold leading-tight">BROWSE</div>
+                    <div className="text-[7px] sm:text-[10px] opacity-90 font-medium">All Goals</div>
                   </div>
                 </div>
               </Link>
               <Link href="/achievements">
-                <div className="aspect-square p-2 sm:p-3 rounded-xl bg-orange-600 text-white hover:bg-orange-700 transition-all hover:scale-105 cursor-pointer shadow-lg overflow-hidden">
+                <div className="aspect-square p-1.5 sm:p-2 rounded-xl bg-orange-600 text-white hover:bg-orange-700 transition-all hover:scale-105 cursor-pointer shadow-lg overflow-hidden">
                   <div className="h-full flex flex-col items-center justify-center text-center">
-                    <div className="p-2 bg-white/20 rounded-full mb-2">
-                      <Award className="h-6 w-6" />
+                    <div className="p-1.5 sm:p-2 bg-white/20 rounded-full mb-1">
+                      <Award className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <div className="text-xs font-bold leading-tight">AWARDS</div>
-                    <div className="text-[10px] opacity-90 font-medium">Badges</div>
+                    <div className="text-[9px] sm:text-xs font-bold leading-tight">AWARDS</div>
+                    <div className="text-[7px] sm:text-[10px] opacity-90 font-medium">Badges</div>
                   </div>
                 </div>
               </Link>
             </CardContent>
           </Card>
 
-          {/* Partner Activities - Limited */}
-          <Card className="hover-lift h-[280px] flex flex-col">
-            <CardHeader className="flex-shrink-0">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-purple-600" />
-                Partner Activities
-              </CardTitle>
-              <CardDescription>
+          {/* Partner Activities - Matches Recent Activity */}
+          <Card className="hover-lift h-[400px] w-full flex flex-col">
+            <CardHeader className="flex-shrink-0 pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Partner Activities</CardTitle>
+                <Link href="/partners/find">
+                  <Button variant="ghost" size="sm" className="h-8">
+                    Find Partners
+                    <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+              <CardDescription className="pt-1">
                 Recent achievements from your partners
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto">
+            <CardContent className="pb-4">
               {recentActivity.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center py-4">
-                  <Users className="h-8 w-8 text-muted-foreground mb-2 opacity-50" />
-                  <p className="text-sm text-muted-foreground">No partner activities yet</p>
-                  <Link href="/partners/find">
-                    <Button variant="link" size="sm" className="mt-2">
+                <div className="text-center py-6">
+                  <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm">
+                    No partner activities yet
+                  </p>
+                  <Link href="/partners/find" className="mt-2 inline-block">
+                    <Button variant="outline" size="sm" className="mt-2">
                       Find Partners
                     </Button>
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {recentActivity.slice(0, 3).map((activity: any) => {
                     const Icon = activity.type === 'goal_completed' ? CheckCircle2 : 
                                  activity.type === 'streak_milestone' ? Flame :
                                  activity.type === 'achievement_unlocked' ? Trophy :
+                                 activity.type === 'partner_request' ? Users :
                                  Target
-                    const color = activity.type === 'goal_completed' ? 'text-green-600' :
-                                  activity.type === 'streak_milestone' ? 'text-orange-600' :
-                                  activity.type === 'achievement_unlocked' ? 'text-yellow-600' :
-                                  'text-blue-600'
                     
+                    const getNotificationColor = (type: string) => {
+                      if (type === 'goal_completed') return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                      if (type === 'streak_milestone') return 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'
+                      if (type === 'partner_joined') return 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800'
+                      if (type === 'goal_created') return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+                      if (type === 'activity_completed') return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                      if (type === 'encouragement_received') return 'bg-pink-50 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800'
+                      return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+                    }
+
                     return (
-                      <div key={activity.id} className="flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                        <div className={`p-1.5 rounded-full bg-muted flex-shrink-0`}>
-                          <Icon className={`h-3 w-3 ${color}`} />
+                      <div
+                        key={activity.id}
+                        className={`flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}`}
+                        onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
+                      >
+                        <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5">
+                          <Icon className={`h-3.5 w-3.5 ${activity.color}`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium line-clamp-1">{activity.title}</p>
-                          <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">
-                            {activity.message}
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{activity.title}</h4>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 whitespace-nowrap">
+                              {activity.time}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2">
+                            {activity.description}
                           </p>
-                          <p className="text-[9px] text-muted-foreground mt-1">
-                            {new Date(activity.created_at).toLocaleDateString()}
-                          </p>
+                          {activity.goalId && (
+                            <div className="mt-1">
+                              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                View Goal →
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )
@@ -982,15 +1010,6 @@ export default function DashboardPage() {
                 </div>
               )}
             </CardContent>
-            {recentActivity.length > 0 && (
-              <div className="border-t p-2">
-                <Link href="/notifications">
-                  <Button variant="ghost" size="sm" className="w-full text-xs">
-                    View All Activities
-                  </Button>
-                </Link>
-              </div>
-            )}
           </Card>
         </div>
 
