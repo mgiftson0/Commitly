@@ -229,112 +229,163 @@ export default function NotificationsPage() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Notifications</h1>
-            <p className="text-muted-foreground">
-              {unreadCount > 0 ? `${unreadCount} unread notifications` : 'All caught up!'}
-            </p>
+      <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+        {/* Header Section with Gradient Background */}
+        <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 sm:p-6 border border-primary/20">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-50" />
+          <div className="relative">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                  Notifications
+                </h1>
+                <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                  {unreadCount > 0 ? (
+                    <span className="flex items-center gap-2">
+                      <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
+                      {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+                    </span>
+                  ) : (
+                    'All caught up! 🎉'
+                  )}
+                </p>
+              </div>
+              {unreadCount > 0 && (
+                <Button
+                  onClick={markAllAsRead}
+                  variant="outline"
+                  className="w-full sm:w-auto bg-background/50 backdrop-blur-sm border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
+                >
+                  <CheckCheck className="h-4 w-4 mr-2" />
+                  Mark All Read
+                </Button>
+              )}
+            </div>
           </div>
-          {unreadCount > 0 && (
-            <Button onClick={markAllAsRead} variant="outline">
-              <CheckCheck className="h-4 w-4 mr-2" />
-              Mark All Read
-            </Button>
-          )}
         </div>
 
+        {/* Notifications List */}
         {notifications.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Bell className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No notifications yet</h3>
-              <p className="text-muted-foreground">
-                When you complete goals or receive encouragements, they'll appear here.
+          <Card className="border-dashed border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+            <CardContent className="p-8 sm:p-12 text-center">
+              <div className="relative inline-block">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-xl opacity-50" />
+                <div className="relative bg-background rounded-full p-4 border border-primary/20">
+                  <Bell className="h-8 sm:h-12 w-8 sm:w-12 text-primary/60" />
+                </div>
+              </div>
+              <h3 className="text-lg sm:text-xl font-semibold mt-4 mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                No notifications yet
+              </h3>
+              <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto">
+                When you complete goals, receive encouragements, or get partner requests, they'll appear here.
               </p>
+              <Button variant="outline" className="mt-4 border-primary/30 hover:bg-primary/10" asChild>
+                <Link href="/goals">Create Your First Goal</Link>
+              </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 sm:space-y-4">
             {notifications.map((notification) => {
               const Icon = getNotificationIcon(notification.type)
               const color = getNotificationColor(notification.type)
-              
+
               return (
-                <Card 
-                  key={notification.id} 
-                  className={`transition-all hover:shadow-md ${!notification.read ? 'border-primary/50 bg-primary/5' : ''}`}
+                <Card
+                  key={notification.id}
+                  className={`group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:scale-[1.01] border-l-4 ${
+                    !notification.read
+                      ? 'border-l-primary bg-gradient-to-r from-primary/5 to-transparent shadow-md'
+                      : 'border-l-muted bg-card'
+                  }`}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <div className={`p-2 rounded-full bg-muted flex-shrink-0`}>
-                        <Icon className={`h-5 w-5 ${color}`} />
+                  {/* Subtle background gradient for unread notifications */}
+                  {!notification.read && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/2 to-transparent opacity-50" />
+                  )}
+
+                  <CardContent className="p-3 sm:p-4 relative">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      {/* Icon with modern styling */}
+                      <div className={`relative flex-shrink-0 p-2 sm:p-3 rounded-xl bg-gradient-to-br ${color.replace('text-', 'from-').replace('-600', '-100')} ${color.replace('text-', 'to-').replace('-600', '-50')} border border-current/20`}>
+                        <Icon className={`h-4 sm:h-5 w-4 sm:w-5 ${color} drop-shadow-sm`} />
                       </div>
-                      
-                      <div className="flex-1 min-w-0">
+
+                      <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
                         <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-sm mb-1">
-                              {notification.title}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm sm:text-base mb-1 flex items-center gap-2">
+                              <span className="truncate">{notification.title}</span>
                               {!notification.read && (
-                                <Badge variant="secondary" className="ml-2 text-xs">
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-primary/10 text-primary border-primary/20 text-xs px-2 py-0.5 animate-pulse"
+                                >
                                   New
                                 </Badge>
                               )}
                             </h3>
-                            <p className="text-sm text-muted-foreground mb-2">
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-2">
                               {notification.message}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground/70">
                               {timeAgo(notification.created_at)}
                             </p>
                           </div>
-                          
+
+                          {/* Action buttons */}
                           <div className="flex gap-1 flex-shrink-0">
                             {!notification.read && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => markAsRead(notification.id)}
-                                className="h-8 w-8 p-0"
+                                className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-colors"
                               >
-                                <CheckCircle2 className="h-4 w-4" />
+                                <CheckCircle2 className="h-3.5 w-3.5" />
                               </Button>
                             )}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => deleteNotification(notification.id)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              className="h-8 w-8 p-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </div>
-                        
+
+                        {/* Goal view button */}
                         {notification.data?.goal_id && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="mt-2"
+                            className="w-full sm:w-auto text-xs sm:text-sm border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
                             onClick={() => router.push(`/goals/${notification.data.goal_id}`)}
                           >
+                            <Target className="h-3.5 w-3.5 mr-1.5" />
                             View Goal
                           </Button>
                         )}
-                        
+
+                        {/* Partner request section */}
                         {notification.type === 'partner_request' && notification.data?.sender_id && (
-                          <div className="mt-3 space-y-2">
-                            <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-xs">
+                          <div className="bg-muted/30 rounded-lg p-3 sm:p-4 border border-muted/50">
+                            <div className="flex items-center gap-3 mb-3">
+                              <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                                <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-primary/10">
                                   {notification.data.sender_name?.[0] || 'U'}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium">{notification.data.sender_name || 'User'}</p>
-                                <p className="text-xs text-muted-foreground">@{notification.data.sender_username || 'user'}</p>
+                                <p className="text-sm font-medium truncate">
+                                  {notification.data.sender_name || 'User'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  @{notification.data.sender_username || 'user'}
+                                </p>
                               </div>
                             </div>
                             <div className="flex gap-2">
@@ -342,32 +393,32 @@ export default function NotificationsPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handlePartnerRequest(notification.id, notification.data.sender_id, 'decline')}
-                                className="flex-1"
+                                className="flex-1 text-xs sm:text-sm border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50"
                               >
                                 Decline
                               </Button>
                               <Button
                                 size="sm"
                                 onClick={() => handlePartnerRequest(notification.id, notification.data.sender_id, 'accept')}
-                                className="flex-1"
+                                className="flex-1 text-xs sm:text-sm bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
                               >
                                 Accept
                               </Button>
                             </div>
                           </div>
                         )}
-                        
+
+                        {/* Goal partner request */}
                         {notification.type === 'goal_partner_request' && notification.data?.requester_id && notification.data?.goal_id && (
-                          <div className="mt-3">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full"
-                              onClick={() => router.push(`/goals/${notification.data.goal_id}`)}
-                            >
-                              View Goal & Respond
-                            </Button>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs sm:text-sm border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
+                            onClick={() => router.push(`/goals/${notification.data.goal_id}`)}
+                          >
+                            <Users className="h-3.5 w-3.5 mr-1.5" />
+                            View Goal & Respond
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -377,6 +428,18 @@ export default function NotificationsPage() {
             })}
           </div>
         )}
+
+        {/* Footer with link to landing page */}
+        <div className="text-center py-4 sm:py-6 border-t border-muted/20">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-2">
+            Want to learn more about Commitly?
+          </p>
+          <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80" asChild>
+            <Link href="/">
+              Visit Landing Page →
+            </Link>
+          </Button>
+        </div>
       </div>
     </MainLayout>
   )

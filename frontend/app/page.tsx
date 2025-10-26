@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -374,11 +374,10 @@ export default function LandingPage() {
             <div className="space-y-4">
               <h3 className="font-semibold">Product</h3>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Features</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Pricing</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Integrations</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">API</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Mobile App</a></li>
+                <li><Link href="/features" className="text-muted-foreground hover:text-primary transition-colors">Features</Link></li>
+                <li><Link href="/pricing" className="text-muted-foreground hover:text-primary transition-colors">Pricing</Link></li>
+                <li><Link href="/blog" className="text-muted-foreground hover:text-primary transition-colors">Blog</Link></li>
+                <li><Link href="/help" className="text-muted-foreground hover:text-primary transition-colors">Help Center</Link></li>
               </ul>
             </div>
 
@@ -386,11 +385,10 @@ export default function LandingPage() {
             <div className="space-y-4">
               <h3 className="font-semibold">Support</h3>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Help Center</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Contact Us</a></li>
+                <li><Link href="/help" className="text-muted-foreground hover:text-primary transition-colors">Help Center</Link></li>
+                <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Contact Us</Link></li>
                 <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Community</a></li>
                 <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Status</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Bug Reports</a></li>
               </ul>
             </div>
 
@@ -398,11 +396,11 @@ export default function LandingPage() {
             <div className="space-y-4">
               <h3 className="font-semibold">Company</h3>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">About</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Blog</a></li>
+                <li><Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">About</Link></li>
+                <li><Link href="/blog" className="text-muted-foreground hover:text-primary transition-colors">Blog</Link></li>
                 <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Careers</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Terms of Service</a></li>
+                <li><Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
