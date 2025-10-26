@@ -448,94 +448,146 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Welcome Header - 2 Lines Maximum */}
-        <div className="relative bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/50 dark:to-blue-950/30 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-6 shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-            <div className="flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                Welcome back, <span className="text-blue-600 dark:text-blue-400">{profile?.first_name || 'User'}!</span>
-              </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                You are on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! 🔥
-              </p>
+        {/* Modern Compact Welcome Header */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 dark:from-emerald-600 dark:via-teal-600 dark:to-cyan-600 rounded-xl p-6 sm:p-8 shadow-xl min-h-[160px] sm:min-h-[180px]">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-15">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full -translate-y-20 translate-x-20"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full translate-y-16 -translate-x-16"></div>
+            <div className="absolute top-1/2 left-1/2 w-24 h-24 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 opacity-20"></div>
+          </div>
+
+          <div className="relative flex flex-col gap-4">
+            {/* Top Row - Welcome & Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              {/* Welcome Text Section */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-white/25 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                    <img 
+                      src={profile?.profile_picture_url || '/default-avatar.png'} 
+                      alt={profile?.first_name || 'User'} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `<span class="text-white font-bold text-lg">${profile?.first_name?.[0]?.toUpperCase() || 'U'}</span>`;
+                        }
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white leading-tight">
+                      Welcome back, <span className="text-yellow-300 drop-shadow-lg">{profile?.first_name || 'User'}</span>
+                    </h1>
+                    <p className="text-emerald-100 text-sm leading-relaxed">
+                      Ready to crush your goals? You're on fire with a{' '}
+                      <span className="font-semibold text-yellow-300">{todayStats.streak}-day streak</span>! 🔥
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Primary Action */}
+                <Link href="/goals/create" className="inline-flex">
+                  <Button className="bg-white text-emerald-600 hover:bg-emerald-50 font-semibold shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl">
+                    <Plus className="h-4 w-4 mr-2" />
+                    <span className="text-sm">New Goal</span>
+                  </Button>
+                </Link>
+
+                {/* Secondary Actions Row */}
+                <div className="flex gap-2">
+                  <Link href="/partners/find" className="hidden xs:inline-flex">
+                    <Button variant="outline" size="sm" className="border-white/40 bg-white/15 text-white hover:bg-white/25 hover:border-white/60 backdrop-blur-sm shadow-lg transition-all duration-200">
+                      <Users className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline text-xs">Partners</span>
+                    </Button>
+                  </Link>
+
+                  {!motivationEnabled && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setMotivationEnabled(true)
+                        setShowMotivation(true)
+                        localStorage.setItem('dailyMotivationEnabled', 'true')
+                      }}
+                      className="border-yellow-300/60 bg-yellow-400/25 text-yellow-100 hover:bg-yellow-400/35 hover:border-yellow-300 shadow-lg animate-pulse backdrop-blur-sm"
+                    >
+                      <Star className="h-3 w-3 mr-1 animate-spin" />
+                      <span className="text-xs">Motivate</span>
+                    </Button>
+                  )}
+
+                  {/* Mobile Menu Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="sm:hidden bg-white/15 text-white hover:bg-white/25 border-white/30 shadow-lg"
+                    onClick={() => {/* Could add mobile menu logic */}}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-2 sm:gap-3">
-              <Link href="/goals/create">
-                <Button className="shadow-md bg-blue-600 hover:bg-blue-700 text-white" size="sm">
-                  <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">New Goal</span>
-                </Button>
-              </Link>
-              <Link href="/partners/find" className="hidden sm:block">
-                <Button variant="outline" className="shadow-md border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800" size="sm">
-                  <Users className="h-4 w-4 mr-2" />
-                  Find Partners
-                </Button>
-              </Link>
-              {!motivationEnabled && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setMotivationEnabled(true)
-                    setShowMotivation(true)
-                    localStorage.setItem('dailyMotivationEnabled', 'true')
-                  }}
-                  className="shadow-md animate-pulse border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/30"
-                >
-                  <Star className="h-4 w-4 mr-2 animate-spin text-amber-600 dark:text-amber-400" />
-                  Enable Motivation
-                </Button>
-              )}
+
+            {/* Motivation Quote Section */}
+            {motivationEnabled && showMotivation && (
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20 shadow-inner">
+                <div className="flex items-start gap-3">
+                  <Star className="h-5 w-5 text-yellow-300 mt-0.5 flex-shrink-0 animate-pulse" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white italic text-sm leading-relaxed mb-1">
+                      "{todayMotivation.quote}"
+                    </p>
+                    <p className="text-emerald-100 text-xs font-medium">
+                      — {todayMotivation.author}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowMotivation(false)}
+                    className="h-6 w-6 p-0 text-white/70 hover:text-white hover:bg-white/20 rounded-full flex-shrink-0"
+                    title="Hide motivation"
+                  >
+                    ×
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Stats Bar */}
+            <div className="pt-2 border-t border-white/25">
+              <div className="grid grid-cols-3 gap-6 text-center">
+                <div className="flex flex-col items-center">
+                  <div className="text-xl font-bold text-white drop-shadow-lg">{todayStats.completed}</div>
+                  <div className="text-xs text-emerald-100 font-medium">Goals Done</div>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="text-xl font-bold text-yellow-300 drop-shadow-lg">{todayStats.streak}</div>
+                  <div className="text-xs text-emerald-100 font-medium">Day Streak</div>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="text-xl font-bold text-white drop-shadow-lg">{activeGoals.length}</div>
+                  <div className="text-xs text-emerald-100 font-medium">Active</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Today's Summary Cards - Profile Page Style */}
-        <div className="border rounded-lg p-3 sm:p-4 bg-card">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 rounded-full bg-green-500/10">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-              </div>
-              <div>
-                <p className="text-base sm:text-lg md:text-xl font-bold">{todayStats.completed}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Completed</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 rounded-full bg-orange-500/10">
-                <Clock className="h-4 w-4 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-base sm:text-lg md:text-xl font-bold">{todayStats.pending}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Pending</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 rounded-full bg-blue-500/10">
-                <Flame className="h-4 w-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-base sm:text-lg md:text-xl font-bold">{todayStats.streak}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Streak</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 rounded-full bg-purple-500/10">
-                <Award className="h-4 w-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-base sm:text-lg md:text-xl font-bold">{todayStats.longestStreak}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Best</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-[800px_400px] 2xl:justify-center">
+        <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-2 2xl:justify-center">
           {/* Active Goals */}
-          <Card className="hover-lift h-[400px] w-full flex flex-col">
+          <Card className="hover-lift h-auto w-full flex flex-col">
             <CardHeader className="flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
@@ -632,7 +684,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Recent Activity - Matches Active Goals Styling */}
-          <Card className="hover-lift h-[400px] w-full flex flex-col">
+          <Card className="hover-lift h-auto w-full flex flex-col">
             <CardHeader className="flex-shrink-0 pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
