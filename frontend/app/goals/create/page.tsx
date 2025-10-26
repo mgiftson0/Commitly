@@ -516,79 +516,73 @@ export default function CreateGoalPage() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-3">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight">
               Create Standard Goal
             </h1>
-            <p className="text-muted-foreground">
-              Set a regular goal with custom timeline and activities
+            <p className="text-xs text-muted-foreground">
+              Set a regular goal with custom timeline
             </p>
           </div>
           <div className="flex gap-2">
             <Link href="/goals">
-              <Button variant="outline" className="hover-lift">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Goals
+              <Button variant="outline" size="sm" className="hover-lift h-7 text-xs px-2">
+                <ArrowLeft className="h-3 w-3 mr-1" />
+                Back
               </Button>
             </Link>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           {/* Main Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit}>
               <Card className="hover-lift">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-primary" />
-                    Standard Goal Details
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Target className="h-3 w-3 text-primary" />
+                    Goal Details
                   </CardTitle>
-                  <CardDescription>
-                    Define your regular goal with custom timeline and activities
-                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-3 px-4 pb-4">
                   {/* Title */}
-                  <div className="space-y-2">
-                    <Label htmlFor="title" className="text-sm font-medium">
-                      Goal Title <span className="text-destructive">*</span>
+                  <div className="space-y-1">
+                    <Label htmlFor="title" className="text-xs font-medium">
+                      Title <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="title"
-                      placeholder="e.g., Workout every morning, Read 30 minutes daily"
+                      placeholder="e.g., Workout daily, Learn Spanish"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="focus-ring"
+                      className="h-7 text-xs focus-ring"
                       required
                     />
                   </div>
 
                   {/* Description */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="description"
-                      className="text-sm font-medium"
-                    >
+                  <div className="space-y-1">
+                    <Label htmlFor="description" className="text-xs font-medium">
                       Description <span className="text-destructive">*</span>
                     </Label>
                     <Textarea
                       id="description"
-                      placeholder="Describe what you want to achieve and why it matters to you..."
+                      placeholder="Why is this goal important?"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      rows={3}
-                      className="focus-ring"
+                      rows={2}
+                      className="text-xs focus-ring resize-none"
                     />
                   </div>
 
                   {/* Goal Nature - Personal or Group */}
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium">
-                      Goal Nature <span className="text-destructive">*</span>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">
+                      Type <span className="text-destructive">*</span>
                     </Label>
                     <RadioGroup
                       value={goalNature}
@@ -596,9 +590,9 @@ export default function CreateGoalPage() {
                         setGoalNature(value as "personal" | "group")
                       }
                     >
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-1.5 sm:grid-cols-2">
                         <div
-                          className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${
+                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
                             goalNature === "personal"
                               ? "border-primary bg-primary/5"
                               : "border-border"
@@ -606,21 +600,18 @@ export default function CreateGoalPage() {
                         >
                           <RadioGroupItem value="personal" id="personal" />
                           <div className="flex-1">
-                            <Label
-                              htmlFor="personal"
-                              className="font-medium cursor-pointer"
-                            >
-                              Personal Goal
+                            <Label htmlFor="personal" className="font-medium cursor-pointer text-xs">
+                              Personal
                             </Label>
-                            <p className="text-sm text-muted-foreground">
-                              Just for you
+                            <p className="text-xs text-muted-foreground">
+                              Just you
                             </p>
                           </div>
-                          <Target className="h-5 w-5 text-muted-foreground" />
+                          <Target className="h-3 w-3 text-muted-foreground" />
                         </div>
 
                         <div
-                          className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${
+                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
                             goalNature === "group"
                               ? "border-primary bg-primary/5"
                               : "border-border"
@@ -628,17 +619,14 @@ export default function CreateGoalPage() {
                         >
                           <RadioGroupItem value="group" id="group" />
                           <div className="flex-1">
-                            <Label
-                              htmlFor="group"
-                              className="font-medium cursor-pointer"
-                            >
-                              Group Goal
+                            <Label htmlFor="group" className="font-medium cursor-pointer text-xs">
+                              Group
                             </Label>
-                            <p className="text-sm text-muted-foreground">
-                              Owner included + up to 4 others (max 5)
+                            <p className="text-xs text-muted-foreground">
+                              Up to 5 total
                             </p>
                           </div>
-                          <Users className="h-5 w-5 text-muted-foreground" />
+                          <Users className="h-3 w-3 text-muted-foreground" />
                         </div>
                       </div>
                     </RadioGroup>
@@ -646,18 +634,12 @@ export default function CreateGoalPage() {
 
                   {/* Group Members Selection (only for group goals) */}
                   {goalNature === "group" && (
-                    <div className="space-y-4 p-4 rounded-lg bg-muted/30 border-2 border-primary/20">
+                    <div className="space-y-2 p-3 rounded border">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-sm font-medium">
-                            Group Members
-                          </Label>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            The owner is automatically included. Add up to 4
-                            more members (max 5 total).
-                          </p>
-                        </div>
-                        <Badge variant="outline">{groupMembers.length}/5</Badge>
+                        <Label className="text-xs font-medium">
+                          Members
+                        </Label>
+                        <Badge variant="outline" className="text-xs">{groupMembers.length}/5</Badge>
                       </div>
 
                       <Select
@@ -671,28 +653,23 @@ export default function CreateGoalPage() {
                           }
                         }}
                       >
-                        <SelectTrigger className="focus-ring">
-                          <SelectValue placeholder="Add a member..." />
+                        <SelectTrigger className="h-7 text-xs focus-ring">
+                          <SelectValue placeholder="Add member..." />
                         </SelectTrigger>
                         <SelectContent>
                           {allGroupCandidates
                             .filter((p) => p.id !== currentUser.id)
                             .filter((p) => !groupMembers.includes(p.id))
                             .map((partner) => (
-                              <SelectItem key={partner.id} value={partner.id}>
+                              <SelectItem key={partner.id} value={partner.id} className="text-xs">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                  <div className="w-4 h-4 rounded bg-primary/20 flex items-center justify-center">
                                     <span className="text-xs font-medium">
                                       {partner.name.charAt(0)}
                                     </span>
                                   </div>
-                                  <div>
-                                    <div className="text-sm font-medium">
-                                      {partner.name}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      @{partner.username}
-                                    </div>
+                                  <div className="text-xs font-medium">
+                                    {partner.name}
                                   </div>
                                 </div>
                               </SelectItem>
@@ -701,7 +678,7 @@ export default function CreateGoalPage() {
                       </Select>
 
                       {groupMembers.length > 0 && (
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           {groupMembers.map((memberId) => {
                             const member = allGroupCandidates.find(
                               (p) => p.id === memberId,
@@ -710,21 +687,16 @@ export default function CreateGoalPage() {
                             return (
                               <div
                                 key={memberId}
-                                className="flex items-center justify-between p-2 rounded-md bg-background border"
+                                className="flex items-center justify-between p-2 rounded bg-background border"
                               >
                                 <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                                    <span className="text-sm font-medium">
+                                  <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center">
+                                    <span className="text-xs font-medium">
                                       {member.name.charAt(0)}
                                     </span>
                                   </div>
-                                  <div>
-                                    <div className="text-sm font-medium">
-                                      {member.name}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      @{member.username}
-                                    </div>
+                                  <div className="text-xs font-medium">
+                                    {member.name}
                                   </div>
                                 </div>
                                 {memberId !== currentUser.id && (
@@ -732,7 +704,7 @@ export default function CreateGoalPage() {
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8"
+                                    className="h-5 w-5"
                                     onClick={() =>
                                       setGroupMembers(
                                         groupMembers.filter(
@@ -741,7 +713,7 @@ export default function CreateGoalPage() {
                                       )
                                     }
                                   >
-                                    <X className="h-4 w-4" />
+                                    <X className="h-3 w-3" />
                                   </Button>
                                 )}
                               </div>
@@ -753,42 +725,30 @@ export default function CreateGoalPage() {
                   )}
 
                   {/* Category Selection */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">
                       Category <span className="text-destructive">*</span>
                     </Label>
                     <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger className="focus-ring">
-                        <SelectValue placeholder="Select a category for your goal" />
+                      <SelectTrigger className="h-7 text-xs focus-ring">
+                        <SelectValue placeholder="Select category..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="health-fitness">
-                          Health & Fitness
-                        </SelectItem>
-                        <SelectItem value="career">
-                          Career & Business
-                        </SelectItem>
-                        <SelectItem value="learning">
-                          Learning & Education
-                        </SelectItem>
-                        <SelectItem value="personal">
-                          Personal Growth
-                        </SelectItem>
-                        <SelectItem value="relationships">
-                          Relationships
-                        </SelectItem>
-                        <SelectItem value="finance">Finance</SelectItem>
-                        <SelectItem value="travel">Travel</SelectItem>
-                        <SelectItem value="creative">Creative Arts</SelectItem>
-                        <SelectItem value="technology">Technology</SelectItem>
-                        <SelectItem value="sports">Sports</SelectItem>
-                        <SelectItem value="music">Music</SelectItem>
-                        <SelectItem value="reading">Reading</SelectItem>
-                        <SelectItem value="wellness">Wellness</SelectItem>
-                        <SelectItem value="productivity">
-                          Productivity
-                        </SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="health-fitness" className="text-xs">Health & Fitness</SelectItem>
+                        <SelectItem value="career" className="text-xs">Career & Business</SelectItem>
+                        <SelectItem value="learning" className="text-xs">Learning & Education</SelectItem>
+                        <SelectItem value="personal" className="text-xs">Personal Growth</SelectItem>
+                        <SelectItem value="relationships" className="text-xs">Relationships</SelectItem>
+                        <SelectItem value="finance" className="text-xs">Finance</SelectItem>
+                        <SelectItem value="travel" className="text-xs">Travel</SelectItem>
+                        <SelectItem value="creative" className="text-xs">Creative Arts</SelectItem>
+                        <SelectItem value="technology" className="text-xs">Technology</SelectItem>
+                        <SelectItem value="sports" className="text-xs">Sports</SelectItem>
+                        <SelectItem value="music" className="text-xs">Music</SelectItem>
+                        <SelectItem value="reading" className="text-xs">Reading</SelectItem>
+                        <SelectItem value="wellness" className="text-xs">Wellness</SelectItem>
+                        <SelectItem value="productivity" className="text-xs">Productivity</SelectItem>
+                        <SelectItem value="other" className="text-xs">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

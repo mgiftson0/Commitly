@@ -270,6 +270,20 @@ nextjs-portal {
   }
 }
 
+/* Float animation for auth pages */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
 /* Modern grid layouts */
 @layer components {
   .dashboard-grid {

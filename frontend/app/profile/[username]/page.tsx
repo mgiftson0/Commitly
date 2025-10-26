@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -291,172 +291,174 @@ export default function UserProfilePage() {
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-4 p-4 border-b">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Enhanced Header */}
+        <div className="flex items-center gap-4 p-4 border-b bg-card/50 backdrop-blur-sm">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="hover-lift">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">
+            <h1 className="text-xl font-bold text-gradient-primary">
               {profile.first_name} {profile.last_name}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {goals.length} goals
+              {goals.length} public goals • {followersCount} followers
             </p>
           </div>
         </div>
 
-        {/* Profile Header */}
-        <div className="relative">
-          {/* Cover */}
-          <div className="h-48 bg-gradient-to-br from-primary/10 via-primary/20 to-primary/10" />
-          
+        {/* Enhanced Profile Header Card */}
+        <Card className="overflow-hidden shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
+          {/* Enhanced Cover Image */}
+          <div className="h-32 sm:h-40 md:h-48 bg-gradient-to-br from-primary/10 via-primary/20 to-primary/10 relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
+          </div>
+
           {/* Profile Info */}
-          <div className="p-4">
-            <div className="flex justify-between items-start mb-4">
-              <Avatar className="h-24 w-24 -mt-12 border-4 border-background">
-                <AvatarImage src={profile.profile_picture_url} />
-                <AvatarFallback className="text-2xl">
-                  {profile.first_name?.charAt(0)}{profile.last_name?.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              
-              <div className="flex gap-2">
+          <CardContent className="p-4 sm:p-6 md:p-8">
+            <div className="flex justify-between items-start mb-4 sm:mb-6">
+              <div className="relative -mt-12 sm:-mt-16">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-xl" />
+                <Avatar className="relative h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 border-4 border-background shadow-lg">
+                  <AvatarImage src={profile.profile_picture_url} />
+                  <AvatarFallback className="text-2xl sm:text-3xl md:text-4xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 text-primary-foreground font-bold">
+                    {profile.first_name?.charAt(0)}{profile.last_name?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+
+              <div className="flex gap-2 mt-2">
                 {!isOwnProfile && currentUser && (
                   <>
-                    <Button variant="outline" size="sm">
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Message
+                    <Button variant="outline" size="sm" className="hover-lift">
+                      <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Message</span>
                     </Button>
-                    
+
                     {followState === 'none' && (
-                      <Button size="sm" onClick={() => handleFollowAction('follow')}>
-                        <UserPlus className="h-4 w-4 mr-2" />
+                      <Button size="sm" onClick={() => handleFollowAction('follow')} className="hover-lift">
+                        <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Follow
                       </Button>
                     )}
-                    
+
                     {followState === 'pending' && (
-                      <Button size="sm" variant="outline" disabled>
-                        <UserCheck className="h-4 w-4 mr-2" />
+                      <Button size="sm" variant="outline" disabled className="hover-lift">
+                        <UserCheck className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Pending
                       </Button>
                     )}
-                    
+
                     {followState === 'following' && (
-                      <Button size="sm" variant="outline" onClick={() => setShowUnfollowDialog(true)}>
-                        <UserCheck className="h-4 w-4 mr-2" />
+                      <Button size="sm" variant="outline" onClick={() => setShowUnfollowDialog(true)} className="hover-lift">
+                        <UserCheck className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Following
                       </Button>
                     )}
-                    
+
                     {followState === 'mutual' && (
-                      <Button size="sm" variant="outline" onClick={() => setShowUnfollowDialog(true)}>
-                        <Users className="h-4 w-4 mr-2" />
+                      <Button size="sm" variant="outline" onClick={() => setShowUnfollowDialog(true)} className="hover-lift">
+                        <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Mutual
                       </Button>
                     )}
                   </>
                 )}
-                
+
                 {isOwnProfile && (
                   <Link href="/profile/edit">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="hover-lift">
                       Edit Profile
                     </Button>
                   </Link>
                 )}
-                
 
-                <Button variant="ghost" size="icon">
+                <ShareProfile
+                  username={profile.username}
+                  displayName={profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'User' : 'User'}
+                  profilePicture={profile.profile_picture_url}
+                />
+
+                <Button variant="ghost" size="icon" className="hover-lift">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            
-            <div className="space-y-3">
+
+            {/* Enhanced Profile Info */}
+            <div className="space-y-4">
               <div>
-                <h2 className="text-2xl font-bold">
+                <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                   {profile.first_name} {profile.last_name}
                 </h2>
-                <p className="text-muted-foreground">@{profile.username}</p>
+                <p className="text-sm sm:text-base text-muted-foreground font-medium">
+                  @{profile.username}
+                </p>
               </div>
-              
+
               {profile.bio && (
-                <p className="text-sm leading-relaxed">{profile.bio}</p>
+                <p className="text-sm sm:text-base leading-relaxed text-muted-foreground max-w-2xl">
+                  {profile.bio}
+                </p>
               )}
-              
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+
+              {/* Enhanced Location & Links */}
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm text-muted-foreground">
                 {profile.location && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full hover-lift">
                     <MapPin className="h-4 w-4" />
-                    {profile.location}
+                    <span>{profile.location}</span>
                   </div>
                 )}
-                
-
-                
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full hover-lift">
                   <Calendar className="h-4 w-4" />
-                  Joined {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  <span>Joined {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                 </div>
               </div>
-              
-              <div className="flex gap-6 text-sm">
-                <span 
-                  className="cursor-pointer hover:underline"
-                  onClick={() => {
-                    setFollowersModalTab('following')
-                    setShowFollowersModal(true)
-                  }}
-                >
-                  <strong>{followingCount}</strong> <span className="text-muted-foreground">Following</span>
-                </span>
-                <span 
-                  className="cursor-pointer hover:underline"
-                  onClick={() => {
-                    setFollowersModalTab('followers')
-                    setShowFollowersModal(true)
-                  }}
-                >
-                  <strong>{followersCount}</strong> <span className="text-muted-foreground">Followers</span>
-                </span>
-              </div>
-              
+
               <SocialLinks profile={{
                 instagram: profile?.instagram,
                 twitter: profile?.twitter,
                 snapchat: profile?.snapchat,
                 email: profile?.email
               }} />
-            </div>
-          </div>
-        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-4 border-b">
-          <div className="text-center py-4">
-            <div className="text-lg font-bold">{activeGoals.length}</div>
-            <div className="text-xs text-muted-foreground">Active</div>
-          </div>
-          <div className="text-center py-4">
-            <div className="text-lg font-bold">{completedGoals.length}</div>
-            <div className="text-xs text-muted-foreground">Completed</div>
-          </div>
-          <div className="text-center py-4">
-            <div className="text-lg font-bold">
-              {goals.length > 0 ? Math.round((completedGoals.length / goals.length) * 100) : 0}%
+              {/* Enhanced Stats Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-4 border-t border-border/50">
+                <div
+                  className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer hover-lift hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
+                  onClick={() => {
+                    setFollowersModalTab('following')
+                    setShowFollowersModal(true)
+                  }}
+                >
+                  <div className="font-bold text-lg sm:text-xl text-primary">{followingCount}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Following</div>
+                </div>
+                <div
+                  className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer hover-lift hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
+                  onClick={() => {
+                    setFollowersModalTab('followers')
+                    setShowFollowersModal(true)
+                  }}
+                >
+                  <div className="font-bold text-lg sm:text-xl text-primary">{followersCount}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Followers</div>
+                </div>
+                <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors hover-lift hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1">
+                  <div className="font-bold text-lg sm:text-xl text-primary">{goals.length}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Goals</div>
+                </div>
+                <div className="text-center p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors hover-lift hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1">
+                  <div className="font-bold text-lg sm:text-xl text-primary">
+                    {goals.length > 0 ? Math.round((completedGoals.length / goals.length) * 100) : 0}%
+                  </div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Success Rate</div>
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">Success</div>
-          </div>
-          <div className="text-center py-4">
-            <div className="text-lg font-bold">
-              {Math.max(...goals.map(g => g.progress || 0), 0)}%
-            </div>
-            <div className="text-xs text-muted-foreground">Best</div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Goals Tabs */}
         <Tabs defaultValue="goals" className="space-y-0">
@@ -544,39 +546,64 @@ function GoalsList({ goals }: { goals: any[] }) {
 
     return (
       <Link href={`/goals/${goal.id}`}>
-        <div className={`aspect-[4/3] p-4 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer bg-card ${getGoalCardStyle()}`}>
-          <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded bg-muted">
-                  {getStatusIcon()}
-                </div>
-                <div className="p-1.5 rounded bg-muted">
-                  {getGoalTypeIcon()}
-                </div>
-              </div>
-              {goal.streak && goal.streak.current_streak > 0 && (
-                <Badge className="bg-orange-500 text-white text-xs px-2">
-                  🔥{goal.streak.current_streak}
+        <Card className={`hover-lift group transition-all duration-300 hover:shadow-2xl hover:shadow-primary/15 hover:-translate-y-2 border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm ${getGoalCardStyle()}`}>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              {getGoalTypeIcon()}
+              <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
+                {goal.type}
+              </Badge>
+              {isSeasonalGoal && (
+                <Badge variant="outline" className="text-xs bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-sm hover:shadow-amber-200/50 transition-all duration-200">
+                  <Star className="h-3 w-3 mr-1" />
+                  Seasonal
+                </Badge>
+              )}
+              {isGroupGoal && (
+                <Badge variant="outline" className="text-xs bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200 shadow-sm hover:shadow-purple-200/50 transition-all duration-200">
+                  <Users className="h-3 w-3 mr-1" />
+                  Group
                 </Badge>
               )}
             </div>
-            <h4 className="font-medium text-sm line-clamp-2 flex-1 leading-tight mb-3">{goal.title}</h4>
-            <div className="mt-auto space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{progress}%</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all ${
-                    progress <= 30 ? 'bg-red-500' : progress <= 70 ? 'bg-yellow-500' : 'bg-green-500'
-                  }`}
-                  style={{ width: `${Math.min(progress, 100)}%` }}
-                />
-              </div>
+            {goal.streak && goal.streak.current_streak > 0 && (
+              <Badge className="bg-orange-500 text-white text-xs px-2">
+                🔥{goal.streak.current_streak}
+              </Badge>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <CardTitle className="line-clamp-2 flex items-center gap-2">
+              {goal.title}
+            </CardTitle>
+            {goal.description && (
+              <CardDescription className="line-clamp-2">
+                {goal.description}
+              </CardDescription>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {/* Progress */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-medium">{progress}%</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all ${
+                  progress <= 30 ? 'bg-red-500' : progress <= 70 ? 'bg-yellow-500' : 'bg-green-500'
+                }`}
+                style={{ width: `${Math.min(progress, 100)}%` }}
+              />
             </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
       </Link>
     )
   }
@@ -590,19 +617,19 @@ function GoalsList({ goals }: { goals: any[] }) {
       </TabsList>
       
       <TabsContent value="active">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {activeGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
         </div>
       </TabsContent>
       
       <TabsContent value="completed">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {completedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
         </div>
       </TabsContent>
       
       <TabsContent value="paused">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {pausedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
         </div>
       </TabsContent>

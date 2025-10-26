@@ -83,82 +83,133 @@ export function FollowersModal({ open, onOpenChange, userId, initialTab = 'follo
     }
   }
 
-  const UserCard = ({ user }: { user: UserProfile }) => (
-    <div className="flex items-center justify-between p-3 hover:bg-accent/50 rounded-lg">
-      <Link href={`/profile/${user.username}`} className="flex items-center gap-3 flex-1">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={user.profile_picture_url} />
-          <AvatarFallback>
-            {user.first_name?.charAt(0)}{user.last_name?.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium truncate">
-            {user.first_name} {user.last_name}
-          </p>
-          <p className="text-sm text-muted-foreground truncate">
-            @{user.username}
-          </p>
-          {user.bio && (
-            <p className="text-xs text-muted-foreground line-clamp-1 mt-1">
-              {user.bio}
-            </p>
+  const UserCard = ({ user }: { user: UserProfile }) => {
+    const isCurrentUser = currentUser && currentUser.id === user.id
+
+    return (
+      <div className="group hover-lift">
+        <div className="flex items-center justify-between p-4 hover:bg-accent/30 rounded-xl transition-all duration-200 border border-transparent hover:border-border/50">
+          <Link href={`/profile/${user.username}`} className="flex items-center gap-4 flex-1">
+            <div className="relative">
+              <Avatar className="h-12 w-12 ring-2 ring-background shadow-sm">
+                <AvatarImage src={user.profile_picture_url} />
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold">
+                  {user.first_name?.charAt(0)}{user.last_name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              {isCurrentUser && (
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-primary rounded-full border-2 border-background flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold truncate text-foreground">
+                  {user.first_name} {user.last_name}
+                </p>
+                {isCurrentUser && (
+                  <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                    You
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground truncate">
+                @{user.username}
+              </p>
+              {user.bio && (
+                <p className="text-xs text-muted-foreground line-clamp-1 mt-1 max-w-xs">
+                  {user.bio}
+                </p>
+              )}
+              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {user.followers_count || 0} followers
+                </span>
+                <span className="flex items-center gap-1">
+                  <UserCheck className="h-3 w-3" />
+                  {user.following_count || 0} following
+                </span>
+              </div>
+            </div>
+          </Link>
+
+          {currentUser && !isCurrentUser && (
+            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button variant="outline" size="sm" className="hover-lift">
+                <MessageCircle className="h-3 w-3" />
+              </Button>
+              <Button size="sm" className="hover-lift">
+                <UserPlus className="h-3 w-3" />
+              </Button>
+            </div>
           )}
         </div>
-      </Link>
-      
-      {currentUser && currentUser.id !== user.id && (
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <MessageCircle className="h-4 w-4" />
-          </Button>
-          <Button size="sm">
-            <UserPlus className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-    </div>
-  )
+      </div>
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] p-0">
-        {/* Drag handle */}
-        <div className="flex justify-center pt-2 pb-1">
-          <div className="w-8 h-1 bg-muted-foreground/30 rounded-full" />
+      <DialogContent className="sm:max-w-lg max-h-[85vh] p-0 bg-background/95 backdrop-blur-xl border-border/50 shadow-2xl">
+        {/* Enhanced Header */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary/10 rounded-t-lg" />
+          <DialogHeader className="px-6 py-4 relative">
+            <DialogTitle className="flex items-center gap-3 text-lg">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <span className="font-semibold">Connections</span>
+            </DialogTitle>
+          </DialogHeader>
         </div>
-        
-        <DialogHeader className="px-6 pb-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Connections
-          </DialogTitle>
-        </DialogHeader>
 
         <Tabs defaultValue={initialTab} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 mx-6">
-            <TabsTrigger value="followers">
-              Followers ({followers.length})
+          <TabsList className="grid w-full grid-cols-2 mx-6 mb-2 bg-muted/50">
+            <TabsTrigger
+              value="followers"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              Followers
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {followers.length}
+              </Badge>
             </TabsTrigger>
-            <TabsTrigger value="following">
-              Following ({following.length})
+            <TabsTrigger
+              value="following"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              Following
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {following.length}
+              </Badge>
             </TabsTrigger>
           </TabsList>
 
           <div className="flex-1 overflow-hidden">
             <TabsContent value="followers" className="h-full mt-0">
-              <div className="h-96 overflow-y-auto px-6 pb-6">
+              <div className="max-h-96 overflow-y-auto px-6 pb-6 scrollbar-thin">
                 {loading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <div className="flex justify-center py-12">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : followers.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No followers yet</p>
+                  <div className="text-center py-12 space-y-4">
+                    <div className="p-4 rounded-2xl bg-muted/30 inline-block">
+                      <Users className="h-12 w-12 text-muted-foreground/50" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-muted-foreground">No followers yet</p>
+                      <p className="text-sm text-muted-foreground/70 mt-1">
+                        Be the first to inspire someone!
+                      </p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {followers.map((user) => (
                       <UserCard key={user.id} user={user} />
                     ))}
@@ -168,18 +219,25 @@ export function FollowersModal({ open, onOpenChange, userId, initialTab = 'follo
             </TabsContent>
 
             <TabsContent value="following" className="h-full mt-0">
-              <div className="h-96 overflow-y-auto px-6 pb-6">
+              <div className="max-h-96 overflow-y-auto px-6 pb-6 scrollbar-thin">
                 {loading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <div className="flex justify-center py-12">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : following.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>Not following anyone yet</p>
+                  <div className="text-center py-12 space-y-4">
+                    <div className="p-4 rounded-2xl bg-muted/30 inline-block">
+                      <UserCheck className="h-12 w-12 text-muted-foreground/50" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-muted-foreground">Not following anyone yet</p>
+                      <p className="text-sm text-muted-foreground/70 mt-1">
+                        Discover amazing goal-setters!
+                      </p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {following.map((user) => (
                       <UserCard key={user.id} user={user} />
                     ))}

@@ -423,22 +423,30 @@ export default function ProfilePage() {
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* Goals Overview */}
-            <Card className="hover-lift h-96">
-              <CardHeader className="px-4 sm:px-6 py-1">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium bg-muted/30 px-2 py-1 rounded-md">
-                    <Target className="h-3 w-3" />
-                    Goals Overview
-                  </CardTitle>
+            {/* Goals Overview - Modern Compact Design */}
+            <Card className="hover-lift">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-primary/10">
+                      <Target className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Goals Overview</CardTitle>
+                      <CardDescription className="text-sm">
+                        Your goal progress and achievements
+                      </CardDescription>
+                    </div>
+                  </div>
                   <Link href="/goals">
-                    <Button variant="outline" size="sm" className="text-[10px] h-6 px-2 border bg-background">
+                    <Button variant="outline" size="sm" className="hover-lift">
+                      <ArrowLeft className="h-3 w-3 mr-1" />
                       View All
                     </Button>
                   </Link>
                 </div>
               </CardHeader>
-              <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0 h-full overflow-y-auto">
+              <CardContent className="space-y-4">
                 <Tabs defaultValue="recent" className="space-y-3 sm:space-y-4">
                   <TabsList className="grid w-full grid-cols-3 h-auto">
                     <TabsTrigger value="recent" className="text-[9px] sm:text-xs md:text-sm px-1 sm:px-3 py-1 sm:py-2">Recent ({goals.length})</TabsTrigger>
@@ -446,17 +454,17 @@ export default function ProfilePage() {
                     <TabsTrigger value="completed" className="text-[9px] sm:text-xs md:text-sm px-1 sm:px-3 py-1 sm:py-2">Completed ({completedGoals.length})</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="recent" className="space-y-2 sm:space-y-3">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                  <TabsContent value="recent" className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {goals.slice(0, 6).map((goal) => {
                         const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
                         const isGroupGoal = goal.goal_nature === 'group'
                         const progress = goal.completed_at ? 100 : (goal.progress || 0)
                         const getStatusIcon = () => {
-                          if (goal.completed_at) return <CheckCircle2 className="h-3 w-3 text-green-600" />
-                          if (goal.status === 'paused') return <Clock className="h-3 w-3 text-yellow-600" />
-                          if (goal.status === 'pending') return <Clock className="h-3 w-3 text-blue-600" />
-                          return <Target className="h-3 w-3 text-blue-600" />
+                          if (goal.completed_at) return <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          if (goal.status === 'paused') return <Clock className="h-4 w-4 text-yellow-600" />
+                          if (goal.status === 'pending') return <Clock className="h-4 w-4 text-blue-600" />
+                          return <Target className="h-4 w-4 text-blue-600" />
                         }
                         const getGoalTypeIcon = () => {
                           if (isSeasonalGoal) return <Star className="h-3 w-3 text-amber-600" />
@@ -470,37 +478,48 @@ export default function ProfilePage() {
                         }
                         return (
                           <Link key={goal.id} href={`/goals/${goal.id}`}>
-                            <div className={`aspect-square p-3 rounded-lg border hover:bg-accent/50 transition-colors group cursor-pointer bg-card ${getGoalCardStyle()}`}>
-                              <div className="h-full flex flex-col">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-1">
-                                    <div className="p-1 rounded bg-muted">
-                                      {getStatusIcon()}
+                            <Card className={`hover-lift transition-all duration-200 hover:shadow-md ${getGoalCardStyle()}`}>
+                              <CardContent className="p-4">
+                                <div className="space-y-3">
+                                  {/* Header */}
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className="p-1.5 rounded-lg bg-muted">
+                                        {getStatusIcon()}
+                                      </div>
+                                      <div className="p-1 rounded bg-muted">
+                                        {getGoalTypeIcon()}
+                                      </div>
                                     </div>
-                                    <div className="p-1 rounded bg-muted">
-                                      {getGoalTypeIcon()}
+                                    {goal.streak && goal.streak > 0 && (
+                                      <Badge className="bg-orange-500 text-white text-xs">
+                                        🔥 {goal.streak}
+                                      </Badge>
+                                    )}
+                                  </div>
+
+                                  {/* Title */}
+                                  <div>
+                                    <h4 className="font-semibold text-sm line-clamp-2 leading-tight">{goal.title}</h4>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {goal.goal_type || 'Standard'} • {goal.category?.replace('-', ' ') || 'General'}
+                                    </p>
+                                  </div>
+
+                                  {/* Progress */}
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="text-muted-foreground">Progress</span>
+                                      <span className="font-medium">{progress}%</span>
                                     </div>
-                                  </div>
-                                  {goal.streak && goal.streak > 0 && (
-                                    <Badge className="bg-orange-500 text-white text-[8px] px-1">
-                                      🔥{goal.streak}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <h4 className="font-medium text-xs line-clamp-2 flex-1 leading-tight">{goal.title}</h4>
-                                <div className="mt-auto pt-2 space-y-1">
-                                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                                    <span>{progress}%</span>
-                                  </div>
-                                  <div className="w-full bg-muted rounded-full h-1.5">
-                                    <div
-                                      className={`h-1.5 rounded-full transition-all ${progress <= 30 ? 'bg-red-500' : progress <= 70 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                                      style={{ width: `${Math.min(progress, 100)}%` }}
+                                    <Progress
+                                      value={progress}
+                                      className={`h-2 ${progress <= 30 ? '[&>div]:bg-red-500' : progress <= 70 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`}
                                     />
                                   </div>
                                 </div>
-                              </div>
-                            </div>
+                              </CardContent>
+                            </Card>
                           </Link>
                         )
                       })}
@@ -617,22 +636,30 @@ export default function ProfilePage() {
 
           {/* Sidebar */}
           <div className="space-y-4 sm:space-y-6">
-            {/* Achievements - Responsive Grid */}
-            <Card className="hover-lift h-[28rem]">
-              <CardHeader className="px-4 sm:px-6 py-1">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="flex items-center gap-2 text-sm font-medium bg-muted/30 px-2 py-1 rounded-md w-fit">
-                    <Award className="h-3 w-3 text-yellow-500" />
-                    Recent Achievements
-                  </CardTitle>
+            {/* Achievements - Modern Grid Design */}
+            <Card className="hover-lift">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-yellow-500/10">
+                      <Award className="h-4 w-4 text-yellow-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Recent Achievements</CardTitle>
+                      <CardDescription className="text-sm">
+                        Your latest unlocked badges and milestones
+                      </CardDescription>
+                    </div>
+                  </div>
                   <Link href="/achievements">
-                    <Button variant="outline" size="sm" className="text-[10px] h-6 px-2 border bg-background">
+                    <Button variant="outline" size="sm" className="hover-lift">
+                      <Trophy className="h-3 w-3 mr-1" />
                       View All
                     </Button>
                   </Link>
                 </div>
               </CardHeader>
-              <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0 h-full overflow-y-auto">
+              <CardContent>
                 {achievements.length === 0 ? (
                   <div className="text-center py-4 text-gray-500">
                     <Trophy className="h-8 w-8 mx-auto mb-2 opacity-50" />
