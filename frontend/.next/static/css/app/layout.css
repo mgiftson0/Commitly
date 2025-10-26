@@ -729,6 +729,58 @@ video {
     max-width: 1536px;
   }
 }
+/* Animated Gradient Border */
+.animated-gradient-border {
+    position: relative;
+    background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
+    background-size: 400% 400%;
+    animation: gradient-shift 4s ease infinite;
+    padding: 2px;
+    border-radius: inherit;
+  }
+.animated-gradient-border::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    background: white;
+    border-radius: inherit;
+    z-index: 1;
+  }
+/* Shimmer Light Sweep */
+.shimmer-sweep {
+    position: relative;
+    overflow: hidden;
+  }
+.shimmer-sweep::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmer 3s ease-in-out infinite;
+    z-index: 1;
+  }
+/* Aurora Neon Glow */
+.aurora-glow {
+    position: relative;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(120, 255, 198, 0.3) 0%, transparent 50%);
+    background-size: 200% 200%;
+    animation: aurora-flow 6s ease-in-out infinite;
+  }
+/* Dynamic Gradient Pulse */
+.gradient-pulse {
+    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+    background-size: 400% 400%;
+    animation: gradient-pulse 4s ease-in-out infinite;
+  }
 .sidebar-nav-item.\!active {
   background-color: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
@@ -2038,6 +2090,9 @@ video {
 .border-blue-400\/40 {
   border-color: rgb(96 165 250 / 0.4);
 }
+.border-blue-400\/50 {
+  border-color: rgb(96 165 250 / 0.5);
+}
 .border-blue-600 {
   --tw-border-opacity: 1;
   border-color: rgb(37 99 235 / var(--tw-border-opacity, 1));
@@ -2118,6 +2173,9 @@ video {
 .border-green-400\/30 {
   border-color: rgb(74 222 128 / 0.3);
 }
+.border-green-400\/50 {
+  border-color: rgb(74 222 128 / 0.5);
+}
 .border-green-500 {
   --tw-border-opacity: 1;
   border-color: rgb(34 197 94 / var(--tw-border-opacity, 1));
@@ -2151,6 +2209,9 @@ video {
 .border-orange-300 {
   --tw-border-opacity: 1;
   border-color: rgb(253 186 116 / var(--tw-border-opacity, 1));
+}
+.border-orange-400\/50 {
+  border-color: rgb(251 146 60 / 0.5);
 }
 .border-orange-500\/20 {
   border-color: rgb(249 115 22 / 0.2);
@@ -2205,6 +2266,9 @@ video {
   --tw-border-opacity: 1;
   border-color: rgb(203 213 225 / var(--tw-border-opacity, 1));
 }
+.border-teal-400\/50 {
+  border-color: rgb(45 212 191 / 0.5);
+}
 .border-transparent {
   border-color: transparent;
 }
@@ -2248,23 +2312,11 @@ video {
 .border-yellow-300\/60 {
   border-color: rgb(253 224 71 / 0.6);
 }
-.border-yellow-500\/20 {
-  border-color: rgb(234 179 8 / 0.2);
-}
 .border-yellow-400\/50 {
   border-color: rgb(250 204 21 / 0.5);
 }
-.border-blue-400\/50 {
-  border-color: rgb(96 165 250 / 0.5);
-}
-.border-orange-400\/50 {
-  border-color: rgb(251 146 60 / 0.5);
-}
-.border-green-400\/50 {
-  border-color: rgb(74 222 128 / 0.5);
-}
-.border-teal-400\/50 {
-  border-color: rgb(45 212 191 / 0.5);
+.border-yellow-500\/20 {
+  border-color: rgb(234 179 8 / 0.2);
 }
 .border-l-amber-500 {
   --tw-border-opacity: 1;
@@ -4263,6 +4315,9 @@ video {
 .delay-1000 {
   transition-delay: 1000ms;
 }
+.delay-200 {
+  transition-delay: 200ms;
+}
 .delay-300 {
   transition-delay: 300ms;
 }
@@ -4316,6 +4371,15 @@ video {
   --tw-enter-translate-x: initial;
   --tw-enter-translate-y: initial;
 }
+.animate-out {
+  animation-name: exit;
+  animation-duration: 150ms;
+  --tw-exit-opacity: initial;
+  --tw-exit-scale: initial;
+  --tw-exit-rotate: initial;
+  --tw-exit-translate-x: initial;
+  --tw-exit-translate-y: initial;
+}
 .fade-in-0 {
   --tw-enter-opacity: 0;
 }
@@ -4324,6 +4388,12 @@ video {
 }
 .zoom-in-95 {
   --tw-enter-scale: .95;
+}
+.slide-in-from-top-full {
+  --tw-enter-translate-y: -100%;
+}
+.slide-out-to-bottom-full {
+  --tw-exit-translate-y: 100%;
 }
 .duration-1000 {
   animation-duration: 1000ms;
@@ -4343,6 +4413,9 @@ video {
 .delay-1000 {
   animation-delay: 1000ms;
 }
+.delay-200 {
+  animation-delay: 200ms;
+}
 .delay-300 {
   animation-delay: 300ms;
 }
@@ -4360,6 +4433,9 @@ video {
 }
 .paused {
   animation-play-state: paused;
+}
+.fill-mode-forwards {
+  animation-fill-mode: forwards;
 }
 /* Glass morphism effect */
 /* Gradient backgrounds */
@@ -4416,6 +4492,37 @@ video {
 .\[mask-image\:linear-gradient\(0deg\2c white\2c rgba\(255\2c 255\2c 255\2c 0\.6\)\)\] {
   -webkit-mask-image: linear-gradient(0deg,white,rgba(255,255,255,0.6));
           mask-image: linear-gradient(0deg,white,rgba(255,255,255,0.6));
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+@keyframes aurora-flow {
+  0%, 100% { 
+    background-position: 0% 50%, 100% 50%, 50% 0%;
+    filter: hue-rotate(0deg);
+  }
+  33% { 
+    background-position: 100% 0%, 0% 100%, 50% 50%;
+    filter: hue-rotate(120deg);
+  }
+  66% { 
+    background-position: 50% 100%, 50% 0%, 0% 50%;
+    filter: hue-rotate(240deg);
+  }
+}
+
+@keyframes gradient-pulse {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 /*

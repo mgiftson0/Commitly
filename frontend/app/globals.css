@@ -2,6 +2,97 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* Animated Gradient Border */
+  .animated-gradient-border {
+    position: relative;
+    background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
+    background-size: 400% 400%;
+    animation: gradient-shift 4s ease infinite;
+    padding: 2px;
+    border-radius: inherit;
+  }
+  
+  .animated-gradient-border::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    background: white;
+    border-radius: inherit;
+    z-index: 1;
+  }
+  
+  /* Shimmer Light Sweep */
+  .shimmer-sweep {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .shimmer-sweep::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmer 3s ease-in-out infinite;
+    z-index: 1;
+  }
+  
+  /* Aurora Neon Glow */
+  .aurora-glow {
+    position: relative;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(120, 255, 198, 0.3) 0%, transparent 50%);
+    background-size: 200% 200%;
+    animation: aurora-flow 6s ease-in-out infinite;
+  }
+  
+  /* Dynamic Gradient Pulse */
+  .gradient-pulse {
+    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+    background-size: 400% 400%;
+    animation: gradient-pulse 4s ease-in-out infinite;
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+@keyframes aurora-flow {
+  0%, 100% { 
+    background-position: 0% 50%, 100% 50%, 50% 0%;
+    filter: hue-rotate(0deg);
+  }
+  33% { 
+    background-position: 100% 0%, 0% 100%, 50% 50%;
+    filter: hue-rotate(120deg);
+  }
+  66% { 
+    background-position: 50% 100%, 50% 0%, 0% 50%;
+    filter: hue-rotate(240deg);
+  }
+}
+
+@keyframes gradient-pulse {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 @layer base {
   :root {
     /* Modern Light Theme - Sophisticated & Clean */

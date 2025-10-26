@@ -637,7 +637,7 @@ export default function DashboardPage() {
                     .map((goal, index) => {
                       const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
                       return (
-                        <div key={goal.id} className={`${
+                        <div key={goal.id} className={`relative animated-gradient-border rounded-lg transition-all duration-500 ease-in-out hover:scale-105 ${
                           exitingItems.has(goal.id) 
                             ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
                             : enteringItems.has(goal.id)
@@ -645,19 +645,20 @@ export default function DashboardPage() {
                             : animationsLoaded 
                             ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
                             : 'opacity-0'
-                        } flex items-center gap-3 p-3 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full ${
-                          isSeasonalGoal 
-                            ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800' 
-                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                        }`} onClick={() => {
-                          console.log('Clicking goal:', goal)
-                          console.log('Goal ID:', goal.id, 'Type:', typeof goal.id)
-                          if (goal.id && goal.id !== 'undefined' && goal.id !== 'null' && !isNaN(goal.id)) {
-                            router.push(`/goals/${goal.id}`)
-                          } else {
-                            console.error('Invalid goal ID:', goal.id, 'Full goal object:', goal)
-                          }
-                        }}>
+                        }`}>
+                          <div className={`relative z-10 flex items-center gap-3 p-3 rounded-lg ${
+                            isSeasonalGoal 
+                              ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800' 
+                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                          }`} onClick={() => {
+                            console.log('Clicking goal:', goal)
+                            console.log('Goal ID:', goal.id, 'Type:', typeof goal.id)
+                            if (goal.id && goal.id !== 'undefined' && goal.id !== 'null' && !isNaN(goal.id)) {
+                              router.push(`/goals/${goal.id}`)
+                            } else {
+                              console.error('Invalid goal ID:', goal.id, 'Full goal object:', goal)
+                            }
+                          }}>
                           <div className={`p-2 rounded-lg flex-shrink-0 ${
                             isSeasonalGoal 
                               ? 'bg-amber-100 dark:bg-amber-900/30' 
@@ -693,6 +694,7 @@ export default function DashboardPage() {
                             <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{goal.progress || 0}%</div>
                             <Progress value={goal.progress || 0} className={`w-16 h-1.5 mt-1 ${getProgressColor(goal.progress || 0)}`} />
                           </div>
+                        </div>
                         </div>
                       )
                     })
@@ -745,7 +747,7 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={activity.id}
-                        className={`${
+                        className={`relative shimmer-sweep rounded-lg transition-all duration-500 ease-in-out hover:scale-105 ${
                           exitingItems.has(activity.id) 
                             ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
                             : enteringItems.has(activity.id)
@@ -753,29 +755,30 @@ export default function DashboardPage() {
                             : animationsLoaded 
                             ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
                             : 'opacity-0'
-                        } flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}`}
-                        onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
+                        }`}
                       >
-                        <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5">
-                          <Icon className={`h-3.5 w-3.5 ${activity.color}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{activity.title}</h4>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 whitespace-nowrap">
-                              {activity.time}
-                            </span>
+                        <div className="flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}" onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}>
+                          <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5">
+                            <Icon className={`h-3.5 w-3.5 ${activity.color}`} />
                           </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2">
-                            {activity.description}
-                          </p>
-                          {activity.goalId && (
-                            <div className="mt-1">
-                              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                View Goal →
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{activity.title}</h4>
+                              <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 whitespace-nowrap">
+                                {activity.time}
                               </span>
                             </div>
-                          )}
+                            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2">
+                              {activity.description}
+                            </p>
+                            {activity.goalId && (
+                              <div className="mt-1">
+                                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                  View Goal →
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )
@@ -834,7 +837,7 @@ export default function DashboardPage() {
                     return (
                       <div 
                         key={goal.id} 
-                        className={`${
+                        className={`relative gradient-pulse rounded-lg transition-all duration-500 ease-in-out hover:scale-105 ${
                           exitingItems.has(goal.id) 
                             ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
                             : enteringItems.has(goal.id)
@@ -842,33 +845,34 @@ export default function DashboardPage() {
                             : animationsLoaded 
                             ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
                             : 'opacity-0'
-                        } flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${getUrgencyColor()}`} 
-                        onClick={() => goal.id && router.push(`/goals/${goal.id}`)}
+                        }`}
                       >
-                        <div className="p-1.5 rounded bg-white dark:bg-slate-800/50">
-                          <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{goal.title}</h4>
-                            <Badge 
-                              variant={goal.priority === 'high' ? 'destructive' : goal.priority === 'medium' ? 'default' : 'secondary'} 
-                              className="text-xs h-5"
-                            >
-                              {goal.priority}
-                            </Badge>
+                        <div className="flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${getUrgencyColor()}" onClick={() => goal.id && router.push(`/goals/${goal.id}`)}>
+                          <div className="p-1.5 rounded bg-white dark:bg-slate-800/50">
+                            <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                           </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">
-                            {getDueDateText()}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
-                              {goal.progress}% complete
-                            </span>
-                            <Progress 
-                              value={goal.progress} 
-                              className={`flex-1 h-2 ${getProgressColor(goal.progress)}`} 
-                            />
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <div className="flex items-center justify-between mb-1">
+                              <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{goal.title}</h4>
+                              <Badge 
+                                variant={goal.priority === 'high' ? 'destructive' : goal.priority === 'medium' ? 'default' : 'secondary'} 
+                                className="text-xs h-5"
+                              >
+                                {goal.priority}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">
+                              {getDueDateText()}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                {goal.progress}% complete
+                              </span>
+                              <Progress 
+                                value={goal.progress} 
+                                className={`flex-1 h-2 ${getProgressColor(goal.progress)}`} 
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1070,7 +1074,7 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={activity.id}
-                        className={`${
+                        className={`relative aurora-glow rounded-lg transition-all duration-500 ease-in-out hover:scale-105 ${
                           exitingItems.has(activity.id) 
                             ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
                             : enteringItems.has(activity.id)
@@ -1078,29 +1082,30 @@ export default function DashboardPage() {
                             : animationsLoaded 
                             ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
                             : 'opacity-0'
-                        } flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}`}
-                        onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
+                        }`}
                       >
-                        <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5">
-                          <Icon className={`h-3.5 w-3.5 ${activity.color}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{activity.title}</h4>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 whitespace-nowrap">
-                              {activity.time}
-                            </span>
+                        <div className="flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}" onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}>
+                          <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5">
+                            <Icon className={`h-3.5 w-3.5 ${activity.color}`} />
                           </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2">
-                            {activity.description}
-                          </p>
-                          {activity.goalId && (
-                            <div className="mt-1">
-                              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                                View Goal →
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{activity.title}</h4>
+                              <span className="text-xs text-slate-500 dark:text-slate-400 ml-2 whitespace-nowrap">
+                                {activity.time}
                               </span>
                             </div>
-                          )}
+                            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2">
+                              {activity.description}
+                            </p>
+                            {activity.goalId && (
+                              <div className="mt-1">
+                                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                  View Goal →
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )
