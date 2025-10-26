@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -57,6 +57,9 @@ import { seasonalIntegration } from "@/lib/seasonal-goals-integration"
 export default function DashboardPage() {
   const [goals, setGoals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [animationsLoaded, setAnimationsLoaded] = useState(false)
+  const [exitingItems, setExitingItems] = useState<Set<string>>(new Set())
+  const [enteringItems, setEnteringItems] = useState<Set<string>>(new Set())
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [showMotivation, setShowMotivation] = useState(true)
   const [bellShake, setBellShake] = useState(false)
@@ -71,6 +74,11 @@ export default function DashboardPage() {
     }
   })
   const router = useRouter()
+
+  // Refs to track previous states for transition animations
+  const prevActiveGoalsRef = useRef<any[]>([])
+  const prevRecentActivityRef = useRef<any[]>([])
+  const prevUpcomingDeadlinesRef = useRef<any[]>([])
 
   const motivations = [
     { quote: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
@@ -161,6 +169,18 @@ export default function DashboardPage() {
   const [dashboardStats, setDashboardStats] = useState<any>(null)
   const [seasonalStats, setSeasonalStats] = useState<any>(null)
   
+  const activeGoals = goals.filter(g => !g.completed_at && !g.is_suspended)
+  const completedGoals = goals.filter(g => g.completed_at)
+  const maxStreak = Math.max(...goals.map(g => g.streak || 0), 0)
+  const avgStreak = goals.length > 0 ? Math.round(goals.reduce((sum, g) => sum + (g.streak || 0), 0) / goals.length) : 0
+  
+  const todayStats = {
+    completed: completedGoals.length,
+    pending: activeGoals.length,
+    streak: avgStreak,
+    longestStreak: maxStreak
+  }
+
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
@@ -243,6 +263,51 @@ export default function DashboardPage() {
       loadDashboardData()
     }
   }, [goals])
+
+  useEffect(() => {
+    const currentActiveGoals = activeGoals.slice(0, 3).map(g => g.id)
+    const prevActiveGoals = prevActiveGoalsRef.current.map(g => g.id)
+    
+    const currentRecentActivity = recentActivity.slice(0, 3).map(a => a.id)
+    const prevRecentActivity = prevRecentActivityRef.current.map(a => a.id)
+    
+    const currentUpcomingDeadlines = upcomingDeadlines.slice(0, 3).map(d => d.id)
+    const prevUpcomingDeadlines = prevUpcomingDeadlinesRef.current.map(d => d.id)
+    
+    // Find exiting items (items that were in previous but not in current)
+    const exiting = new Set([
+      ...prevActiveGoals.filter(id => !currentActiveGoals.includes(id)),
+      ...prevRecentActivity.filter(id => !currentRecentActivity.includes(id)),
+      ...prevUpcomingDeadlines.filter(id => !currentUpcomingDeadlines.includes(id))
+    ])
+    
+    // Find entering items (items that are in current but not in previous)
+    const entering = new Set([
+      ...currentActiveGoals.filter(id => !prevActiveGoals.includes(id)),
+      ...currentRecentActivity.filter(id => !prevRecentActivity.includes(id)),
+      ...currentUpcomingDeadlines.filter(id => !prevUpcomingDeadlines.includes(id))
+    ])
+    
+    if (exiting.size > 0 || entering.size > 0) {
+      setExitingItems(exiting)
+      setEnteringItems(entering)
+      
+      // Clear exiting items after animation
+      setTimeout(() => {
+        setExitingItems(new Set())
+      }, 600)
+      
+      // Clear entering items after animation completes
+      setTimeout(() => {
+        setEnteringItems(new Set())
+      }, 1000)
+    }
+    
+    // Update refs
+    prevActiveGoalsRef.current = activeGoals.slice(0, 3)
+    prevRecentActivityRef.current = recentActivity.slice(0, 3)
+    prevUpcomingDeadlinesRef.current = upcomingDeadlines.slice(0, 3)
+  }, [activeGoals, recentActivity, upcomingDeadlines])
 
   const toggleMotivation = () => {
     const newValue = !motivationEnabled
@@ -368,21 +433,15 @@ export default function DashboardPage() {
     }
   }
 
-  // Live update when localStorage changes
+  // Trigger animations after loading completes
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', loadGoals)
-      window.addEventListener('goalUpdated', loadGoals)
-      window.addEventListener('goalDeleted', loadGoals)
+    if (!loading && !animationsLoaded) {
+      const timer = setTimeout(() => {
+        setAnimationsLoaded(true)
+      }, 300) // Increased delay to ensure smooth loading experience
+      return () => clearTimeout(timer)
     }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', loadGoals)
-        window.removeEventListener('goalUpdated', loadGoals)
-        window.removeEventListener('goalDeleted', loadGoals)
-      }
-    }
-  }, [])
+  }, [loading, animationsLoaded])
 
   if (loading) {
     return (
@@ -393,18 +452,6 @@ export default function DashboardPage() {
         </div>
       </div>
     )
-  }
-
-  const activeGoals = goals.filter(g => !g.completed_at && !g.is_suspended)
-  const completedGoals = goals.filter(g => g.completed_at)
-  const maxStreak = Math.max(...goals.map(g => g.streak || 0), 0)
-  const avgStreak = goals.length > 0 ? Math.round(goals.reduce((sum, g) => sum + (g.streak || 0), 0) / goals.length) : 0
-  
-  const todayStats = {
-    completed: completedGoals.length,
-    pending: activeGoals.length,
-    streak: avgStreak,
-    longestStreak: maxStreak
   }
 
   return (
@@ -587,10 +634,18 @@ export default function DashboardPage() {
                   {activeGoals
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .slice(0, 3)
-                    .map((goal) => {
+                    .map((goal, index) => {
                       const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
                       return (
-                        <div key={goal.id} className={`flex items-center gap-3 p-3 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full ${
+                        <div key={goal.id} className={`${
+                          exitingItems.has(goal.id) 
+                            ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
+                            : enteringItems.has(goal.id)
+                            ? 'animate-in slide-in-from-top-full duration-800 fill-mode-forwards'
+                            : animationsLoaded 
+                            ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
+                            : 'opacity-0'
+                        } flex items-center gap-3 p-3 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer h-[80px] w-full ${
                           isSeasonalGoal 
                             ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800' 
                             : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
@@ -676,7 +731,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {recentActivity.slice(0, 3).map((activity: any) => {
+                  {recentActivity.slice(0, 3).map((activity: any, index) => {
                     const Icon = activity.icon
                     const getNotificationColor = (type: string) => {
                       if (type === 'goal_completed') return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
@@ -690,7 +745,15 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={activity.id}
-                        className={`flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}`}
+                        className={`${
+                          exitingItems.has(activity.id) 
+                            ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
+                            : enteringItems.has(activity.id)
+                            ? 'animate-in slide-in-from-top-full duration-800 fill-mode-forwards'
+                            : animationsLoaded 
+                            ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
+                            : 'opacity-0'
+                        } flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}`}
                         onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
                       >
                         <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5">
@@ -748,7 +811,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {upcomingDeadlines.slice(0, 3).map((goal: any) => {
+                  {upcomingDeadlines.slice(0, 3).map((goal: any, index) => {
                     const dueDate = new Date(goal.dueDate)
                     const today = new Date()
                     const diffTime = dueDate.getTime() - today.getTime()
@@ -771,7 +834,15 @@ export default function DashboardPage() {
                     return (
                       <div 
                         key={goal.id} 
-                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${getUrgencyColor()}`} 
+                        className={`${
+                          exitingItems.has(goal.id) 
+                            ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
+                            : enteringItems.has(goal.id)
+                            ? 'animate-in slide-in-from-top-full duration-800 fill-mode-forwards'
+                            : animationsLoaded 
+                            ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
+                            : 'opacity-0'
+                        } flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${getUrgencyColor()}`} 
                         onClick={() => goal.id && router.push(`/goals/${goal.id}`)}
                       >
                         <div className="p-1.5 rounded bg-white dark:bg-slate-800/50">
@@ -979,7 +1050,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {recentActivity.slice(0, 3).map((activity: any) => {
+                  {recentActivity.slice(0, 3).map((activity: any, index) => {
                     const Icon = activity.type === 'goal_completed' ? CheckCircle2 : 
                                  activity.type === 'streak_milestone' ? Flame :
                                  activity.type === 'achievement_unlocked' ? Trophy :
@@ -999,7 +1070,15 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={activity.id}
-                        className={`flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}`}
+                        className={`${
+                          exitingItems.has(activity.id) 
+                            ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
+                            : enteringItems.has(activity.id)
+                            ? 'animate-in slide-in-from-top-full duration-800 fill-mode-forwards'
+                            : animationsLoaded 
+                            ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
+                            : 'opacity-0'
+                        } flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}`}
                         onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
                       >
                         <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5">
