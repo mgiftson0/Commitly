@@ -447,7 +447,7 @@ export default function AnalyticsPage() {
                   <span className="text-sm font-medium text-orange-800 dark:text-orange-400">Streak Opportunity</span>
                 </div>
                 <p className="text-xs text-orange-700 dark:text-orange-300">
-                  You're close to your longest streak! One more day could set a new record.
+                  You&apos;re close to your longest streak! One more day could set a new record.
                 </p>
               </div>
             </div>
