@@ -44,6 +44,7 @@ import { RecentActivity } from "@/components/dashboard/recent-activity"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { PartnerRequests } from "@/components/dashboard/partner-requests"
 import { CloseToUnlock } from "@/components/dashboard/close-to-unlock"
+import { AnimatedBackground } from "@/components/dashboard/animated-background"
 
 // Import hooks and utilities
 import { useGoals } from "@/hooks/use-goals"
@@ -407,47 +408,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        {/* Daily Motivation - Single Container, One Line */}
-        {motivationEnabled && showMotivation && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-blue-100 dark:border-blue-800">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <Star className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-gray-900 dark:text-gray-100 italic truncate">
-                    &ldquo;{todayMotivation.quote}&rdquo;
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 font-medium truncate">
-                    — {todayMotivation.author}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2 flex-shrink-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleMotivation}
-                  className="h-8 w-8 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full"
-                  title="Toggle daily notifications"
-                >
-                  <Bell className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowMotivation(false)}
-                  className="h-8 w-8 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full"
-                  title="Hide motivation"
-                >
-                  ×
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
+    <>
+      <AnimatedBackground />
+      <MainLayout>
+        <div className="space-y-6">
         {/* Modern Compact Welcome Header */}
         <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 dark:from-emerald-600 dark:via-teal-600 dark:to-cyan-600 rounded-xl p-6 sm:p-8 shadow-xl min-h-[160px] sm:min-h-[180px]">
           {/* Background Pattern */}
@@ -1076,5 +1040,6 @@ export default function DashboardPage() {
         />
       </div>
     </MainLayout>
+    </>
   )
 }
