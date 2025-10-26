@@ -157,7 +157,7 @@ export function GoalPartnerRequestCard({ request, onUpdate }: GoalPartnerRequest
 
             {request.message && (
               <p className="text-sm bg-muted/50 p-2 rounded mb-2 italic">
-                "{request.message}"
+                &ldquo;{request.message}&rdquo;
               </p>
             )}
 

@@ -60,7 +60,7 @@ export function ShareProfile({ username, displayName, profilePicture }: SharePro
             {profilePicture && (
               <img src={profilePicture} alt={displayName} className="w-8 h-8 rounded-full" />
             )}
-            Share {displayName}'s Profile
+            Share {displayName}&apos;s Profile
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
