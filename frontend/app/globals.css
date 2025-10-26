@@ -8,7 +8,7 @@
     position: relative;
     background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
     background-size: 400% 400%;
-    animation: gradient-shift 4s ease infinite;
+    animation: gradient-shift 4s ease forwards;
     padding: 2px;
     border-radius: inherit;
   }
@@ -39,7 +39,7 @@
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-    animation: shimmer 3s ease-in-out infinite;
+    animation: shimmer 3s ease-in-out forwards;
     z-index: 1;
   }
   
@@ -51,14 +51,14 @@
       radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
       radial-gradient(circle at 40% 40%, rgba(120, 255, 198, 0.3) 0%, transparent 50%);
     background-size: 200% 200%;
-    animation: aurora-flow 6s ease-in-out infinite;
+    animation: aurora-flow 6s ease-in-out forwards;
   }
   
   /* Dynamic Gradient Pulse */
   .gradient-pulse {
     background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
     background-size: 400% 400%;
-    animation: gradient-pulse 4s ease-in-out infinite;
+    animation: gradient-pulse 4s ease-in-out forwards;
   }
 }
 
