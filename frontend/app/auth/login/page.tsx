@@ -145,185 +145,221 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-4">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] -z-10" />
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/50">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-r from-indigo-400/15 to-purple-400/15 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-transparent via-blue-50/10 to-transparent rounded-full" />
+      </div>
 
-      <div className="w-full max-w-md space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-full blur opacity-75 animate-pulse" />
-              <div className="relative bg-white rounded-full p-3 shadow-lg">
-                <Target className="h-8 w-8 text-blue-600" />
-              </div>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome Back
-          </h1>
-          <p className="text-gray-600">Continue your journey to success</p>
+      {/* Floating Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-400/40 rounded-full animate-float" style={{ animationDelay: '0s' }} />
+        <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-cyan-400/30 rounded-full animate-float" style={{ animationDelay: '2s' }} />
+        <div className="absolute bottom-1/3 left-1/3 w-1.5 h-1.5 bg-indigo-400/50 rounded-full animate-float" style={{ animationDelay: '4s' }} />
+        <div className="absolute top-2/3 right-1/4 w-2.5 h-2.5 bg-purple-400/35 rounded-full animate-float" style={{ animationDelay: '1s' }} />
+      </div>
 
-          {/* Show mode indicator */}
-          {!useSupabase && (
-            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs text-amber-700">
-              <AlertCircle className="h-3 w-3" />
-              Demo Mode - Using local storage
-            </div>
-          )}
-        </div>
-
-        {/* Login Card */}
-        <Card className="backdrop-blur-xl bg-white/80 shadow-2xl border-0 shadow-blue-100/50">
-          <CardContent className="p-8">
-            <form onSubmit={handleLogin} className="space-y-6">
-              {/* Email Field */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="email"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Email Address
-                </Label>
+      <div className="relative min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
+        <div className="w-full max-w-md space-y-8">
+          {/* Enhanced Header */}
+          <div className="text-center space-y-6">
+            <div className="relative inline-block">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600 rounded-2xl blur-xl opacity-30 animate-pulse" />
+              <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl p-4 shadow-2xl border border-white/20">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-cyan-50/50 rounded-2xl" />
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-12 bg-gray-50 border-gray-200 focus:bg-white transition-all duration-200"
-                    required
-                  />
+                  <Target className="h-10 w-10 text-blue-600 drop-shadow-lg" />
                 </div>
               </div>
+            </div>
 
-              {/* Password Field */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="password"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Password
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 h-12 bg-gray-50 border-gray-200 focus:bg-white transition-all duration-200"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Forgot Password */}
-              <div className="flex justify-end">
-                <Link
-                  href="/auth/reset-password"
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                >
-                  Forgot your password?
-                </Link>
-              </div>
-
-              {/* Login Button */}
-              <Button
-                type="submit"
-                className="w-full h-12 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-                disabled={loading}
-              >
-                {loading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Signing you in...
-                  </div>
-                ) : (
-                  "Sign In to Your Account"
-                )}
-              </Button>
-
-              {/* Google OAuth Section - Only show if configured */}
-              {useSupabase && googleOAuthAvailable && (
-                <>
-                  {/* Divider */}
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-gray-200" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-gray-500">
-                        Or continue with
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Google Login */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGoogleLogin}
-                    className="w-full h-12 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
-                    disabled={loading}
-                  >
-                    <Chrome className="h-5 w-5 mr-2 text-blue-600" />
-                    <span className="font-semibold text-gray-700">
-                      Continue with Google
-                    </span>
-                  </Button>
-                </>
-              )}
-            </form>
-
-            {/* Sign Up Link */}
-            <div className="mt-8 text-center">
-              <p className="text-sm text-gray-600">
-                New to Commitly?{" "}
-                <Link
-                  href="/auth/signup"
-                  className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  Create your account
-                </Link>
+            <div className="space-y-3">
+              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
+                Welcome Back
+              </h1>
+              <p className="text-lg text-gray-600 font-medium">
+                Continue your journey to success
               </p>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Footer */}
-        <div className="text-center text-sm text-gray-500">
-          <p>
-            By signing in, you agree to our{" "}
-            <Link
-              href="#"
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link
-              href="#"
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Privacy Policy
-            </Link>
-          </p>
+            {/* Enhanced Mode Indicator */}
+            {!useSupabase && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 rounded-full text-sm text-amber-700 shadow-sm">
+                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                <AlertCircle className="h-4 w-4" />
+                <span className="font-medium">Demo Mode Active</span>
+              </div>
+            )}
+          </div>
+
+          {/* Enhanced Login Card */}
+          <Card className="relative overflow-hidden bg-white/80 backdrop-blur-2xl shadow-2xl border-0 shadow-blue-100/50">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-blue-50/30 to-cyan-50/30" />
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-indigo-500" />
+
+            <CardContent className="relative p-8 sm:p-10">
+              <form onSubmit={handleLogin} className="space-y-6">
+                {/* Enhanced Email Field */}
+                <div className="space-y-3">
+                  <Label htmlFor="email" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-blue-500" />
+                    Email Address
+                  </Label>
+                  <div className="relative group">
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-12 pl-12 pr-4 bg-gray-50/80 border-gray-200 focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-100/50 transition-all duration-300 group-hover:shadow-md"
+                      required
+                    />
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Enhanced Password Field */}
+                <div className="space-y-3">
+                  <Label htmlFor="password" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-blue-500" />
+                    Password
+                  </Label>
+                  <div className="relative group">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-12 pl-12 pr-12 bg-gray-50/80 border-gray-200 focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-100/50 transition-all duration-300 group-hover:shadow-md"
+                      required
+                    />
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
+                      <Lock className="h-5 w-5" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:text-blue-500 transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Enhanced Forgot Password */}
+                <div className="flex justify-end">
+                  <Link
+                    href="/auth/reset-password"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-all duration-200"
+                  >
+                    Forgot your password?
+                  </Link>
+                </div>
+
+                {/* Enhanced Login Button */}
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-gradient-to-r from-blue-600 via-cyan-600 to-indigo-600 hover:from-blue-700 hover:via-cyan-700 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl hover:shadow-blue-200/50 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Signing you in...</span>
+                    </div>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      Sign In to Your Account
+                      <Target className="h-4 w-4" />
+                    </span>
+                  )}
+                </Button>
+
+                {/* Enhanced Google OAuth Section */}
+                {useSupabase && googleOAuthAvailable && (
+                  <>
+                    {/* Enhanced Divider */}
+                    <div className="relative my-8">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-200" />
+                      </div>
+                      <div className="relative flex justify-center">
+                        <div className="bg-white px-4 text-sm text-gray-500 font-medium">
+                          Or continue with
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Enhanced Google Login */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGoogleLogin}
+                      className="w-full h-12 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-300 shadow-sm hover:shadow-md"
+                      disabled={loading}
+                    >
+                      <Chrome className="h-5 w-5 mr-3 text-blue-600" />
+                      <span className="font-semibold text-gray-700">
+                        Continue with Google
+                      </span>
+                    </Button>
+                  </>
+                )}
+              </form>
+
+              {/* Enhanced Sign Up Link */}
+              <div className="mt-8 pt-6 border-t border-gray-100">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">
+                    New to Commitly?{" "}
+                    <Link
+                      href="/auth/signup"
+                      className="font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-all duration-200"
+                    >
+                      Create your account →
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Enhanced Footer */}
+          <div className="text-center space-y-3">
+            <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+              <span>🔒 Secure & Private</span>
+              <span>•</span>
+              <span>⚡ Fast & Reliable</span>
+              <span>•</span>
+              <span>🎯 Goal-Oriented</span>
+            </div>
+            <p className="text-xs text-gray-500 max-w-sm mx-auto leading-relaxed">
+              By signing in, you agree to our{" "}
+              <Link
+                href="/terms"
+                className="text-blue-600 hover:text-blue-700 hover:underline font-medium"
+              >
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy"
+                className="text-blue-600 hover:text-blue-700 hover:underline font-medium"
+              >
+                Privacy Policy
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
