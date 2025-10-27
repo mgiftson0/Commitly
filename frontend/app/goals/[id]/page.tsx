@@ -90,6 +90,8 @@ export default function GoalDetailPage() {
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isOwner, setIsOwner] = useState(false)
+  const [partnerRequest, setPartnerRequest] = useState<any>(null)
+  const [accountabilityPartners, setAccountabilityPartners] = useState<any[]>([])
 
   useEffect(() => {
     const loadGoal = async () => {
@@ -135,6 +137,48 @@ export default function GoalDetailPage() {
 
           setActivities(activitiesData || [])
         }
+
+        // Check if current user has a pending partner request for this goal
+        const { data: pendingRequest } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('type', 'partner_request')
+          .eq('read', false)
+          .contains('data', { goal_id: goalId })
+          .maybeSingle()
+
+        if (pendingRequest) {
+          setPartnerRequest(pendingRequest)
+        }
+
+        // Get accountability partners for this goal - using notifications table for now
+        const { data: partnerNotifications } = await supabase
+          .from('notifications')
+          .select('data')
+          .eq('type', 'goal_created')
+          .contains('data', { goal_id: goalId })
+          .eq('read', true)
+
+        const partnerIds = (partnerNotifications || []).map(n => n.data?.partner_id).filter(Boolean)
+        
+        let partnersList = []
+        if (partnerIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, username, profile_picture_url')
+            .in('id', partnerIds)
+
+          partnersList = (profiles || []).map(profile => ({
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Partner',
+            avatar: profile.profile_picture_url || '/placeholder-avatar.jpg'
+          }))
+        }
+
+        // partnersList already created above
+
+        setAccountabilityPartners(partnersList)
       } catch (error) {
         console.error('Error loading goal:', error)
         toast.error('Failed to load goal')
@@ -223,6 +267,88 @@ export default function GoalDetailPage() {
     }
   }
 
+  const handlePartnerRequest = async (action: 'accept' | 'decline') => {
+    if (!partnerRequest || !currentUser) return
+
+    try {
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, username')
+        .eq('id', currentUser.id)
+        .single()
+
+      const userName = userProfile?.first_name 
+        ? `${userProfile.first_name} ${userProfile.last_name || ''}`.trim()
+        : userProfile?.username || 'Someone'
+
+      if (action === 'accept') {
+        // Create acceptance notification for requester
+        const { error: partnerError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: partnerRequest.data.requester_id,
+            title: 'Goal Partner Request Accepted! 🎉',
+            message: `${userName} accepted your accountability partner request for "${goal?.title}"`,
+            type: 'goal_created',
+            read: false,
+            data: { partner_id: currentUser.id, partner_name: userName, goal_id: goalId }
+          })
+
+        if (partnerError) throw partnerError
+
+        // Create partnership record for tracking (for the accepter to see the goal in their partner goals)
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: currentUser.id,
+            title: 'Partnership Established',
+            message: `You are now an accountability partner for "${goal?.title}"`,
+            type: 'goal_created',
+            read: true,
+            data: { 
+              partner_id: partnerRequest.data.requester_id, 
+              partner_name: partnerRequest.data.requester_name, 
+              goal_id: goalId,
+              goal_title: goal?.title
+            }
+          })
+
+        toast.success('Partner request accepted!')
+      } else {
+        // Send decline notification to requester
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: partnerRequest.data.requester_id,
+            title: 'Goal Partner Request Declined',
+            message: `${userName} declined your accountability partner request for "${goal?.title}"`,
+            type: 'goal_created',
+            read: false,
+            data: { partner_id: currentUser.id, partner_name: userName }
+          })
+
+        toast.success('Partner request declined')
+      }
+
+      // Delete the original notification
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', partnerRequest.id)
+
+      setPartnerRequest(null)
+      
+      // Reload partners if accepted
+      if (action === 'accept') {
+        window.location.reload()
+      }
+      
+    } catch (error: any) {
+      console.error('Error handling partner request:', error)
+      toast.error(error.message || 'Failed to process request')
+    }
+  }
+
   if (loading) {
     return (
       <MainLayout>
@@ -284,6 +410,39 @@ export default function GoalDetailPage() {
           )}
         </div>
 
+        {/* Partner Request Alert */}
+        {partnerRequest && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-amber-800">Partnership Request</h3>
+                  <p className="text-sm text-amber-700">
+                    {partnerRequest.data.requester_name} wants you as an accountability partner for this goal
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePartnerRequest('decline')}
+                    className="border-red-300 text-red-700 hover:bg-red-50"
+                  >
+                    Decline
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handlePartnerRequest('accept')}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Accept
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Goal Details */}
         <Card className="border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.16)] dark:border-slate-800 dark:bg-slate-900">
           <CardHeader>
@@ -301,6 +460,42 @@ export default function GoalDetailPage() {
                     {goal.goal_type === 'multi-activity' ? 'Multi-Activity' : 'Single Activity'}
                   </Badge>
                 </div>
+                {/* Show accountability partners */}
+                {accountabilityPartners.length > 0 && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-sm text-muted-foreground">Partners:</span>
+                    <div className="flex -space-x-1">
+                      {accountabilityPartners.slice(0, 3).map((partner, index) => (
+                        <div key={partner.id} className="relative w-6 h-6 rounded-full border-2 border-background overflow-hidden">
+                          {partner.avatar && partner.avatar !== '/placeholder-avatar.jpg' ? (
+                            <img 
+                              src={partner.avatar} 
+                              alt={partner.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                                const parent = target.parentElement
+                                if (parent) {
+                                  parent.innerHTML = `<div class="w-full h-full bg-primary/10 flex items-center justify-center"><span class="text-xs font-medium text-primary">${partner.name.charAt(0)}</span></div>`
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-xs font-medium text-primary">{partner.name.charAt(0)}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {accountabilityPartners.length > 3 && (
+                        <div className="w-6 h-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground font-medium">+{accountabilityPartners.length - 3}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-primary">{goal.progress}%</div>

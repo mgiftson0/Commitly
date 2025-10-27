@@ -115,34 +115,58 @@ export default function CreateGoalPage() {
           username: profile?.username || 'you'
         })
 
-        // Get mutual follows - users who follow each other
+        // Get follows relationships - simple queries first
         const { data: myFollowing } = await supabase
           .from('follows')
-          .select('following_id, following_profile:profiles!follows_following_id_fkey(*)')
+          .select('following_id')
           .eq('follower_id', user.id)
-          .eq('status', 'accepted')
 
         const { data: myFollowers } = await supabase
           .from('follows')
-          .select('follower_id, follower_profile:profiles!follows_follower_id_fkey(*)')
+          .select('follower_id')
           .eq('following_id', user.id)
-          .eq('status', 'accepted')
+
+        console.log('My following:', myFollowing)
+        console.log('My followers:', myFollowers)
 
         // Find mutual connections
         const followingIds = new Set(myFollowing?.map(f => f.following_id) || [])
         const followerIds = new Set(myFollowers?.map(f => f.follower_id) || [])
         
-        const partnersList = (myFollowing || []).filter(f => 
-          followerIds.has(f.following_id)
-        ).map(f => {
-          const profile = Array.isArray(f.following_profile) ? f.following_profile[0] : f.following_profile;
-          return {
-            id: f.following_id,
-            name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Partner',
-            username: profile?.username || 'partner'
-          };
-        })
+        // Get mutual follower IDs
+        const mutualIds = Array.from(followingIds).filter(id => followerIds.has(id))
+        console.log('Mutual IDs:', mutualIds)
 
+        // If we have mutual followers, get their profiles
+        let partnersList = []
+        if (mutualIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, username')
+            .in('id', mutualIds)
+
+          partnersList = (profiles || []).map(profile => ({
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Partner',
+            username: profile.username || 'partner'
+          }))
+        }
+        
+        // If no mutual follows, use all followers
+        if (partnersList.length === 0 && followerIds.size > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, username')
+            .in('id', Array.from(followerIds))
+
+          partnersList = (profiles || []).map(profile => ({
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Follower',
+            username: profile.username || 'follower'
+          }))
+        }
+
+        console.log('Final partners list:', partnersList)
         setAvailablePartners(partnersList)
       } catch (error) {
         console.error('Error loading data:', error)
@@ -297,9 +321,17 @@ export default function CreateGoalPage() {
         return
       }
 
-      // Show modal if no accountability partners available
-      if (goalNature === "personal" && selectedPartners.length === 0 && availablePartners.length === 0) {
-        // This will be handled by the UI showing the dropdown with empty state
+      // Validate accountability partners for personal goals
+      if (goalNature === "personal" && selectedPartners.length > 0) {
+        // Verify all selected partners are still valid mutual followers
+        const validPartners = selectedPartners.filter(partnerId => 
+          availablePartners.some(p => p.id === partnerId)
+        )
+        
+        if (validPartners.length !== selectedPartners.length) {
+          toast.error('Some selected partners are no longer available')
+          return
+        }
       }
 
 
@@ -370,6 +402,31 @@ export default function CreateGoalPage() {
           toast.error(goalError.message || 'Failed to create goal')
         }
         return
+      }
+
+      // Send notifications to selected accountability partners
+      if (goalNature === "personal" && selectedPartners.length > 0) {
+        const partnerNotifications = selectedPartners.map(partnerId => ({
+          user_id: partnerId,
+          title: 'Goal Partner Request',
+          message: `${currentUser.name} wants you as an accountability partner for "${title}"`,
+          type: 'partner_request',
+          read: false,
+          data: { 
+            requester_id: authUser.id, 
+            requester_name: currentUser.name,
+            goal_id: newGoal.id,
+            goal_title: title
+          }
+        }))
+
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert(partnerNotifications)
+
+        if (notificationError) {
+          console.error('Error sending partner notifications:', notificationError)
+        }
       }
 
       // Check for achievements
@@ -799,8 +856,8 @@ export default function CreateGoalPage() {
 
 
                   {/* Goal Type Selection */}
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">
                       Goal Type <span className="text-destructive">*</span>
                     </Label>
                     <RadioGroup
@@ -811,9 +868,9 @@ export default function CreateGoalPage() {
                         )
                       }
                     >
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-2 sm:grid-cols-2">
                         <div
-                          className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${
+                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
                             goalType === "single-activity"
                               ? "border-primary bg-primary/5"
                               : "border-border"
@@ -826,19 +883,19 @@ export default function CreateGoalPage() {
                           <div className="flex-1">
                             <Label
                               htmlFor="single-activity"
-                              className="font-medium cursor-pointer"
+                              className="font-medium cursor-pointer text-xs"
                             >
                               Single Activity
                             </Label>
-                            <p className="text-sm text-muted-foreground">
-                              One specific task to complete
+                            <p className="text-xs text-muted-foreground">
+                              One task
                             </p>
                           </div>
-                          <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+                          <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
                         </div>
 
                         <div
-                          className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${
+                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
                             goalType === "multi-activity"
                               ? "border-primary bg-primary/5"
                               : "border-border"
@@ -851,15 +908,15 @@ export default function CreateGoalPage() {
                           <div className="flex-1">
                             <Label
                               htmlFor="multi-activity"
-                              className="font-medium cursor-pointer"
+                              className="font-medium cursor-pointer text-xs"
                             >
-                              Multi-Activity Checklist
+                              Multi-Activity
                             </Label>
-                            <p className="text-sm text-muted-foreground">
-                              Multiple tasks to complete
+                            <p className="text-xs text-muted-foreground">
+                              Multiple tasks
                             </p>
                           </div>
-                          <Target className="h-5 w-5 text-muted-foreground" />
+                          <Target className="h-3 w-3 text-muted-foreground" />
                         </div>
                       </div>
                     </RadioGroup>
@@ -886,8 +943,8 @@ export default function CreateGoalPage() {
                   )}
 
                   {/* Schedule for all goal types */}
-                  <div className="space-y-4 p-4 rounded-lg bg-muted/30">
-                    <Label className="text-sm font-medium">
+                  <div className="space-y-2 p-3 rounded-lg bg-muted/30">
+                    <Label className="text-xs font-medium">
                       Schedule <span className="text-destructive">*</span>
                     </Label>
                     <RadioGroup
@@ -896,26 +953,26 @@ export default function CreateGoalPage() {
                         setScheduleType(v)
                       }
                     >
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-2 sm:grid-cols-2">
                         <div
-                          className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${scheduleType === "date" ? "border-primary bg-primary/5" : "border-border"}`}
+                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${scheduleType === "date" ? "border-primary bg-primary/5" : "border-border"}`}
                         >
                           <RadioGroupItem value="date" id="schedule-date" />
                           <div className="flex-1">
                             <Label
                               htmlFor="schedule-date"
-                              className="font-medium cursor-pointer"
+                              className="font-medium cursor-pointer text-xs"
                             >
                               Specific Date
                             </Label>
-                            <p className="text-sm text-muted-foreground">
-                              Pick the day to complete this
+                            <p className="text-xs text-muted-foreground">
+                              Pick completion day
                             </p>
                           </div>
-                          <Calendar className="h-5 w-5 text-muted-foreground" />
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
                         </div>
                         <div
-                          className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-accent/50 ${scheduleType === "recurring" ? "border-primary bg-primary/5" : "border-border"}`}
+                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${scheduleType === "recurring" ? "border-primary bg-primary/5" : "border-border"}`}
                         >
                           <RadioGroupItem
                             value="recurring"
@@ -924,24 +981,24 @@ export default function CreateGoalPage() {
                           <div className="flex-1">
                             <Label
                               htmlFor="schedule-recurring"
-                              className="font-medium cursor-pointer"
+                              className="font-medium cursor-pointer text-xs"
                             >
                               Recurring
                             </Label>
-                            <p className="text-sm text-muted-foreground">
-                              Repeat on a schedule
+                            <p className="text-xs text-muted-foreground">
+                              Repeat schedule
                             </p>
                           </div>
-                          <Flame className="h-5 w-5 text-muted-foreground" />
+                          <Flame className="h-3 w-3 text-muted-foreground" />
                         </div>
                       </div>
                     </RadioGroup>
 
                     {scheduleType === "date" ? (
-                      <div className="space-y-4">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="specificStartDate" className="text-sm font-medium">
+                      <div className="space-y-2">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="space-y-1">
+                            <Label htmlFor="specificStartDate" className="text-xs font-medium">
                               Start Date <span className="text-destructive">*</span>
                             </Label>
                             <Input
@@ -949,14 +1006,14 @@ export default function CreateGoalPage() {
                               type="date"
                               value={startDate}
                               onChange={(e) => setStartDate(e.target.value)}
-                              className="focus-ring"
+                              className="h-7 text-xs focus-ring"
                               min={new Date().toISOString().split("T")[0]}
                               max={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
                               required
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="specificEndDate" className="text-sm font-medium">
+                          <div className="space-y-1">
+                            <Label htmlFor="specificEndDate" className="text-xs font-medium">
                               End Date <span className="text-destructive">*</span>
                             </Label>
                             <Input
@@ -964,20 +1021,20 @@ export default function CreateGoalPage() {
                               type="date"
                               value={singleDate}
                               onChange={(e) => setSingleDate(e.target.value)}
-                              className="focus-ring"
+                              className="h-7 text-xs focus-ring"
                               min={startDate || new Date().toISOString().split("T")[0]}
                               required
                             />
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Start date maximum 2 months from today. Goal will be pending if start date is in the future.
+                          Max 2 months from today
                         </p>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="startDate" className="text-sm font-medium">
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="startDate" className="text-xs font-medium">
                             Start Date <span className="text-destructive">*</span>
                           </Label>
                           <Input
@@ -985,42 +1042,38 @@ export default function CreateGoalPage() {
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="focus-ring"
+                            className="h-7 text-xs focus-ring"
                             min={new Date().toISOString().split("T")[0]}
                             max={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
                             required
                           />
                           <p className="text-xs text-muted-foreground">
-                            Maximum 2 months from today. Goal will be pending if start date is in the future.
+                            Max 2 months from today
                           </p>
                         </div>
-                        <div className="grid gap-4 sm:grid-cols-3">
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              Recurrence Pattern{" "}
-                              <span className="text-destructive">*</span>
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs font-medium">
+                              Pattern <span className="text-destructive">*</span>
                             </Label>
                             <Select
                               value={recurrencePattern}
                               onValueChange={setRecurrencePattern}
                             >
-                              <SelectTrigger className="focus-ring">
+                              <SelectTrigger className="h-7 text-xs focus-ring">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="daily">Daily</SelectItem>
                                 <SelectItem value="weekly">Weekly</SelectItem>
                                 <SelectItem value="monthly">Monthly</SelectItem>
-                                <SelectItem value="custom">
-                                  Custom Days
-                                </SelectItem>
+                                <SelectItem value="custom">Custom</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">
-                              End Condition{" "}
-                              <span className="text-destructive">*</span>
+                          <div className="space-y-1">
+                            <Label className="text-xs font-medium">
+                              End <span className="text-destructive">*</span>
                             </Label>
                             <Select
                               value={endCondition}
@@ -1031,62 +1084,42 @@ export default function CreateGoalPage() {
                                   | "after-completions",
                               ) => setEndCondition(value)}
                             >
-                              <SelectTrigger className="focus-ring">
+                              <SelectTrigger className="h-7 text-xs focus-ring">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="ongoing">
-                                  Ongoing (No end date)
-                                </SelectItem>
-                                <SelectItem value="by-date">
-                                  {recurrencePattern === "daily"
-                                    ? "End Date"
-                                    : recurrencePattern === "weekly"
-                                      ? "Target Week"
-                                      : recurrencePattern === "monthly"
-                                        ? "Target Month"
-                                        : "End Date"}
-                                </SelectItem>
-                                <SelectItem value="after-completions">
-                                  After Completions
-                                </SelectItem>
+                                <SelectItem value="ongoing">Ongoing</SelectItem>
+                                <SelectItem value="by-date">By Date</SelectItem>
+                                <SelectItem value="after-completions">After Count</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                           {endCondition === "by-date" && (
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                               <Label
                                 htmlFor="recurringDue"
-                                className="text-sm font-medium"
+                                className="text-xs font-medium"
                               >
-                                {recurrencePattern === "daily"
-                                  ? "End Date"
-                                  : recurrencePattern === "weekly"
-                                    ? "Target Week End"
-                                    : recurrencePattern === "monthly"
-                                      ? "Target Month End"
-                                      : "End Date"}{" "}
-                                <span className="text-destructive">*</span>
+                                End Date <span className="text-destructive">*</span>
                               </Label>
                               <Input
                                 id="recurringDue"
                                 type="date"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
-                                className="focus-ring"
+                                className="h-7 text-xs focus-ring"
                                 min={startDate || new Date().toISOString().split("T")[0]}
                                 required
                               />
                             </div>
                           )}
                           {endCondition === "after-completions" && (
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                               <Label
                                 htmlFor="targetCompletions"
-                                className="text-sm font-medium"
+                                className="text-xs font-medium"
                               >
-                                Target Completions{" "}
-                                <span className="text-destructive">*</span>
+                                Count <span className="text-destructive">*</span>
                               </Label>
                               <Input
                                 id="targetCompletions"
@@ -1097,16 +1130,8 @@ export default function CreateGoalPage() {
                                 onChange={(e) =>
                                   setTargetCompletions(e.target.value)
                                 }
-                                className="focus-ring"
-                                placeholder={
-                                  recurrencePattern === "daily"
-                                    ? "e.g., 30 days"
-                                    : recurrencePattern === "weekly"
-                                      ? "e.g., 12 weeks"
-                                      : recurrencePattern === "monthly"
-                                        ? "e.g., 6 months"
-                                        : "e.g., 20 cycles"
-                                }
+                                className="h-7 text-xs focus-ring"
+                                placeholder="30"
                                 required
                               />
                             </div>
@@ -1149,23 +1174,24 @@ export default function CreateGoalPage() {
 
                   {/* Activities (for multi-activity goals) */}
                   {goalType === "multi-activity" && (
-                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                    <div className="space-y-2 p-3 rounded-lg bg-muted/30">
                       <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium">
+                        <Label className="text-xs font-medium">
                           Activities <span className="text-destructive">*</span>
                         </Label>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
+                          className="h-6 text-xs px-2"
                           onClick={addActivity}
                         >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Add Activity
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Add at least 2 activities or choose from suggestions
+                        Add at least 2 activities
                       </p>
 
                       {/* Activity Suggestions Dropdown */}
@@ -1282,6 +1308,116 @@ export default function CreateGoalPage() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Accountability Partners (only for personal goals) */}
+                  {goalNature === "personal" && (
+                    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 shadow-[0_8px_18px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900/40">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                          Accountability Partners
+                        </Label>
+                        <Badge variant="outline" className="text-xs bg-white text-slate-600 border-slate-200 dark:bg-slate-900/60 dark:text-slate-200">
+                          {selectedPartners.length}/2
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Choose mutual followers to help keep you accountable
+                      </p>
+
+                      {availablePartners.length === 0 ? (
+                        <div className="text-center py-4">
+                          <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-xs text-muted-foreground mb-2">
+                            No mutual followers available
+                          </p>
+                          <Link href="/partners/find">
+                            <Button variant="outline" size="sm" className="text-xs h-7">
+                              Find Partners
+                            </Button>
+                          </Link>
+                        </div>
+                      ) : (
+                        <>
+                          <Select
+                            value=""
+                            onValueChange={(value) => {
+                              if (
+                                !selectedPartners.includes(value) &&
+                                selectedPartners.length < 2
+                              ) {
+                                setSelectedPartners([...selectedPartners, value]);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-9 text-xs focus-ring rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                              <SelectValue placeholder="Add accountability partner..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availablePartners
+                                .filter((p) => !selectedPartners.includes(p.id))
+                                .map((partner) => (
+                                  <SelectItem key={partner.id} value={partner.id} className="text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                        <span className="text-[10px] font-semibold">
+                                          {partner.name.charAt(0)}
+                                        </span>
+                                      </div>
+                                      <div className="text-xs font-medium text-slate-600 dark:text-slate-200">
+                                        {partner.name}
+                                      </div>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+
+                          {selectedPartners.length > 0 && (
+                            <div className="space-y-2">
+                              {selectedPartners.map((partnerId) => {
+                                const partner = availablePartners.find(
+                                  (p) => p.id === partnerId,
+                                );
+                                if (!partner) return null;
+                                return (
+                                  <div
+                                    key={partnerId}
+                                    className="flex items-center justify-between rounded-lg border border-white bg-white p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                        <span className="text-[11px] font-semibold">
+                                          {partner.name.charAt(0)}
+                                        </span>
+                                      </div>
+                                      <div className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                                        {partner.name}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-slate-400 hover:text-destructive"
+                                      onClick={() =>
+                                        setSelectedPartners(
+                                          selectedPartners.filter(
+                                            (id) => id !== partnerId,
+                                          ),
+                                        )
+                                      }
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -1406,56 +1542,38 @@ export default function CreateGoalPage() {
           </div>
 
           <div className="space-y-5">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    Group Goal Chat Starters
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Use these prompts to keep momentum over text.
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-[10px] uppercase tracking-wide bg-white dark:bg-slate-900/60">
-                  Group
-                </Badge>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {goalSamples.map(renderGoalSample)}
-              </div>
-            </div>
 
-            <Card className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+
+            <Card className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Lightbulb className="h-4 w-4 text-amber-500" />
+                <CardTitle className="flex items-center gap-2 text-xs">
+                  <Lightbulb className="h-3 w-3 text-amber-500" />
                   Quick Templates
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Pre-built structures to accelerate setup. Tap to load and customize.
+                  Pre-built structures
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid gap-3">
+              <CardContent className="space-y-2">
+                <div className="grid gap-2">
                   {goalTemplates.slice(0, 3).map((template, index) => {
                     const Icon = template.icon;
                     return (
                       <button
                         key={template.title}
                         type="button"
-                        className={"flex w-full items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left dark:border-slate-800 dark:bg-slate-900"}
+                        className={"flex w-full items-start gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900"}
                         onClick={() => {
                           setSelectedTemplate(template);
                           setShowTemplateModal(true);
                         }}
                       >
-                        <div className={"flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 " + template.color}>
-                          <Icon className="h-4 w-4" />
+                        <div className={"flex h-6 w-6 items-center justify-center rounded bg-blue-50 text-blue-600 " + template.color}>
+                          <Icon className="h-3 w-3" />
                         </div>
                         <div className="flex-1 space-y-1">
-                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">{template.title}</p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{template.description}</p>
-                          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                          <p className="text-xs font-medium text-slate-800 dark:text-slate-100">{template.title}</p>
+                          <Badge variant="secondary" className="text-xs">
                             {template.category.replace('-', ' ')}
                           </Badge>
                         </div>
@@ -1466,10 +1584,11 @@ export default function CreateGoalPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full justify-center rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50"
+                  size="sm"
+                  className="w-full h-6 text-xs"
                   onClick={() => setShowTemplateModal(true)}
                 >
-                  Browse full template library
+                  Browse All
                 </Button>
               </CardContent>
             </Card>

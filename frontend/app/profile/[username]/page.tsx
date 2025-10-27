@@ -25,7 +25,8 @@ import {
   CheckCircle2,
   Users,
   MoreHorizontal,
-  Clock
+  Clock,
+  Flame
 } from "lucide-react"
 import Link from "next/link"
 import { MainLayout } from "@/components/layout/main-layout"
@@ -37,7 +38,6 @@ import { getGoalStreak } from "@/lib/streak-manager"
 import { StreakBadge } from "@/components/streaks/streak-badge"
 import { UnfollowDialog } from "@/components/ui/unfollow-dialog"
 import { ShareProfile } from "@/components/profile/share-profile"
-import { Flame } from "lucide-react"
 import { FollowersModal } from "@/components/profile/followers-modal"
 
 export default function UserProfilePage() {
@@ -525,85 +525,143 @@ function GoalsList({ goals }: { goals: any[] }) {
     const isPaused = goal.status === 'paused'
     const progress = isCompleted ? 100 : (goal.progress || 0)
     
-    const getStatusIcon = () => {
-      if (isCompleted) return <CheckCircle2 className="h-4 w-4 text-green-600" />
-      if (isPaused) return <Clock className="h-4 w-4 text-yellow-600" />
-      if (goal.status === 'pending') return <Clock className="h-4 w-4 text-blue-600" />
-      return <Target className="h-4 w-4 text-blue-600" />
+    const getStatusColor = (status: string) => {
+      switch (status) {
+        case "active": return "bg-green-500"
+        case "completed": return "bg-blue-500"
+        case "paused": return "bg-yellow-500"
+        case "pending": return "bg-orange-500"
+        default: return "bg-gray-500"
+      }
     }
     
-    const getGoalTypeIcon = () => {
-      if (isSeasonalGoal) return <Star className="h-4 w-4 text-amber-600" />
-      if (isGroupGoal) return <Users className="h-4 w-4 text-purple-600" />
-      return <Target className="h-4 w-4 text-blue-600" />
+    const getProgressColor = (progress: number) => {
+      if (progress < 30) return 'bg-red-500'
+      if (progress <= 70) return 'bg-yellow-500'
+      return 'bg-green-500'
+    }
+    
+    const getTypeIcon = (type: string) => {
+      switch (type) {
+        case "recurring": return <Flame className="h-4 w-4" />
+        case "single": return <CheckCircle2 className="h-4 w-4" />
+        case "multi": return <Target className="h-4 w-4" />
+        default: return <Target className="h-4 w-4" />
+      }
     }
     
     const getGoalCardStyle = () => {
-      if (isSeasonalGoal) return "border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-background"
-      if (isGroupGoal) return "border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50/50 to-white dark:from-purple-950/20 dark:to-background"
-      return ""
+      if (isCompleted) {
+        return "ring-1 ring-green-200/50 hover:ring-green-300/70 shadow-green-100/50 hover:shadow-green-200/60 bg-gradient-to-br from-green-50/60 via-white to-green-50/30 dark:from-green-950/30 dark:via-background dark:to-green-950/20"
+      }
+      if (isSeasonalGoal) {
+        return "ring-1 ring-amber-200/50 hover:ring-amber-300/70 shadow-amber-100/50 hover:shadow-amber-200/60 bg-gradient-to-br from-amber-50/60 via-white to-amber-50/30 dark:from-amber-950/30 dark:via-background dark:to-amber-950/20"
+      }
+      if (isGroupGoal) {
+        return "ring-1 ring-purple-200/50 hover:ring-purple-300/70 shadow-purple-100/50 hover:shadow-purple-200/60 bg-gradient-to-br from-purple-50/60 via-white to-purple-50/30 dark:from-purple-950/30 dark:via-background dark:to-purple-950/20"
+      }
+      return "ring-1 ring-border/50 hover:ring-primary/30 shadow-slate-100/50 hover:shadow-slate-200/60"
     }
 
     return (
       <Link href={`/goals/${goal.id}`}>
-        <Card className={`hover-lift group transition-all duration-300 hover:shadow-2xl hover:shadow-primary/15 hover:-translate-y-2 border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm ${getGoalCardStyle()}`}>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              {getGoalTypeIcon()}
-              <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
-                {goal.type}
-              </Badge>
-              {isSeasonalGoal && (
-                <Badge variant="outline" className="text-xs bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-sm hover:shadow-amber-200/50 transition-all duration-200">
-                  <Star className="h-3 w-3 mr-1" />
-                  Seasonal
+        <Card className={`hover-lift group transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 border-0 shadow-slate-900/15 bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm ${getGoalCardStyle()}`}>
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                {getTypeIcon(goal.goal_type || goal.type)}
+                <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
+                  {goal.goal_type || goal.type}
+                </Badge>
+                {isSeasonalGoal && (
+                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-sm hover:shadow-amber-200/50 transition-all duration-200">
+                    <Star className="h-3 w-3 mr-1" />
+                    Seasonal
+                  </Badge>
+                )}
+                {isGroupGoal && (
+                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200 shadow-sm hover:shadow-purple-200/50 transition-all duration-200">
+                    <Users className="h-3 w-3 mr-1" />
+                    Group
+                  </Badge>
+                )}
+              </div>
+              {goal.streak && goal.streak.current_streak > 0 && (
+                <Badge className="bg-orange-500 text-white text-xs px-2">
+                  <Flame className="h-3 w-3 mr-1" />
+                  {goal.streak.current_streak}
                 </Badge>
               )}
-              {isGroupGoal && (
-                <Badge variant="outline" className="text-xs bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200 shadow-sm hover:shadow-purple-200/50 transition-all duration-200">
-                  <Users className="h-3 w-3 mr-1" />
-                  Group
-                </Badge>
+            </div>
+
+            <div className="space-y-2">
+              <CardTitle className="line-clamp-2 flex items-center gap-2">
+                {goal.title}
+              </CardTitle>
+              {goal.description && (
+                <CardDescription className="line-clamp-2">
+                  {goal.description}
+                </CardDescription>
               )}
             </div>
-            {goal.streak && goal.streak.current_streak > 0 && (
-              <Badge className="bg-orange-500 text-white text-xs px-2">
-                🔥{goal.streak.current_streak}
-              </Badge>
-            )}
-          </div>
+          </CardHeader>
 
-          <div className="space-y-2">
-            <CardTitle className="line-clamp-2 flex items-center gap-2">
-              {goal.title}
-            </CardTitle>
-            {goal.description && (
-              <CardDescription className="line-clamp-2">
-                {goal.description}
-              </CardDescription>
-            )}
-          </div>
-        </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Progress */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="font-medium">{progress}%</span>
+              </div>
+              <Progress value={progress} className={`h-3 rounded-full bg-gradient-to-r from-muted/50 to-muted/30 border border-border/30 shadow-inner ${progress <= 30 ? '[&>div]:bg-red-500' : progress <= 70 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`} />
+            </div>
 
-        <CardContent className="space-y-4">
-          {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">{progress}%</span>
+            {/* Category and Due Date */}
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">
+                {goal.category?.replace('_', ' ') || 'Personal'}
+              </span>
+              {goal.target_date && (() => {
+                const dueDate = new Date(goal.target_date)
+                const today = new Date()
+                const diffTime = dueDate.getTime() - today.getTime()
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                
+                const getUrgencyColor = () => {
+                  if (diffDays < 0) return 'text-red-600'
+                  if (diffDays <= 3) return 'text-red-600'
+                  if (diffDays <= 7) return 'text-yellow-600'
+                  return 'text-blue-600'
+                }
+                
+                const getText = () => {
+                  if (diffDays < 0) return 'Overdue'
+                  if (diffDays === 0) return 'Today'
+                  if (diffDays === 1) return '1d'
+                  return `${diffDays}d`
+                }
+                
+                return (
+                  <div className={`flex items-center gap-1 ${getUrgencyColor()}`}>
+                    <Calendar className="h-3 w-3" />
+                    <span className="font-medium">{getText()}</span>
+                  </div>
+                )
+              })()}
             </div>
-            <div className="w-full bg-muted rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  progress <= 30 ? 'bg-red-500' : progress <= 70 ? 'bg-yellow-500' : 'bg-green-500'
-                }`}
-                style={{ width: `${Math.min(progress, 100)}%` }}
-              />
+
+            {/* Status and Created Date */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${getStatusColor(goal.status)}`} />
+                <span className="capitalize">{goal.status}</span>
+              </div>
+              <span>
+                Created {new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
       </Link>
     )
   }
@@ -616,22 +674,43 @@ function GoalsList({ goals }: { goals: any[] }) {
         <TabsTrigger value="paused">Paused ({pausedGoals.length})</TabsTrigger>
       </TabsList>
       
-      <TabsContent value="active">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {activeGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
-        </div>
+      <TabsContent value="active" className="mt-6">
+        {activeGoals.length === 0 ? (
+          <div className="py-12 text-center">
+            <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No active goals</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {activeGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
+          </div>
+        )}
       </TabsContent>
       
-      <TabsContent value="completed">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {completedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
-        </div>
+      <TabsContent value="completed" className="mt-6">
+        {completedGoals.length === 0 ? (
+          <div className="py-12 text-center">
+            <CheckCircle2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No completed goals</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {completedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
+          </div>
+        )}
       </TabsContent>
       
-      <TabsContent value="paused">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {pausedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
-        </div>
+      <TabsContent value="paused" className="mt-6">
+        {pausedGoals.length === 0 ? (
+          <div className="py-12 text-center">
+            <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No paused goals</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {pausedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
+          </div>
+        )}
       </TabsContent>
     </Tabs>
   )

@@ -34,12 +34,7 @@ export function FollowersModal({ open, onOpenChange, userId, initialTab = 'follo
   const [following, setFollowing] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
-
-  useEffect(() => {
-    if (open) {
-      loadData()
-    }
-  }, [open, loadData])
+  const [followStates, setFollowStates] = useState<Record<string, 'none' | 'pending' | 'following'>>({})
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -75,6 +70,35 @@ export function FollowersModal({ open, onOpenChange, userId, initialTab = 'follo
       if (followingData) {
         setFollowing(followingData.map(f => f.profiles).filter(Boolean))
       }
+
+      // Load follow states for current user
+      if (user) {
+        const allUsers = [...(followersData?.map(f => f.profiles) || []), ...(followingData?.map(f => f.profiles) || [])]
+        const uniqueUsers = allUsers.filter((u, i, arr) => u && arr.findIndex(x => x?.id === u.id) === i)
+        
+        const states: Record<string, 'none' | 'pending' | 'following'> = {}
+        
+        for (const profile of uniqueUsers) {
+          if (profile && profile.id !== user.id) {
+            const { data: followData } = await supabase
+              .from('follows')
+              .select('status')
+              .eq('follower_id', user.id)
+              .eq('following_id', profile.id)
+              .maybeSingle()
+            
+            if (followData?.status === 'accepted') {
+              states[profile.id] = 'following'
+            } else if (followData?.status === 'pending') {
+              states[profile.id] = 'pending'
+            } else {
+              states[profile.id] = 'none'
+            }
+          }
+        }
+        
+        setFollowStates(states)
+      }
     } catch (error) {
       console.error('Error loading follow data:', error)
       toast.error('Failed to load data')
@@ -82,6 +106,49 @@ export function FollowersModal({ open, onOpenChange, userId, initialTab = 'follo
       setLoading(false)
     }
   }, [userId])
+
+  const handleFollowAction = async (targetUserId: string, action: 'follow' | 'unfollow') => {
+    if (!currentUser) return
+
+    try {
+      if (action === 'follow') {
+        const { error } = await supabase
+          .from('follows')
+          .insert({
+            follower_id: currentUser.id,
+            following_id: targetUserId,
+            status: 'accepted' // Assuming public profiles for now
+          })
+
+        if (error && error.code !== '23505') {
+          throw error
+        }
+
+        setFollowStates(prev => ({ ...prev, [targetUserId]: 'following' }))
+        toast.success('Following successfully!')
+      } else {
+        const { error } = await supabase
+          .from('follows')
+          .delete()
+          .eq('follower_id', currentUser.id)
+          .eq('following_id', targetUserId)
+
+        if (error) throw error
+
+        setFollowStates(prev => ({ ...prev, [targetUserId]: 'none' }))
+        toast.success('Unfollowed successfully!')
+      }
+    } catch (error: any) {
+      console.error('Follow action error:', error)
+      toast.error(error.message || 'Action failed')
+    }
+  }
+
+  useEffect(() => {
+    if (open) {
+      loadData()
+    }
+  }, [open, loadData])
 
   const UserCard = ({ user }: { user: UserProfile }) => {
     const isCurrentUser = currentUser && currentUser.id === user.id
@@ -141,9 +208,30 @@ export function FollowersModal({ open, onOpenChange, userId, initialTab = 'follo
               <Button variant="outline" size="sm" className="hover-lift">
                 <MessageCircle className="h-3 w-3" />
               </Button>
-              <Button size="sm" className="hover-lift">
-                <UserPlus className="h-3 w-3" />
-              </Button>
+              {followStates[user.id] === 'following' ? (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="hover-lift"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleFollowAction(user.id, 'unfollow')
+                  }}
+                >
+                  <UserCheck className="h-3 w-3" />
+                </Button>
+              ) : (
+                <Button 
+                  size="sm" 
+                  className="hover-lift"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleFollowAction(user.id, 'follow')
+                  }}
+                >
+                  <UserPlus className="h-3 w-3" />
+                </Button>
+              )}
             </div>
           )}
         </div>

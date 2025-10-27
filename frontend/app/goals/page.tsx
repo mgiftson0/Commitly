@@ -500,33 +500,94 @@ export default function GoalsPage() {
           console.error('Error fetching user goals:', userGoalsError)
         }
 
-        // Fetch goal activities for multi-activity goals
+        // Fetch partner goals from accepted notifications
+        const { data: acceptedNotifications, error: partnerGoalsError } = await supabase
+          .from('notifications')
+          .select('data')
+          .eq('user_id', user.id)
+          .eq('type', 'goal_created')
+          .eq('read', true)
+
+        console.log('Accepted notifications:', acceptedNotifications)
+        
+        const partnerGoalIds = (acceptedNotifications || [])
+          .filter(n => n.data?.goal_id && n.data?.partner_id)
+          .map(n => n.data.goal_id)
+        
+        console.log('Partner goal IDs:', partnerGoalIds)
+        
+        let partnerGoals = []
+        if (partnerGoalIds.length > 0) {
+          const { data: goals, error: goalsError } = await supabase
+            .from('goals')
+            .select('id, title, description, goal_type, status, progress, category, priority, target_date, created_at, visibility, user_id')
+            .in('id', partnerGoalIds)
+          
+          if (goalsError) {
+            console.error('Error fetching partner goals:', goalsError)
+          } else if (goals && goals.length > 0) {
+            // Get owner profiles separately
+            const ownerIds = [...new Set(goals.map(g => g.user_id))]
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('id, first_name, last_name, username, profile_picture_url')
+              .in('id', ownerIds)
+            
+            // Attach profiles to goals
+            partnerGoals = goals.map(goal => ({
+              ...goal,
+              profiles: profiles?.find(p => p.id === goal.user_id)
+            }))
+          }
+          
+          console.log('Partner goals loaded:', partnerGoals)
+        }
+
+        if (partnerGoalsError) {
+          console.error('Error fetching partner goals:', partnerGoalsError)
+        }
+
+        // Fetch goal activities and accountability partners for all goals
         const goalsWithActivities = await Promise.all((userGoals || []).map(async (goal) => {
+          // Get activities
+          let activities = []
           if (goal.goal_type === 'multi-activity') {
-            const { data: activities } = await supabase
+            const { data: goalActivities } = await supabase
               .from('goal_activities')
               .select('*')
               .eq('goal_id', goal.id)
               .order('order_index', { ascending: true })
-
-            return {
-              ...goal,
-              activities: activities || [],
-              type: goal.goal_type,
-              userId: goal.user_id,
-              createdAt: goal.created_at,
-              visibility: goal.visibility,
-              status: goal.status,
-              category: goal.category?.replace('_', ' '),
-              priority: goal.priority,
-              dueDate: goal.target_date,
-              isPartnerGoal: false
-            }
+            activities = goalActivities || []
           }
+
+          // Get accountability partners from notifications
+          const { data: partnerNotifications } = await supabase
+            .from('notifications')
+            .select('data')
+            .eq('type', 'goal_created')
+            .contains('data', { goal_id: goal.id })
+            .eq('read', true)
+
+          const partnerIds = (partnerNotifications || []).map(n => n.data?.partner_id).filter(Boolean)
           
+          let accountabilityPartners = []
+          if (partnerIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('id, first_name, last_name, username, profile_picture_url')
+              .in('id', partnerIds)
+
+            accountabilityPartners = (profiles || []).map(profile => ({
+              id: profile.id,
+              name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Partner',
+              avatar: profile.profile_picture_url || '/placeholder-avatar.jpg'
+            }))
+          }
+
           return {
             ...goal,
-            activities: [],
+            activities,
+            accountabilityPartners,
             type: goal.goal_type,
             userId: goal.user_id,
             createdAt: goal.created_at,
@@ -539,8 +600,33 @@ export default function GoalsPage() {
           }
         }))
 
-        console.log('Loaded goals from database:', goalsWithActivities)
-        setRealGoals(goalsWithActivities)
+        // Process partner goals
+        const processedPartnerGoals = (partnerGoals || []).map(goal => {
+          const profile = goal.profiles
+          return {
+            ...goal,
+            activities: [],
+            accountabilityPartners: [],
+            type: goal.goal_type,
+            userId: goal.user_id,
+            createdAt: goal.created_at,
+            visibility: goal.visibility,
+            status: goal.status,
+            category: goal.category?.replace('_', ' '),
+            priority: goal.priority,
+            dueDate: goal.target_date,
+            isPartnerGoal: true,
+            goalOwner: {
+              id: goal.user_id,
+              name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || profile?.username || 'Owner',
+              avatar: profile?.profile_picture_url || '/placeholder-avatar.jpg'
+            }
+          }
+        })
+
+        const allGoals = [...goalsWithActivities, ...processedPartnerGoals]
+        console.log('Loaded goals from database:', allGoals)
+        setRealGoals(allGoals)
       } catch (error) {
         console.error('Error loading goals:', error)
         setRealGoals([])
@@ -1031,7 +1117,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {goals.map((goal, index) => (
         <Card key={`${goal.id}-${index}-${goal.title.replace(/\s+/g, '-').toLowerCase()}`} className={`hover-lift group transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 border-0 shadow-slate-900/15 bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm ${getGoalCardStyle(goal)}`}>
           <CardHeader className="pb-3">
@@ -1208,19 +1294,37 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                   {goal.description}
                 </CardDescription>
               )}
-              {/* Show accountability partners for partner goals */}
-              {isPartnerView && goal.accountabilityPartners.length > 0 && (
+              {/* Show accountability partners for all goals that have them */}
+              {goal.accountabilityPartners && goal.accountabilityPartners.length > 0 && (
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs text-muted-foreground">Partners:</span>
                   <div className="flex -space-x-1">
                     {goal.accountabilityPartners.slice(0, 3).map((partner: { id: string; name: string; avatar: string }, index: number) => (
-                      <div key={partner.id} className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center">
-                        <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
+                      <div key={partner.id} className="relative w-6 h-6 rounded-full border-2 border-background overflow-hidden">
+                        {partner.avatar && partner.avatar !== '/placeholder-avatar.jpg' ? (
+                          <img 
+                            src={partner.avatar} 
+                            alt={partner.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                              const parent = target.parentElement
+                              if (parent) {
+                                parent.innerHTML = `<div class="w-full h-full bg-primary/10 flex items-center justify-center"><span class="text-xs font-medium text-primary">${partner.name.charAt(0)}</span></div>`
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-medium text-primary">{partner.name.charAt(0)}</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {goal.accountabilityPartners.length > 3 && (
-                      <div className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center">
-                        <span className="text-xs text-muted-foreground">+{goal.accountabilityPartners.length - 3}</span>
+                      <div className="w-6 h-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+                        <span className="text-xs text-muted-foreground font-medium">+{goal.accountabilityPartners.length - 3}</span>
                       </div>
                     )}
                   </div>
@@ -1239,7 +1343,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 <span className="text-muted-foreground">Progress</span>
                 <span className="font-medium">{goal.progress}%</span>
               </div>
-              <Progress value={goal.progress} className={`h-3 rounded-full bg-gradient-to-r from-muted/50 to-muted/30 border border-border/30 shadow-inner ${getProgressColor(goal.progress)}`} />
+              <Progress value={goal.progress} className={`h-3 rounded-full bg-gradient-to-r from-muted/50 to-muted/30 border border-border/30 shadow-inner ${goal.progress <= 30 ? '[&>div]:bg-red-500' : goal.progress <= 70 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`} />
             </div>
 
             {/* Stats - Different for partner goals */}
@@ -1356,6 +1460,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                         <DialogTitle>Send Encouragement</DialogTitle>
                       </DialogHeader>
                       <EncouragementCard 
+                        goalId={goal.id}
                         isPartner={true}
                         goalOwnerName={goal.goalOwner?.name || 'Owner'}
                       />

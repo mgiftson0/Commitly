@@ -752,7 +752,7 @@ export default function DashboardPage() {
                             </div>
                             <div className="text-right flex-shrink-0 flex flex-col justify-center">
                               <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{goal.progress || 0}%</div>
-                              <Progress value={goal.progress || 0} className={`w-16 h-1.5 mt-1 ${getProgressColor(goal.progress || 0)}`} />
+                              <Progress value={goal.progress || 0} className={`w-16 h-1.5 mt-1 ${(goal.progress || 0) <= 30 ? '[&>div]:bg-red-500' : (goal.progress || 0) <= 70 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`} />
                             </div>
                           </div>
                         </div>
@@ -930,7 +930,7 @@ export default function DashboardPage() {
                             </span>
                             <Progress
                               value={goal.progress}
-                              className={`flex-1 h-2 ${getProgressColor(goal.progress)}`}
+                              className={`flex-1 h-2 ${goal.progress <= 30 ? '[&>div]:bg-red-500' : goal.progress <= 70 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`}
                             />
                           </div>
                         </div>
@@ -1011,7 +1011,7 @@ export default function DashboardPage() {
                           </span>
                         </div>
 
-                        <Progress value={category.progress || 0} className={`h-1.5 sm:h-2 ${getProgressColor(category.progress || 0)}`} />
+                        <Progress value={category.progress || 0} className={`h-1.5 sm:h-2 ${(category.progress || 0) <= 30 ? '[&>div]:bg-red-500' : (category.progress || 0) <= 70 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`} />
                       </div>
                     )
                   })}

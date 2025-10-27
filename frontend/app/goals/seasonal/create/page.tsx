@@ -299,7 +299,7 @@ export default function CreateSeasonalGoalPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Link href="/goals/seasonal">
+            <Link href="/goals">
               <Button variant="outline" size="sm" className="hover-lift h-7 text-xs px-2">
                 <ArrowLeft className="h-3 w-3 mr-1" />
                 Back
@@ -312,19 +312,19 @@ export default function CreateSeasonalGoalPage() {
           {/* Main Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit}>
-              <Card className="animated-gradient-border rounded-2xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:bg-slate-900 overflow-hidden min-h-[600px] md:min-h-[700px] transition-all duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.2)]">
-                <CardHeader className="pb-2 px-4 pt-4 relative z-10">
-                  <CardTitle className="flex items-center gap-2 text-sm">
+              <Card className="rounded-xl border border-border bg-card overflow-hidden min-h-[500px] md:min-h-[600px]">
+                <CardHeader className="pb-2 px-4 pt-4">
+                  <CardTitle className="flex items-center gap-2 text-xs">
                     <Target className="h-3 w-3 text-primary" />
                     Goal Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 px-4 pb-4 relative z-10 overflow-y-auto max-h-[calc(100vh-300px)] md:max-h-none">
+                <CardContent className="space-y-3 px-4 pb-4 overflow-y-auto max-h-[calc(100vh-300px)] md:max-h-none">
                   {/* Duration Type */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <Label className="text-xs font-medium">Duration</Label>
                     <RadioGroup value={durationType} onValueChange={(v: any) => setDurationType(v)}>
-                      <div className="grid gap-1.5 sm:grid-cols-3">
+                      <div className="grid gap-1 sm:grid-cols-3">
                         <div className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
                           durationType === 'annual' ? 'border-primary bg-primary/5' : 'border-border'
                         }`}>
@@ -366,7 +366,7 @@ export default function CreateSeasonalGoalPage() {
                   </div>
 
                   {/* Seasonal Settings */}
-                  <div className="grid gap-1.5 sm:grid-cols-2">
+                  <div className="grid gap-1 sm:grid-cols-2">
                     <div className="space-y-1">
                       <Label className="text-xs font-medium">Year</Label>
                       <Select value={seasonalYear.toString()} onValueChange={(v) => setSeasonalYear(parseInt(v))}>
@@ -389,10 +389,10 @@ export default function CreateSeasonalGoalPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="1" className="text-xs">Q1 (Jan-Mar)</SelectItem>
-                            <SelectItem value="2" className="text-xs">Q2 (Apr-Jun)</SelectItem>
-                            <SelectItem value="3" className="text-xs">Q3 (Jul-Sep)</SelectItem>
-                            <SelectItem value="4" className="text-xs">Q4 (Oct-Dec)</SelectItem>
+                            <SelectItem value="1" className="text-xs">Q1</SelectItem>
+                            <SelectItem value="2" className="text-xs">Q2</SelectItem>
+                            <SelectItem value="3" className="text-xs">Q3</SelectItem>
+                            <SelectItem value="4" className="text-xs">Q4</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -400,28 +400,28 @@ export default function CreateSeasonalGoalPage() {
                   </div>
 
                   {/* Title */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <Label htmlFor="title" className="text-xs font-medium">
                       Goal Title <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="title"
-                      placeholder="e.g., Master Spanish Language, Complete Marathon Training"
+                      placeholder="e.g., Master Spanish Language"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="h-8 text-xs focus-ring"
+                      className="h-7 text-xs focus-ring"
                       required
                     />
                   </div>
 
                   {/* Description */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <Label htmlFor="description" className="text-xs font-medium">
                       Description <span className="text-destructive">*</span>
                     </Label>
                     <Textarea
                       id="description"
-                      placeholder="Describe your seasonal commitment and what success looks like..."
+                      placeholder="Describe your seasonal commitment..."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={2}
@@ -431,39 +431,39 @@ export default function CreateSeasonalGoalPage() {
                   </div>
 
                   {/* Goal Nature */}
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label className="text-xs font-medium">
-                      Goal Nature <span className="text-destructive">*</span>
+                      Type <span className="text-destructive">*</span>
                     </Label>
                     <RadioGroup
                       value={goalNature}
                       onValueChange={(value: string) => setGoalNature(value as "personal" | "group")}
                     >
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <div className={`flex items-center space-x-2 p-2 rounded-md border transition-all cursor-pointer hover:bg-accent/30 ${
+                      <div className="grid gap-1 sm:grid-cols-2">
+                        <div className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
                           goalNature === "personal" ? "border-primary bg-primary/5" : "border-border"
                         }`}>
                           <RadioGroupItem value="personal" id="personal" />
                           <div className="flex-1">
                             <Label htmlFor="personal" className="font-medium cursor-pointer text-xs">
-                              Personal Goal
+                              Personal
                             </Label>
                             <p className="text-xs text-muted-foreground">
-                              Just for you
+                              Just you
                             </p>
                           </div>
                           <Target className="h-3 w-3 text-muted-foreground" />
                         </div>
-                        <div className={`flex items-center space-x-2 p-2 rounded-md border transition-all cursor-pointer hover:bg-accent/30 ${
+                        <div className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
                           goalNature === "group" ? "border-primary bg-primary/5" : "border-border"
                         }`}>
                           <RadioGroupItem value="group" id="group" />
                           <div className="flex-1">
                             <Label htmlFor="group" className="font-medium cursor-pointer text-xs">
-                              Group Goal
+                              Group
                             </Label>
                             <p className="text-xs text-muted-foreground">
-                              Owner included + up to 4 others (max 5)
+                              Up to 5 people
                             </p>
                           </div>
                           <Users className="h-3 w-3 text-muted-foreground" />
@@ -474,21 +474,21 @@ export default function CreateSeasonalGoalPage() {
 
                   {/* Group Members */}
                   {goalNature === "group" && (
-                    <div className="space-y-4 p-4 rounded-lg bg-muted/30 border-2 border-primary/20">
+                    <div className="space-y-2 p-3 rounded-lg bg-muted/30">
                       <div className="flex items-center justify-between">
                         <div>
-                          <Label className="text-sm font-medium">Group Members</Label>
-                          <p className="text-xs text-muted-foreground mt-1">Owner is automatically included. Add up to 4 more members (max 5 total).</p>
+                          <Label className="text-xs font-medium">Members</Label>
+                          <p className="text-xs text-muted-foreground">Add up to 4 more (max 5)</p>
                         </div>
-                        <Badge variant="outline">{groupMembers.length}/5</Badge>
+                        <Badge variant="outline" className="text-xs">{groupMembers.length}/5</Badge>
                       </div>
                       <Select value="" onValueChange={(value) => {
                         if (!groupMembers.includes(value) && groupMembers.length < 5) {
                           setGroupMembers([...groupMembers, value])
                         }
                       }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Add a member..." />
+                        <SelectTrigger className="h-7 text-xs">
+                          <SelectValue placeholder="Add member..." />
                         </SelectTrigger>
                         <SelectContent>
                           {allGroupCandidates.filter((p) => p.id !== currentUser?.id).filter((p) => !groupMembers.includes(p.id)).map((partner) => (
@@ -555,39 +555,36 @@ export default function CreateSeasonalGoalPage() {
                   </div>
 
                   {/* Milestones */}
-                  <div className="space-y-4">
+                  <div className="space-y-2 p-3 rounded-lg bg-muted/30">
                     <div className="flex items-center justify-between">
-                      <Label>Key Milestones <span className="text-destructive">*</span></Label>
-                      <Button type="button" variant="outline" size="sm" onClick={addMilestone}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Milestone
+                      <Label className="text-xs font-medium">Milestones <span className="text-destructive">*</span></Label>
+                      <Button type="button" variant="outline" size="sm" className="h-6 text-xs px-2" onClick={addMilestone}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add
                       </Button>
                     </div>
                     
-
-                    
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {milestones.map((milestone, index) => (
-                        <div key={index} className="space-y-2 p-3 rounded-lg border bg-card">
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder={`Milestone ${index + 1}`}
-                              value={milestone}
-                              onChange={(e) => updateMilestone(index, e.target.value)}
-                              required
-                            />
-                            {milestones.length > 1 && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                onClick={() => removeMilestone(index)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            placeholder={`Milestone ${index + 1}`}
+                            value={milestone}
+                            onChange={(e) => updateMilestone(index, e.target.value)}
+                            className="h-7 text-xs"
+                            required
+                          />
+                          {milestones.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => removeMilestone(index)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -702,7 +699,7 @@ export default function CreateSeasonalGoalPage() {
 
                   {/* Submit */}
                   <div className="flex gap-2 pt-2">
-                    <Link href="/goals/seasonal" className="flex-1">
+                    <Link href="/goals" className="flex-1">
                       <Button type="button" variant="outline" className="w-full h-7 text-xs hover-lift">
                         Cancel
                       </Button>
@@ -730,7 +727,7 @@ export default function CreateSeasonalGoalPage() {
           <div className="space-y-2">
             <Card className="hover-lift">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm">
+                <CardTitle className="flex items-center gap-2 text-xs">
                   <Lightbulb className="h-3 w-3 text-yellow-500" />
                   Templates
                 </CardTitle>
@@ -738,20 +735,17 @@ export default function CreateSeasonalGoalPage() {
                   {durationType} ideas
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-1">
                 {SEASONAL_TEMPLATES[durationType].map((template, index) => (
                   <Button
                     key={index}
                     variant="outline"
-                    className="w-full justify-start h-auto p-2 hover-lift"
+                    className="w-full justify-start h-auto p-2 text-left"
                     onClick={() => applyTemplate(template)}
                   >
-                    <div className="text-left">
+                    <div>
                       <div className="font-medium text-xs">
                         {template.title}
-                      </div>
-                      <div className="text-xs text-muted-foreground line-clamp-2">
-                        {template.description}
                       </div>
                       <Badge variant="secondary" className="text-xs mt-1">
                         {template.category.replace('-', ' ')}
