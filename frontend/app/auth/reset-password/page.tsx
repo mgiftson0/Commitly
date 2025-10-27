@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
 
   // Check if Supabase is configured on mount
   useEffect(() => {
-    setUseSupabase(hasSupabase());
+    setUseSupabase(true); // Always use Supabase since it's configured
   }, []);
 
   const handleSupabaseReset = async () => {
