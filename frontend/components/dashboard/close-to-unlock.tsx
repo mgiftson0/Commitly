@@ -12,7 +12,7 @@ export function CloseToUnlock() {
           Close to Unlock
         </CardTitle>
         <CardDescription>
-          Achievements you're close to unlocking
+          Achievements you&apos;re close to unlocking
         </CardDescription>
       </CardHeader>
       <CardContent>

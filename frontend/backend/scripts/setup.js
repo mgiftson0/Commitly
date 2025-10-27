@@ -15,8 +15,9 @@
  * node setup.js
  */
 
-const { createClient } = require('@supabase/supabase-js');
-const readline = require('readline');
+import { createClient } from '@supabase/supabase-js';
+import readline from 'readline';
+import fs from 'fs';
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -497,7 +498,6 @@ CREATE POLICY "Users can delete own avatar" ON storage.objects FOR DELETE USING 
       console.log('\n⚠️  Please run the SQL manually in your Supabase SQL Editor.');
       console.log('The complete SQL schema has been saved to: supabase-schema.sql\n');
       
-      const fs = require('fs');
       fs.writeFileSync('supabase-schema.sql', schema);
       
       rl.close();
@@ -528,7 +528,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 SUPABASE_SERVICE_ROLE_KEY=${supabaseServiceKey.trim()}
 `;
 
-    const fs = require('fs');
     fs.writeFileSync('.env.local', envContent);
     
     console.log('✅ Created .env.local file');
@@ -542,9 +541,8 @@ SUPABASE_SERVICE_ROLE_KEY=${supabaseServiceKey.trim()}
 
   } catch (error) {
     console.error('❌ Setup failed:', error.message);
-    console.log('\n⚠️  Saving SQL schema to file for manual execution...');
+    console.log('Saving SQL schema to file for manual execution...');
     
-    const fs = require('fs');
     fs.writeFileSync('supabase-schema.sql', schema);
     
     console.log('✅ SQL schema saved to: supabase-schema.sql');

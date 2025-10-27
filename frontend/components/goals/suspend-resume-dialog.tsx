@@ -103,7 +103,7 @@ export function SuspendResumeDialog({ goalId, goalTitle, isSuspended, onStatusCh
                 <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium text-yellow-800 dark:text-yellow-200">Suspend this goal</p>
-                  <p className="text-yellow-700 dark:text-yellow-300">Your goal will be paused and won't affect your streaks or progress tracking.</p>
+                  <p className="text-yellow-700 dark:text-yellow-300">Your goal will be paused and won&apos;t affect your streaks or progress tracking.</p>
                 </div>
               </div>
               

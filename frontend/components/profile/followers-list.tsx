@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -30,9 +30,9 @@ export function FollowersList({ userId, type, currentUserId }: FollowersListProp
 
   useEffect(() => {
     fetchUsers();
-  }, [userId, type]);
+  }, [fetchUsers]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -47,7 +47,7 @@ export function FollowersList({ userId, type, currentUserId }: FollowersListProp
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, type]);
 
   if (loading) {
     return (

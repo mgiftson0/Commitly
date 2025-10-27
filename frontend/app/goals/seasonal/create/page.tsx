@@ -312,14 +312,14 @@ export default function CreateSeasonalGoalPage() {
           {/* Main Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit}>
-              <Card className="hover-lift">
-                <CardHeader className="pb-2 px-4 pt-4">
+              <Card className="animated-gradient-border rounded-2xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:bg-slate-900 overflow-hidden min-h-[600px] md:min-h-[700px] transition-all duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.2)]">
+                <CardHeader className="pb-2 px-4 pt-4 relative z-10">
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <Target className="h-3 w-3 text-primary" />
                     Goal Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 px-4 pb-4">
+                <CardContent className="space-y-3 px-4 pb-4 relative z-10 overflow-y-auto max-h-[calc(100vh-300px)] md:max-h-none">
                   {/* Duration Type */}
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">Duration</Label>

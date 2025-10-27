@@ -5,9 +5,9 @@
  * Tests if your Supabase credentials are configured correctly
  */
 
-const { createClient } = require('@supabase/supabase-js');
-const path = require('path');
-const fs = require('fs');
+import { createClient } from '@supabase/supabase-js';
+import path from 'path';
+import fs from 'fs';
 
 // Colors for console output
 const colors = {

@@ -48,6 +48,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+
 import { MainLayout } from "@/components/layout/main-layout"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
@@ -64,7 +65,42 @@ import {
 import { EncouragementCard } from "@/components/goals/encouragement-card"
 import * as React from "react"
 import { getProgressColor } from "@/lib/utils/progress-colors"
-import { supabase, authHelpers } from "@/lib/supabase-client"
+import { authHelpers, supabase } from "@/lib/supabase-client"
+
+// Define types
+interface Goal {
+  id: string | number
+  title: string
+  description: string
+  type: string
+  status: string
+  progress: number
+  streak: number
+  totalCompletions: number
+  visibility: string
+  createdAt: string
+  dueDate?: string
+  category: string
+  priority: string
+  isForked: boolean
+  forkedFrom?: string | null
+  accountabilityPartners: Array<{ id: string; name: string; avatar: string }>
+  isGroupGoal: boolean
+  groupMembers: unknown[]
+  recurrencePattern?: string
+  recurrenceDays?: string[]
+  scheduleType?: string
+  isPartnerGoal?: boolean
+  ownerName?: string
+  goalOwner?: { id: string; name: string; avatar: string }
+  is_seasonal?: boolean
+  duration_type?: string
+  seasonal_year?: number
+  seasonal_quarter?: number
+  updated_at?: string
+  completed_at?: string | null
+  activities?: Array<{ completed: boolean }>
+}
 
 // Mock data for goals with enhanced features
 const mockGoals: any[] = [
@@ -366,11 +402,11 @@ const getTypeIcon = (type: string) => {
   }
 }
 
-const formatRecurrence = (goal: any) => {
-  const pattern = goal?.recurrencePattern
+const formatRecurrence = (goal: Goal) => {
+  const pattern = goal.recurrencePattern
   if (!pattern) return null
   if (pattern !== 'custom') return pattern.charAt(0).toUpperCase() + pattern.slice(1)
-  const days: string[] = goal?.recurrenceDays || []
+  const days: string[] = goal.recurrenceDays || []
   const map: Record<string, string> = {
     monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun'
   }
@@ -416,7 +452,11 @@ const isAccountabilityPartner = (goal: typeof mockGoals[0], currentUserId: strin
 
 // Get goal card styling based on type
 const getGoalCardStyle = (goal: typeof mockGoals[0]) => {
-  if ((goal as any).is_seasonal || (goal as any).duration_type === 'seasonal') {
+  // First check if goal is completed - add green shadow
+  if (goal.status === 'completed') {
+    return "ring-1 ring-green-200/50 hover:ring-green-300/70 shadow-green-100/50 hover:shadow-green-200/60 bg-gradient-to-br from-green-50/60 via-white to-green-50/30 dark:from-green-950/30 dark:via-background dark:to-green-950/20"
+  }
+  if ((goal.is_seasonal || goal.duration_type === 'seasonal')) {
     return "ring-1 ring-amber-200/50 hover:ring-amber-300/70 shadow-amber-100/50 hover:shadow-amber-200/60 bg-gradient-to-br from-amber-50/60 via-white to-amber-50/30 dark:from-amber-950/30 dark:via-background dark:to-amber-950/20"
   }
   if (goal.isGroupGoal) {
@@ -535,7 +575,7 @@ export default function GoalsPage() {
       if (goal.activities && Array.isArray(goal.activities)) {
         if (goal.type === 'multi-activity') {
           totalActivities = goal.activities.length
-          completedActivities = goal.activities.filter((activity: any) => activity.completed).length
+          completedActivities = goal.activities.filter((activity: { completed: boolean }) => activity.completed).length
           realProgress = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0
         } else if (goal.type === 'single-activity') {
           // For single activity, check if the single activity is completed
@@ -611,9 +651,9 @@ export default function GoalsPage() {
   })
 
   // Separate goals into user's goals and partner goals
-  const userGoals = filteredGoals.filter(goal => isGoalOwner(goal) && !(goal as any).isPartnerGoal)
+  const userGoals = filteredGoals.filter(goal => isGoalOwner(goal) && !goal.isPartnerGoal)
   const partnerGoals = filteredGoals
-    .filter(goal => (goal.accountabilityPartners.some((partner: any) => partner.id === 'mock-user-id') && !isGoalOwner(goal)) || (goal as any).isPartnerGoal)
+    .filter(goal => (goal.accountabilityPartners.some((partner: { id: string; name: string; avatar: string }) => partner.id === 'mock-user-id') && !isGoalOwner(goal)) || goal.isPartnerGoal)
 
   const categories = Array.from(new Set(allGoals.map(g => g.category)))
 
@@ -919,7 +959,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
   useEffect(() => {
     // Frontend doesn't depend on backend invite status
     // Use default invite states for partner goals
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [])
 
   const canEditWithin5hFromCreated = (createdAt?: string, status?: string, startDate?: string) => {
@@ -994,7 +1034,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {goals.map((goal, index) => (
-        <Card key={`${goal.id}-${index}-${goal.title.replace(/\s+/g, '-').toLowerCase()}`} className={`hover-lift group transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 border-0 shadow-lg bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm ${getGoalCardStyle(goal)}`}>
+        <Card key={`${goal.id}-${index}-${goal.title.replace(/\s+/g, '-').toLowerCase()}`} className={`hover-lift group transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 border-0 shadow-slate-900/15 bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm ${getGoalCardStyle(goal)}`}>
           <CardHeader className="pb-3">
             {/* Requests handled in Notifications. Status shown below. */}
             <div className="flex items-start justify-between">
@@ -1003,7 +1043,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
                   {goal.type}
                 </Badge>
-                {((goal as any).is_seasonal || (goal as any).duration_type === 'seasonal') && (
+                {(goal.is_seasonal || goal.duration_type === 'seasonal') && (
                   <Badge variant="outline" className="text-xs bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-sm hover:shadow-amber-200/50 transition-all duration-200">
                     <Star className="h-3 w-3 mr-1" />
                     Seasonal
@@ -1016,7 +1056,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                   </Badge>
                 )}
                 {/* Recurrence badge if available */}
-                {(goal as any).recurrencePattern && (
+                {(goal.recurrencePattern) && (
                   <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-blue-200/50 hover:border-blue-300/70 transition-colors duration-200">
                     <Calendar className="h-3 w-3 mr-1" />
                     {formatRecurrence(goal)}
@@ -1046,8 +1086,8 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                         {(() => {
                           const messageCount = (() => {
                             try {
-                              const messages = JSON.parse(localStorage.getItem(`encouragement_${goal.id}`) || '[]')
-                              return messages.filter((msg: any) => !msg.read).length
+                              const messages = JSON.parse(localStorage.getItem(`encouragement_${goal.id}`) || '[]') as Array<{ read: boolean }>
+                              return messages.filter((msg: { read: boolean }) => !msg.read).length
                             } catch {
                               return 0
                             }
@@ -1086,7 +1126,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 {!isPartnerView && isGoalOwner(goal) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity blob-bounce">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -1097,7 +1137,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                       </DropdownMenuItem>
                       {goal.status !== 'completed' && (
                         <DropdownMenuItem onClick={() => {
-                          const isSeasonalGoal = (goal as any).duration_type === 'seasonal' || (goal as any).is_seasonal
+                          const isSeasonalGoal = goal.duration_type === 'seasonal' || goal.is_seasonal
                           const updatePath = isSeasonalGoal ? `/goals/seasonal/${goal.id}/update` : `/goals/${goal.id}/update`
                           router.push(updatePath)
                         }}>
@@ -1107,7 +1147,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                       )}
                       {canEditWithin5hFromCreated(goal.createdAt, goal.status, goal.start_date) && goal.status !== 'completed' && (
                         <DropdownMenuItem onClick={() => {
-                          const isSeasonalGoal = (goal as any).duration_type === 'seasonal' || (goal as any).is_seasonal
+                          const isSeasonalGoal = goal.duration_type === 'seasonal' || goal.is_seasonal
                           const editPath = isSeasonalGoal ? `/goals/seasonal/${goal.id}/edit` : `/goals/${goal.id}/edit`
                           router.push(editPath)
                         }}>
@@ -1174,7 +1214,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs text-muted-foreground">Partners:</span>
                   <div className="flex -space-x-1">
-                    {goal.accountabilityPartners.slice(0, 3).map((partner: any, index: number) => (
+                    {goal.accountabilityPartners.slice(0, 3).map((partner: { id: string; name: string; avatar: string }, index: number) => (
                       <div key={partner.id} className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center">
                         <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
                       </div>
@@ -1262,7 +1302,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 const goalAge = Date.now() - new Date(goal.createdAt).getTime()
                 const isMoreThanOneDay = goalAge > 24 * 60 * 60 * 1000
                 const isSingle = goal.type === 'single' || goal.type === 'single-activity'
-                const showStreak = !isSingle && (goal as any).scheduleType !== 'date' && isMoreThanOneDay && goal.streak !== undefined && !isPartnerView
+                const showStreak = !isSingle && goal.scheduleType !== 'date' && isMoreThanOneDay && goal.streak !== undefined && !isPartnerView
                 return showStreak && (
                   <div className="flex items-center gap-1 text-orange-600">
                     <Flame className="h-3 w-3" />

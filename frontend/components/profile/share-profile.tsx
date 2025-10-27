@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Share2, Copy, Check, Twitter, Facebook, MessageCircle } from "lucide-react"
@@ -58,7 +58,7 @@ export function ShareProfile({ username, displayName, profilePicture }: SharePro
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             {profilePicture && (
-              <img src={profilePicture} alt={displayName} className="w-8 h-8 rounded-full" />
+              <Image src={profilePicture} alt={displayName} width={32} height={32} className="w-8 h-8 rounded-full" />
             )}
             Share {displayName}&apos;s Profile
           </DialogTitle>

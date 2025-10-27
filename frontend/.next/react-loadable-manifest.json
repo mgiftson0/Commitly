@@ -1,4 +1,18 @@
 {
+  "app\\goals\\[id]\\page.tsx -> @/lib/achievements": {
+    "id": "app\\goals\\[id]\\page.tsx -> @/lib/achievements",
+    "files": []
+  },
+  "app\\goals\\create\\page.tsx -> @/lib/achievement-tracker-db": {
+    "id": "app\\goals\\create\\page.tsx -> @/lib/achievement-tracker-db",
+    "files": [
+      "static/chunks/_app-pages-browser_lib_achievement-tracker-db_ts.js"
+    ]
+  },
+  "app\\goals\\create\\page.tsx -> @/lib/achievements": {
+    "id": "app\\goals\\create\\page.tsx -> @/lib/achievements",
+    "files": []
+  },
   "node_modules\\@supabase\\auth-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch": {
     "id": "node_modules\\@supabase\\auth-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch",
     "files": []

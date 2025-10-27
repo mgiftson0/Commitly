@@ -288,7 +288,7 @@ export default function UpdateGoalPage() {
   return (
     <MainLayout>
       {!canUpdate && goal.status === 'completed' && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-green-200 bg-green-50 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -302,7 +302,7 @@ export default function UpdateGoalPage() {
       )}
       
       {goal.status === 'pending' && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-blue-200 bg-blue-50 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="h-4 w-4 text-blue-600" />
@@ -348,7 +348,7 @@ export default function UpdateGoalPage() {
           </div>
         </div>
 
-        <Card>
+        <Card className="border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-900">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
@@ -374,7 +374,7 @@ export default function UpdateGoalPage() {
         </Card>
 
         {goal.goal_type === 'multi-activity' && (
-          <Card>
+          <Card className="border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-900">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Activities</CardTitle>

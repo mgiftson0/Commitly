@@ -24,7 +24,7 @@ export function WelcomeHeader({
             Welcome back, <span className="text-blue-600 dark:text-blue-400">{userName}!</span>
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            You're on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! 🔥
+            You&apos;re on a <span className="font-semibold text-orange-600 dark:text-orange-400">{todayStats.streak}-day streak</span>! 🔥
           </p>
         </div>
         <div className="flex gap-2 sm:gap-3">

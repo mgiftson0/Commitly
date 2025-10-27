@@ -56,6 +56,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/main-layout";
 import { authHelpers, supabase } from "@/lib/supabase-client";
+import { groupGoalSamples, type GoalSample } from "../goal-sample-data";
 
 export default function CreateGoalPage() {
   const [title, setTitle] = useState("");
@@ -89,7 +90,6 @@ export default function CreateGoalPage() {
   const [seasonalType, setSeasonalType] = useState<"annual" | "quarterly" | "biannual">("annual");
   const [seasonalYear, setSeasonalYear] = useState<number>(new Date().getFullYear());
   const [seasonalQuarter, setSeasonalQuarter] = useState<number>(Math.ceil((new Date().getMonth() + 1) / 3));
-;
   const router = useRouter();
 
   // Load real user and partners data
@@ -176,6 +176,43 @@ export default function CreateGoalPage() {
   const allGroupCandidates = useMemo(
     () => currentUser ? [currentUser, ...availablePartners] : [],
     [currentUser, availablePartners],
+  );
+
+  const goalSamples = useMemo<GoalSample[]>(() => groupGoalSamples.slice(0, 3), []);
+
+  const renderGoalSample = (sample: GoalSample) => (
+    <Card
+      key={sample.id}
+      className="rounded-xl border border-slate-100 bg-white"
+    >
+      <CardContent className="space-y-3 p-4">
+        <div className="flex items-center justify-between">
+          <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-slate-600">
+            Group Goal
+          </Badge>
+          <span className="text-[11px] font-medium text-slate-500">
+            {sample.timeframe}
+          </span>
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-sm font-semibold text-slate-900 leading-tight">
+            {sample.title}
+          </h4>
+          <p className="text-[13px] text-slate-600 leading-relaxed">
+            {sample.summary}
+          </p>
+        </div>
+        <div className="flex items-center justify-between text-[11px] text-slate-500">
+          <span className="flex items-center gap-1">
+            <Sparkles className="h-3 w-3 text-slate-400" />
+            <span className="capitalize">{sample.goalType.replace('-', ' ')}</span>
+          </span>
+        </div>
+        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-[12px] font-medium text-slate-600">
+          {sample.callToAction}
+        </div>
+      </CardContent>
+    </Card>
   );
 
   if (!currentUser) {
@@ -537,18 +574,21 @@ export default function CreateGoalPage() {
           </div>
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:gap-5">
           {/* Main Form */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-1">
             <form onSubmit={handleSubmit}>
-              <Card className="hover-lift">
-                <CardHeader className="pb-2 px-4 pt-4">
-                  <CardTitle className="flex items-center gap-2 text-sm">
+              <Card className="rounded-2xl border border-border bg-card overflow-hidden min-h-[600px] md:min-h-[700px]">
+                <CardHeader className="pb-3 px-5 pt-5 relative z-10">
+                  <CardTitle className="flex items-center gap-2 text-sm text-slate-900 dark:text-slate-100">
                     <Target className="h-3 w-3 text-primary" />
                     Goal Details
                   </CardTitle>
+                  <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+                    Capture the essentials before layering in accountability.
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 px-4 pb-4">
+                <CardContent className="space-y-4 px-5 pb-6 relative z-10 overflow-y-auto max-h-[calc(100vh-300px)] md:max-h-none">
                   {/* Title */}
                   <div className="space-y-1">
                     <Label htmlFor="title" className="text-xs font-medium">
@@ -590,56 +630,56 @@ export default function CreateGoalPage() {
                         setGoalNature(value as "personal" | "group")
                       }
                     >
-                      <div className="grid gap-1.5 sm:grid-cols-2">
-                        <div
-                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label
+                          htmlFor="personal"
+                          className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-xs transition ${
                             goalNature === "personal"
-                              ? "border-primary bg-primary/5"
-                              : "border-border"
+                              ? "border-blue-300 bg-blue-50 shadow-[0_10px_18px_rgba(37,99,235,0.12)]"
+                              : "border-slate-200 bg-white hover:border-blue-200"
                           }`}
                         >
-                          <RadioGroupItem value="personal" id="personal" />
-                          <div className="flex-1">
-                            <Label htmlFor="personal" className="font-medium cursor-pointer text-xs">
-                              Personal
-                            </Label>
-                            <p className="text-xs text-muted-foreground">
-                              Just you
-                            </p>
+                          <RadioGroupItem value="personal" id="personal" className="sr-only" />
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                            <Target className="h-4 w-4" />
                           </div>
-                          <Target className="h-3 w-3 text-muted-foreground" />
-                        </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-slate-800">Personal</p>
+                            <p className="text-[11px] text-slate-500">Just you</p>
+                          </div>
+                        </label>
 
-                        <div
-                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
+                        <label
+                          htmlFor="group"
+                          className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-xs transition ${
                             goalNature === "group"
-                              ? "border-primary bg-primary/5"
-                              : "border-border"
+                              ? "border-blue-300 bg-blue-50 shadow-[0_10px_18px_rgba(37,99,235,0.12)]"
+                              : "border-slate-200 bg-white hover:border-blue-200"
                           }`}
                         >
-                          <RadioGroupItem value="group" id="group" />
-                          <div className="flex-1">
-                            <Label htmlFor="group" className="font-medium cursor-pointer text-xs">
-                              Group
-                            </Label>
-                            <p className="text-xs text-muted-foreground">
-                              Up to 5 total
-                            </p>
+                          <RadioGroupItem value="group" id="group" className="sr-only" />
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                            <Users className="h-4 w-4" />
                           </div>
-                          <Users className="h-3 w-3 text-muted-foreground" />
-                        </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-slate-800">Group</p>
+                            <p className="text-[11px] text-slate-500">Up to 5 teammates</p>
+                          </div>
+                        </label>
                       </div>
                     </RadioGroup>
                   </div>
 
                   {/* Group Members Selection (only for group goals) */}
                   {goalNature === "group" && (
-                    <div className="space-y-2 p-3 rounded border">
+                    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 shadow-[0_8px_18px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900/40">
                       <div className="flex items-center justify-between">
-                        <Label className="text-xs font-medium">
+                        <Label className="text-xs font-semibold text-slate-700 dark:text-slate-200">
                           Members
                         </Label>
-                        <Badge variant="outline" className="text-xs">{groupMembers.length}/5</Badge>
+                        <Badge variant="outline" className="text-xs bg-white text-slate-600 border-slate-200 dark:bg-slate-900/60 dark:text-slate-200">
+                          {groupMembers.length}/5
+                        </Badge>
                       </div>
 
                       <Select
@@ -653,7 +693,7 @@ export default function CreateGoalPage() {
                           }
                         }}
                       >
-                        <SelectTrigger className="h-7 text-xs focus-ring">
+                        <SelectTrigger className="h-9 text-xs focus-ring rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
                           <SelectValue placeholder="Add member..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -663,12 +703,12 @@ export default function CreateGoalPage() {
                             .map((partner) => (
                               <SelectItem key={partner.id} value={partner.id} className="text-xs">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-4 h-4 rounded bg-primary/20 flex items-center justify-center">
-                                    <span className="text-xs font-medium">
+                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                    <span className="text-[10px] font-semibold">
                                       {partner.name.charAt(0)}
                                     </span>
                                   </div>
-                                  <div className="text-xs font-medium">
+                                  <div className="text-xs font-medium text-slate-600 dark:text-slate-200">
                                     {partner.name}
                                   </div>
                                 </div>
@@ -678,7 +718,7 @@ export default function CreateGoalPage() {
                       </Select>
 
                       {groupMembers.length > 0 && (
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           {groupMembers.map((memberId) => {
                             const member = allGroupCandidates.find(
                               (p) => p.id === memberId,
@@ -687,15 +727,15 @@ export default function CreateGoalPage() {
                             return (
                               <div
                                 key={memberId}
-                                className="flex items-center justify-between p-2 rounded bg-background border"
+                                className="flex items-center justify-between rounded-lg border border-white bg-white p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
                               >
                                 <div className="flex items-center gap-2">
-                                  <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center">
-                                    <span className="text-xs font-medium">
+                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                    <span className="text-[11px] font-semibold">
                                       {member.name.charAt(0)}
                                     </span>
                                   </div>
-                                  <div className="text-xs font-medium">
+                                  <div className="text-xs font-medium text-slate-700 dark:text-slate-200">
                                     {member.name}
                                   </div>
                                 </div>
@@ -704,7 +744,7 @@ export default function CreateGoalPage() {
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="h-5 w-5"
+                                    className="h-6 w-6 text-slate-400 hover:text-destructive"
                                     onClick={() =>
                                       setGroupMembers(
                                         groupMembers.filter(
@@ -730,7 +770,7 @@ export default function CreateGoalPage() {
                       Category <span className="text-destructive">*</span>
                     </Label>
                     <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger className="h-7 text-xs focus-ring">
+                      <SelectTrigger className="h-9 text-xs focus-ring rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
                         <SelectValue placeholder="Select category..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -896,34 +936,36 @@ export default function CreateGoalPage() {
 
                     {scheduleType === "date" ? (
                       <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="specificStartDate" className="text-sm font-medium">
-                            Start Date <span className="text-destructive">*</span>
-                          </Label>
-                          <Input
-                            id="specificStartDate"
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="focus-ring"
-                            min={new Date().toISOString().split("T")[0]}
-                            max={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="specificEndDate" className="text-sm font-medium">
-                            End Date <span className="text-destructive">*</span>
-                          </Label>
-                          <Input
-                            id="specificEndDate"
-                            type="date"
-                            value={singleDate}
-                            onChange={(e) => setSingleDate(e.target.value)}
-                            className="focus-ring"
-                            min={startDate || new Date().toISOString().split("T")[0]}
-                            required
-                          />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="specificStartDate" className="text-sm font-medium">
+                              Start Date <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                              id="specificStartDate"
+                              type="date"
+                              value={startDate}
+                              onChange={(e) => setStartDate(e.target.value)}
+                              className="focus-ring"
+                              min={new Date().toISOString().split("T")[0]}
+                              max={new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="specificEndDate" className="text-sm font-medium">
+                              End Date <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                              id="specificEndDate"
+                              type="date"
+                              value={singleDate}
+                              onChange={(e) => setSingleDate(e.target.value)}
+                              className="focus-ring"
+                              min={startDate || new Date().toISOString().split("T")[0]}
+                              required
+                            />
+                          </div>
                         </div>
                         <p className="text-xs text-muted-foreground">
                           Start date maximum 2 months from today. Goal will be pending if start date is in the future.
@@ -1196,8 +1238,6 @@ export default function CreateGoalPage() {
                               )}
                             </div>
 
-
-
                             {/* Activity Assignment (for group goals) */}
                             {goalNature === "group" && groupMembers.length > 1 && (
                               <div className="flex items-center gap-2">
@@ -1239,118 +1279,6 @@ export default function CreateGoalPage() {
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Accountability Partners (only for personal goals) */}
-                  {goalNature === "personal" && (
-                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
-                      <div>
-                        <Label className="text-sm font-medium">
-                          Accountability Partners
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Optional: Select partners to help keep you accountable
-                        </p>
-                      </div>
-
-                      {/* Partners Dropdown */}
-                      <Select
-                        value=""
-                        onValueChange={(value) => {
-                          if (selectedPartners.length >= 2) {
-                            try {
-                              toast.error("You can select up to 2 partners");
-                            } catch {}
-                            return;
-                          }
-                          if (!selectedPartners.includes(value)) {
-                            setSelectedPartners([...selectedPartners, value]);
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="focus-ring">
-                          <SelectValue placeholder="Add an accountability partner..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availablePartners.length === 0 ? (
-                            <div className="p-4 text-center text-muted-foreground">
-                              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                              <p className="text-sm mb-2">No accountability partners available</p>
-                              <p className="text-xs">You can still create the goal and add partners later from your Partners page.</p>
-                            </div>
-                          ) : (
-                            availablePartners
-                              .filter((p) => !selectedPartners.includes(p.id))
-                              .map((partner) => (
-                                <SelectItem key={partner.id} value={partner.id}>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                                      <span className="text-xs font-medium">
-                                        {partner.name.charAt(0)}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <div className="text-sm font-medium">
-                                        {partner.name}
-                                      </div>
-                                      <div className="text-xs text-muted-foreground">
-                                        @{partner.username}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </SelectItem>
-                              ))
-                          )}
-                        </SelectContent>
-                      </Select>
-
-                      <div className="text-xs text-muted-foreground">
-                        Selected {selectedPartners.length}/2
-                      </div>
-
-                      {selectedPartners.length > 0 && (
-                        <div className="space-y-2">
-                          {selectedPartners.map((partnerId) => {
-                            const partner = availablePartners.find(
-                              (p) => p.id === partnerId,
-                            );
-                            if (!partner) return null;
-                            return (
-                              <div
-                                key={partnerId}
-                                className="flex items-center justify-between p-2 rounded-md bg-background border"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                                    <span className="text-xs font-medium">
-                                      {partner.name.charAt(0)}
-                                    </span>
-                                  </div>
-                                  <div className="text-sm font-medium">
-                                    {partner.name}
-                                  </div>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() =>
-                                    setSelectedPartners(
-                                      selectedPartners.filter(
-                                        (id) => id !== partnerId,
-                                      ),
-                                    )
-                                  }
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -1474,285 +1402,219 @@ export default function CreateGoalPage() {
             </form>
           </div>
 
-          {/* Sidebar - Templates & Tips */}
-          <div className="space-y-6">
-            {/* Goal Templates */}
-            <Card className="hover-lift">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Lightbulb className="h-5 w-5 text-yellow-500" />
-                  Goal Templates
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    Group Goal Chat Starters
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Use these prompts to keep momentum over text.
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-[10px] uppercase tracking-wide bg-white dark:bg-slate-900/60">
+                  Group
+                </Badge>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {goalSamples.map(renderGoalSample)}
+              </div>
+            </div>
+
+            <Card className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Lightbulb className="h-4 w-4 text-amber-500" />
+                  Quick Templates
                 </CardTitle>
-                <CardDescription>
-                  Get inspired with these popular goal ideas
+                <CardDescription className="text-xs">
+                  Pre-built structures to accelerate setup. Tap to load and customize.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {goalTemplates.map((template, index) => {
-                  const Icon = template.icon;
-                  return (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      className="w-full justify-start h-auto p-3 hover-lift"
-                      onClick={() => {
-                        setSelectedTemplate(template);
-                        setShowTemplateModal(true);
-                      }}
-                    >
-                      <div className="flex items-start gap-3 text-left">
-                        <div
-                          className={`p-2 rounded-lg bg-muted ${template.color}`}
-                        >
+                <div className="grid gap-3">
+                  {goalTemplates.slice(0, 3).map((template, index) => {
+                    const Icon = template.icon;
+                    return (
+                      <button
+                        key={template.title}
+                        type="button"
+                        className={"flex w-full items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left dark:border-slate-800 dark:bg-slate-900"}
+                        onClick={() => {
+                          setSelectedTemplate(template);
+                          setShowTemplateModal(true);
+                        }}
+                      >
+                        <div className={"flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 " + template.color}>
                           <Icon className="h-4 w-4" />
                         </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">
-                            {template.title}
-                          </div>
-                          <div className="text-xs text-muted-foreground line-clamp-2">
-                            {template.description}
-                          </div>
-                          <Badge variant="secondary" className="text-xs mt-1">
-                            {template.category.replace("-", " ")}
+                        <div className="flex-1 space-y-1">
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">{template.title}</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{template.description}</p>
+                          <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                            {template.category.replace('-', ' ')}
                           </Badge>
                         </div>
-                      </div>
-                    </Button>
-                  );
-                })}
+                      </button>
+                    );
+                  })}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-center rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50"
+                  onClick={() => setShowTemplateModal(true)}
+                >
+                  Browse full template library
+                </Button>
               </CardContent>
             </Card>
 
-            {/* Template Selection Modal */}
-            <Dialog
-              open={showTemplateModal}
-              onOpenChange={setShowTemplateModal}
-            >
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Customize Template</DialogTitle>
-                </DialogHeader>
-                {selectedTemplate && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                      <selectedTemplate.icon
-                        className={`h-5 w-5 ${selectedTemplate.color}`}
-                      />
-                      <div>
-                        <div className="font-medium">
-                          {selectedTemplate.title}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {selectedTemplate.description}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-sm font-medium">Goal Type</Label>
-                      <RadioGroup
-                        value={templateGoalType}
-                        onValueChange={(
-                          v: "single-activity" | "multi-activity",
-                        ) => setTemplateGoalType(v)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem
-                            value="single-activity"
-                            id="template-single"
-                          />
-                          <Label htmlFor="template-single" className="text-sm">
-                            Single Activity
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem
-                            value="multi-activity"
-                            id="template-multi"
-                          />
-                          <Label htmlFor="template-multi" className="text-sm">
-                            Multi-Activity Checklist
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        {templateGoalType === "single-activity"
-                          ? "Choose One Activity"
-                          : "Select Activities"}
-                      </Label>
-                      <div className="space-y-1">
-                        {(
-                          activitySuggestions[
-                            selectedTemplate.category as keyof typeof activitySuggestions
-                          ] || []
-                        ).map((activity, i) => {
-                          const isSelected =
-                            templateGoalType === "single-activity"
-                              ? selectedSingleActivity === activity
-                              : selectedActivities.includes(activity);
-
-                          return (
-                            <Button
-                              key={i}
-                              variant={isSelected ? "default" : "ghost"}
-                              size="sm"
-                              className="w-full justify-start h-auto p-2 text-sm"
-                              onClick={() => toggleActivitySelection(activity)}
-                            >
-                              <div className="flex items-center gap-2">
-                                {templateGoalType === "single-activity" ? (
-                                  <div
-                                    className={`w-3 h-3 rounded-full border-2 ${isSelected ? "bg-primary border-primary" : "border-muted-foreground"}`}
-                                  />
-                                ) : (
-                                  <Checkbox checked={isSelected} disabled />
-                                )}
-                                {activity}
-                              </div>
-                            </Button>
-                          );
-                        })}
-                      </div>
-                      {templateGoalType === "multi-activity" && (
-                        <p className="text-xs text-muted-foreground">
-                          Selected: {selectedActivities.length}/5
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowTemplateModal(false)}
-                        className="flex-1"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={applyTemplate}
-                        className="flex-1"
-                        disabled={
-                          templateGoalType === "single-activity"
-                            ? !selectedSingleActivity
-                            : selectedActivities.length === 0
-                        }
-                      >
-                        Apply Template
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-
-            {/* Tips Card */}
-            <Card className="hover-lift">
-              <CardHeader>
-                <CardTitle className="text-lg">?? Pro Tips</CardTitle>
+            <Card className="rounded-2xl border border-slate-200 bg-white p-0 dark:border-slate-800 dark:bg-slate-900">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Goal Creation Progress</CardTitle>
+                <CardDescription className="text-xs">Complete each step to publish with confidence.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="text-sm space-y-2">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                    <span className="text-muted-foreground">
-                      Start with specific, measurable goals
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                    <span className="text-muted-foreground">
-                      Break large goals into smaller milestones
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                    <span className="text-muted-foreground">
-                      Share with partners for accountability
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                    <span className="text-muted-foreground">
-                      Track progress and celebrate wins
-                    </span>
-                  </div>
+                <div className="space-y-2 text-xs">
+                  {[
+                    { label: "Goal Title", complete: Boolean(title) },
+                    { label: "Goal Type", complete: Boolean(goalType) },
+                    { label: "Category", complete: Boolean(category) },
+                    { label: "Visibility", complete: Boolean(visibility) },
+                  ].map((step) => (
+                    <div key={step.label} className={`flex items-center gap-2 ${step.complete ? "text-emerald-600" : "text-slate-400"}`}>
+                      {step.complete ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
+                      <span>{step.label}</span>
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Progress Indicator */}
-            <Card className="hover-lift">
-              <CardContent className="p-4">
-                <div className="text-center space-y-3">
-                  <div className="text-sm font-medium">
-                    Goal Creation Progress
-                  </div>
-                  <div className="space-y-2">
-                    <div
-                      className={`flex items-center gap-2 text-sm ${title ? "text-green-600" : "text-muted-foreground"}`}
-                    >
-                      {title ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <div className="h-4 w-4 rounded-full border-2 border-current" />
-                      )}
-                      Goal Title
-                    </div>
-                    <div
-                      className={`flex items-center gap-2 text-sm ${goalType ? "text-green-600" : "text-muted-foreground"}`}
-                    >
-                      {goalType ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <div className="h-4 w-4 rounded-full border-2 border-current" />
-                      )}
-                      Goal Type
-                    </div>
-                    <div
-                      className={`flex items-center gap-2 text-sm ${category ? "text-green-600" : "text-muted-foreground"}`}
-                    >
-                      {category ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <div className="h-4 w-4 rounded-full border-2 border-current" />
-                      )}
-                      Category
-                    </div>
-                    <div
-                      className={`flex items-center gap-2 text-sm ${visibility ? "text-green-600" : "text-muted-foreground"}`}
-                    >
-                      {visibility ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <div className="h-4 w-4 rounded-full border-2 border-current" />
-                      )}
-                      Visibility
-                    </div>
-                  </div>
-                  <Progress
-                    value={
-                      title && goalType && category && visibility
-                        ? 100
-                        : title && goalType && category
-                          ? 75
-                          : title && goalType
-                            ? 50
-                            : title
-                              ? 25
-                              : 0
-                    }
-                    className="h-2"
-                  />
-                </div>
+                <Progress
+                  value={
+                    title && goalType && category && visibility
+                      ? 100
+                      : title && goalType && category
+                        ? 75
+                        : title && goalType
+                          ? 50
+                          : title
+                            ? 25
+                            : 0
+                  }
+                  className="h-2"
+                />
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={showTemplateModal}
+        onOpenChange={setShowTemplateModal}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Customize Template</DialogTitle>
+          </DialogHeader>
+          {selectedTemplate && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 rounded-2xl border border-white/40 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/60">
+                <selectedTemplate.icon className={"h-5 w-5 " + selectedTemplate.color} />
+                <div>
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{selectedTemplate.title}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">{selectedTemplate.description}</div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide">Goal Type</Label>
+                <RadioGroup
+                  value={templateGoalType}
+                  onValueChange={(v: "single-activity" | "multi-activity") => setTemplateGoalType(v)}
+                  className="grid gap-2"
+                >
+                  {[
+                    { value: "single-activity", label: "Single Activity" },
+                    { value: "multi-activity", label: "Multi-Activity Checklist" },
+                  ].map((option) => (
+                    <label
+                      key={option.value}
+                      htmlFor={`template-${option.value}`}
+                      className={"flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition " + (
+                        templateGoalType === option.value ? "border-primary/60 bg-primary/10" : "border-border/50 hover:border-primary/40"
+                      )}
+                    >
+                      <RadioGroupItem value={option.value} id={`template-${option.value}`} />
+                      {option.label}
+                    </label>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wide">
+                  {templateGoalType === "single-activity" ? "Choose one activity" : "Select activities"}
+                </Label>
+                <div className="space-y-1">
+                  {(activitySuggestions[selectedTemplate.category as keyof typeof activitySuggestions] || []).map((activity, idx) => {
+                    const isSelected =
+                      templateGoalType === "single-activity"
+                        ? selectedSingleActivity === activity
+                        : selectedActivities.includes(activity);
+
+                    return (
+                      <Button
+                        key={`${activity}-${idx}`}
+                        variant={isSelected ? "default" : "ghost"}
+                        size="sm"
+                        className="w-full justify-start rounded-xl px-3 py-2 text-sm"
+                        onClick={() => toggleActivitySelection(activity)}
+                      >
+                        <div className="flex items-center gap-2">
+                          {templateGoalType === "single-activity" ? (
+                            <div className={"h-3 w-3 rounded-full border " + (isSelected ? "border-primary bg-primary" : "border-muted-foreground")} />
+                          ) : (
+                            <Checkbox checked={isSelected} disabled />
+                          )}
+                          {activity}
+                        </div>
+                      </Button>
+                    );
+                  })}
+                </div>
+                {templateGoalType === "multi-activity" && (
+                  <p className="text-[11px] text-muted-foreground">Selected: {selectedActivities.length}/5</p>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowTemplateModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={applyTemplate}
+                  className="flex-1"
+                  disabled={
+                    templateGoalType === "single-activity"
+                      ? !selectedSingleActivity
+                      : selectedActivities.length === 0
+                  }
+                >
+                  Apply Template
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

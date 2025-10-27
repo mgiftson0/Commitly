@@ -139,7 +139,7 @@ export function FollowRequests() {
           <UserPlus className="h-12 w-12 text-muted-foreground" />
           <h3 className="font-semibold">No pending requests</h3>
           <p className="text-sm text-muted-foreground">
-            You'll see follow requests here
+            You&apos;ll see follow requests here
           </p>
         </div>
       </Card>

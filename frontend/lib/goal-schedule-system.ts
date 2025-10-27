@@ -11,7 +11,7 @@ export interface SchedulePattern {
 }
 
 export interface EndCondition {
-  type: EndCondition
+  type: EndConditionType
   endDate?: string
   targetCompletions?: number
   targetStreak?: number
@@ -237,7 +237,7 @@ export class GoalScheduleCalculator {
     const current = new Date(currentDate)
     
     // Find the next date after lastDate that matches the pattern
-    let nextDate = new Date(last)
+    const nextDate = new Date(last)
     nextDate.setDate(nextDate.getDate() + 1)
     
     while (nextDate <= current) {

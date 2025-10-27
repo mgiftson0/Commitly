@@ -60,7 +60,7 @@ export class StreakRecoveryCalculator {
     daysMissed: number
   ): StreakState {
     let newStreak = streakState.currentStreak
-    let newMissedDays = 0
+    const newMissedDays = 0
     let graceDaysUsed = streakState.graceDaysUsed
 
     switch (config.recoveryMode) {
@@ -145,7 +145,7 @@ export class StreakRecoveryCalculator {
     const start = new Date(lastDate)
     const end = new Date(currentDate)
     let missedCount = 0
-    let checkDate = new Date(start)
+    const checkDate = new Date(start)
     checkDate.setDate(checkDate.getDate() + 1)
 
     while (checkDate < end) {

@@ -106,17 +106,18 @@ export const authHelpers = {
         throw error;
       }
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Re-throw with better error message
+      const err = error as Error;
       if (
-        error.message?.includes("provider is not enabled") ||
-        error.message?.includes("Unsupported provider")
+        err.message?.includes("provider is not enabled") ||
+        err.message?.includes("Unsupported provider")
       ) {
         throw new Error(
           "Google OAuth is not enabled. Please enable it in your Supabase dashboard: Authentication → Providers → Google",
         );
       }
-      throw error;
+      throw err;
     }
   },
 
@@ -222,14 +223,14 @@ export const authHelpers = {
         .from('profiles')
         .select('has_completed_kyc')
         .eq('id', session.user.id)
-        .single();
+        .single()
 
       if (error) {
         console.error('Error fetching KYC status:', error);
         return false;
       }
 
-      return data?.has_completed_kyc === true;
+      return (data as { has_completed_kyc: boolean | null })?.has_completed_kyc === true;
     } catch (err) {
       console.error('Error checking KYC status:', err);
       return false;
@@ -267,7 +268,7 @@ export const authHelpers = {
   },
 
   // Listen to auth state changes
-  onAuthStateChange: (callback: (event: string, session: any) => void) => {
+  onAuthStateChange: (callback: (event: string, session: Session | null) => void) => {
     if (!hasSupabase()) {
       return { data: { subscription: { unsubscribe: () => {} } } };
     }
@@ -301,11 +302,11 @@ export type User = {
   user_metadata?: {
     full_name?: string;
     avatar_url?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   app_metadata?: {
     provider?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   created_at?: string;
 };

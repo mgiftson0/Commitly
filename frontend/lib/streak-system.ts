@@ -53,7 +53,14 @@ export class StreakSystem {
       }
       
       await supabase.from('goal_streaks').insert(newStreak)
-      return newStreak as StreakData
+      return {
+        goalId: newStreak.goal_id,
+        userId: newStreak.user_id,
+        currentStreak: newStreak.current_streak,
+        longestStreak: newStreak.longest_streak,
+        lastActivityDate: newStreak.last_activity_date,
+        streakType: newStreak.streak_type
+      }
     }
 
     // Calculate new streak
@@ -130,10 +137,9 @@ export class StreakSystem {
       .eq('goal_id', goalId)
       .eq('activity_date', today)
 
-    const memberIds = goal.goal_members.map((m: any) => m.user_id)
-    const completedMembers = todayActivities?.filter(a => a.completed).map(a => a.user_id) || []
+    const memberIds = goal.goal_members.map((m: { user_id: string }) => m.user_id)
+    const completedMembers = todayActivities?.filter((a: { completed: boolean; user_id: string }) => a.completed).map((a: { user_id: string }) => a.user_id) || []
     
-    const allCompleted = memberIds.every(id => completedMembers.includes(id))
     const participationRate = completedMembers.length / memberIds.length
 
     // Update group streak based on participation threshold (80%)
@@ -287,7 +293,7 @@ export class StreakSystem {
     const bothCompleted = completed && partnerActivity?.completed
 
     // Update mutual streak
-    const partnerStreakId = `${goalId}-${Math.min(userId, partnerId)}-${Math.max(userId, partnerId)}`
+    const partnerStreakId = userId < partnerId ? `${goalId}-${userId}-${partnerId}` : `${goalId}-${partnerId}-${userId}`
     
     const { data: mutualStreak } = await supabase
       .from('goal_streaks')

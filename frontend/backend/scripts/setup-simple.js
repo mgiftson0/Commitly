@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
-require('dotenv').config({ path: '.env.local' });
-const { createClient } = require('@supabase/supabase-js');
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+
+dotenv.config({ path: '.env.local' });
 
 async function setupDatabase() {
   console.log('\n🚀 COMMITLY - Database Setup\n');
@@ -40,8 +43,6 @@ async function setupDatabase() {
   console.log('3. Paste it into the SQL Editor');
   console.log('4. Click "Run" to execute\n');
   console.log('Creating setup-schema.sql file...\n');
-
-  const fs = require('fs');
   const schema = `-- ============================================
 -- COMMITLY DATABASE SCHEMA
 -- Run this in Supabase SQL Editor

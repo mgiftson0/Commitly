@@ -1,4 +1,6 @@
 // Dashboard-specific TypeScript interfaces
+import { LucideIcon } from 'lucide-react'
+
 export interface TodayStats {
   completed: number
   pending: number
@@ -12,7 +14,7 @@ export interface Activity {
   title: string
   description: string
   time: string
-  icon: any
+  icon: LucideIcon
   color: string
   goalId?: string
 }
@@ -23,7 +25,7 @@ export interface CategoryProgress {
   total: number
   progress: number
   color: string
-  icon: any
+  icon: LucideIcon
 }
 
 export interface Deadline {

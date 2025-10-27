@@ -229,7 +229,7 @@ export default function EditGoalPage() {
         </div>
 
         {goal.status === 'pending' && (
-          <Card className="border-blue-200 bg-blue-50">
+          <Card className="border-blue-200 bg-blue-50 shadow-[0_16px_38px_rgba(15,23,42,0.12)]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Clock className="h-4 w-4 text-blue-600" />
@@ -242,7 +242,7 @@ export default function EditGoalPage() {
           </Card>
         )}
 
-        <Card>
+        <Card className="border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-900">
           <CardHeader>
             <CardTitle>Goal Details</CardTitle>
           </CardHeader>
@@ -292,7 +292,7 @@ export default function EditGoalPage() {
         </Card>
 
         {goal.goal_type === 'multi-activity' && (
-          <Card>
+          <Card className="border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-900">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Activities</CardTitle>

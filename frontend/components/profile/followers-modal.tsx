@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -39,9 +39,9 @@ export function FollowersModal({ open, onOpenChange, userId, initialTab = 'follo
     if (open) {
       loadData()
     }
-  }, [open, userId])
+  }, [open, loadData])
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     try {
       // Get current user
@@ -81,7 +81,7 @@ export function FollowersModal({ open, onOpenChange, userId, initialTab = 'follo
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
 
   const UserCard = ({ user }: { user: UserProfile }) => {
     const isCurrentUser = currentUser && currentUser.id === user.id

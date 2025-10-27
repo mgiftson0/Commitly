@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 // test-env.js
 console.log('Current working directory:', process.cwd());
 console.log('Environment variables:', {
@@ -6,8 +9,6 @@ console.log('Environment variables:', {
 });
 
 // Try to read the .env.local file directly
-const fs = require('fs');
-const path = require('path');
 try {
   const envContent = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf8');
   console.log('\n.env.local file contents:', envContent);

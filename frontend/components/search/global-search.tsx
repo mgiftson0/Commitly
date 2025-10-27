@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,40 +23,6 @@ interface SearchResult {
   onClick: () => void
 }
 
-interface GoalData {
-  id: string
-  title: string
-  description?: string
-  category?: string
-  status?: string
-  progress?: number
-  streak?: number
-}
-
-interface PartnerGoalData extends GoalData {
-  ownerName?: string
-}
-
-interface AchievementData {
-  id: string
-  title: string
-  description: string
-  type: string
-  rarity: string
-}
-
-interface NotificationData {
-  id: string
-  title: string
-  message: string
-}
-
-interface MockUser {
-  id: string
-  name: string
-  avatar: string
-}
-
 interface GlobalSearchProps {
   className?: string
   placeholder?: string
@@ -67,43 +33,16 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
   const [results, setResults] = useState<SearchResult[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
-  const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    // Load recent searches with improved error handling
-    const loadRecentSearches = (): void => {
-      try {
-        const stored = localStorage.getItem('recentSearches')
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed)) {
-            setRecentSearches(parsed)
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to load recent searches:', error)
-        // Clear corrupted data
-        localStorage.removeItem('recentSearches')
-      }
-    }
+  const addToRecentSearches = useCallback((search: string) => {
+    const updated = [search, ...recentSearches.filter(s => s !== search)].slice(0, 5)
+    setRecentSearches(updated)
+    localStorage.setItem('recentSearches', JSON.stringify(updated))
+  }, [recentSearches])
 
-    loadRecentSearches()
-  }, [])
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (query.length > 0) {
-        performSearch(query)
-      } else {
-        setResults([])
-      }
-    }, 500) // Increased debounce for stability
-
-    return () => clearTimeout(timeoutId)
-  }, [query])
-
-  const performSearch = async (searchQuery: string): Promise<void> => {
+  const performSearch = useCallback(async (searchQuery: string): Promise<void> => {
     if (searchQuery.length < 2) {
       setResults([])
       return
@@ -179,13 +118,40 @@ export function GlobalSearch({ className, placeholder = "Search goals, users, ac
     })
 
     setResults(searchResults.slice(0, 8))
-  }
+  }, [router, addToRecentSearches])
 
-  const addToRecentSearches = (search: string) => {
-    const updated = [search, ...recentSearches.filter(s => s !== search)].slice(0, 5)
-    setRecentSearches(updated)
-    localStorage.setItem('recentSearches', JSON.stringify(updated))
-  }
+  useEffect(() => {
+    // Load recent searches with improved error handling
+    const loadRecentSearches = (): void => {
+      try {
+        const stored = localStorage.getItem('recentSearches')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed)) {
+            setRecentSearches(parsed)
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load recent searches:', error)
+        // Clear corrupted data
+        localStorage.removeItem('recentSearches')
+      }
+    }
+
+    loadRecentSearches()
+  }, [])
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (query.length > 0) {
+        performSearch(query)
+      } else {
+        setResults([])
+      }
+    }, 500) // Increased debounce for stability
+
+    return () => clearTimeout(timeoutId)
+  }, [query, performSearch])
 
   const clearRecentSearches = () => {
     setRecentSearches([])

@@ -285,7 +285,7 @@ export default function GoalDetailPage() {
         </div>
 
         {/* Goal Details */}
-        <Card>
+        <Card className="border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.16)] dark:border-slate-800 dark:bg-slate-900">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -413,7 +413,7 @@ export default function GoalDetailPage() {
 
         {/* Activities */}
         {goal.goal_type === 'multi-activity' && activities.length > 0 && (
-          <Card>
+          <Card className="border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.16)] dark:border-slate-800 dark:bg-slate-900">
             <CardHeader>
               <CardTitle>Activities</CardTitle>
             </CardHeader>

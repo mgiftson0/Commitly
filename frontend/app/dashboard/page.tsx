@@ -54,6 +54,63 @@ import { CATEGORIES, CATEGORY_MAP } from "@/lib/constants/categories"
 import { authHelpers, supabase } from "@/lib/supabase-client"
 import { seasonalIntegration } from "@/lib/seasonal-goals-integration"
 
+interface ActivityItem {
+  id: string
+  type: string
+  title: string
+  description: string
+  time: string
+  icon: React.ComponentType<any>
+  color: string
+  goalId?: string
+}
+
+interface GoalItem {
+  id: string
+  title: string
+  description?: string
+  dueDate: string
+  category?: string
+  progress?: number
+  status?: string
+}
+
+interface DashboardStats {
+  totalGoals: number
+  activeGoals: number
+  completedGoals: number
+  completionRate: number
+}
+
+interface SeasonalStats {
+  currentSeason?: string
+  seasonProgress?: number
+  seasonalGoals?: number
+  seasonalAchievements?: number
+}
+
+interface Profile {
+  id: string
+  first_name?: string
+  last_name?: string
+  profile_picture_url?: string
+}
+
+interface Notification {
+  id: string
+  type?: string
+  title?: string
+  message?: string
+  created_at: string
+  data?: {
+    goal_id?: string
+  }
+}
+
+interface AchievementEvent {
+  detail: any
+}
+
 export default function DashboardPage() {
   const [goals, setGoals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -65,7 +122,7 @@ export default function DashboardPage() {
   const [bellShake, setBellShake] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [celebrationAchievement, setCelebrationAchievement] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [motivationEnabled, setMotivationEnabled] = useState(() => {
     try {
       return localStorage.getItem('dailyMotivationEnabled') !== 'false'
@@ -77,8 +134,8 @@ export default function DashboardPage() {
 
   // Refs to track previous states for transition animations
   const prevActiveGoalsRef = useRef<any[]>([])
-  const prevRecentActivityRef = useRef<any[]>([])
-  const prevUpcomingDeadlinesRef = useRef<any[]>([])
+  const prevRecentActivityRef = useRef<ActivityItem[]>([])
+  const prevUpcomingDeadlinesRef = useRef<GoalItem[]>([])
 
   const motivations = [
     { quote: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
@@ -165,9 +222,9 @@ export default function DashboardPage() {
   }, [goals])
 
   // Get real recent activity from database
-  const [recentActivity, setRecentActivity] = useState<any[]>([])
-  const [dashboardStats, setDashboardStats] = useState<any>(null)
-  const [seasonalStats, setSeasonalStats] = useState<any>(null)
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
+  const [seasonalStats, setSeasonalStats] = useState<SeasonalStats | null>(null)
   
   const activeGoals = goals.filter(g => !g.completed_at && !g.is_suspended)
   const completedGoals = goals.filter(g => g.completed_at)
@@ -222,7 +279,7 @@ export default function DashboardPage() {
           return 'Just now'
         }
         
-        const activities = (notifications || []).map((n: any) => ({
+        const activities = (notifications || []).map((n: Notification) => ({
           id: n.id,
           type: n.type || 'general',
           title: n.title || 'Notification',
@@ -346,7 +403,7 @@ export default function DashboardPage() {
       setTimeout(() => setBellShake(false), 1000)
     }
 
-    const handleAchievementUnlocked = (event: any) => {
+    const handleAchievementUnlocked = (event: AchievementEvent) => {
       setCelebrationAchievement(event.detail)
       setShowCelebration(true)
     }
@@ -598,7 +655,7 @@ export default function DashboardPage() {
 
         <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-2 2xl:justify-center">
           {/* Active Goals */}
-          <Card className="hover-lift h-auto w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-yellow-400/50">
+          <Card className="hover-lift h-auto w-full flex flex-col hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 shadow-slate-900/15 transition-all duration-200 border-2 border-yellow-400/50">
             <CardHeader className="flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
@@ -636,21 +693,28 @@ export default function DashboardPage() {
                     .slice(0, 3)
                     .map((goal, index) => {
                       const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+                      const tileSurfaceClass = isSeasonalGoal
+                        ? 'border-amber-200/70 dark:border-amber-800/60 bg-gradient-to-br from-amber-50/85 via-white to-white dark:from-amber-950/20 dark:via-slate-900/40 dark:to-slate-900/60'
+                        : 'border-slate-200/70 dark:border-slate-700/60 bg-gradient-to-br from-white via-white to-slate-50 dark:from-slate-900/60 dark:via-slate-900/40 dark:to-slate-900/60'
+                      const accentBarClass = isSeasonalGoal
+                        ? 'from-amber-400 via-amber-300 to-amber-500'
+                        : 'from-sky-500 via-emerald-400 to-blue-500'
+                      const iconWrapperClass = isSeasonalGoal
+                        ? 'border border-amber-200/60 dark:border-amber-800/50 bg-amber-100/70 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300'
+                        : 'border border-sky-200/60 dark:border-sky-800/50 bg-sky-100/70 dark:bg-sky-900/30 text-sky-600 dark:text-sky-300'
                       return (
-                        <div key={goal.id} className={`relative animated-gradient-border rounded-lg transition-all duration-500 ease-in-out hover:scale-105 ${
-                          exitingItems.has(goal.id) 
-                            ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
-                            : enteringItems.has(goal.id)
-                            ? 'animate-in slide-in-from-top-full duration-800 fill-mode-forwards'
-                            : animationsLoaded 
-                            ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
-                            : 'opacity-0'
-                        }`}>
-                          <div className={`relative z-10 flex items-center gap-3 p-3 rounded-lg ${
-                            isSeasonalGoal 
-                              ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800' 
-                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                          }`} onClick={() => {
+                        <div
+                          key={goal.id}
+                          className={`relative group cursor-pointer select-none overflow-hidden rounded-xl border backdrop-blur transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-xl ${tileSurfaceClass} ${
+                            exitingItems.has(goal.id) 
+                              ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
+                              : enteringItems.has(goal.id)
+                              ? 'animate-in slide-in-from-top-full duration-800 fill-mode-forwards'
+                              : animationsLoaded 
+                              ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
+                              : 'opacity-0'
+                          }`}
+                          onClick={() => {
                             console.log('Clicking goal:', goal)
                             console.log('Goal ID:', goal.id, 'Type:', typeof goal.id)
                             if (goal.id && goal.id !== 'undefined' && goal.id !== 'null' && !isNaN(goal.id)) {
@@ -658,43 +722,39 @@ export default function DashboardPage() {
                             } else {
                               console.error('Invalid goal ID:', goal.id, 'Full goal object:', goal)
                             }
-                          }}>
-                          <div className={`p-2 rounded-lg flex-shrink-0 ${
-                            isSeasonalGoal 
-                              ? 'bg-amber-100 dark:bg-amber-900/30' 
-                              : 'bg-blue-100 dark:bg-blue-900/30'
-                          }`}>
-                            <Target className={`h-4 w-4 ${
-                              isSeasonalGoal 
-                                ? 'text-amber-600 dark:text-amber-400' 
-                                : 'text-blue-600 dark:text-blue-400'
-                            }`} />
-                          </div>
-                          <div className="flex-1 min-w-0 flex flex-col justify-center">
-                            <h4 className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">{goal.title}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {goal.goal_type || 'Standard'}
-                              </Badge>
-                              {isSeasonalGoal && (
-                                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-                                  <Star className="h-3 w-3 mr-1" />
-                                  Seasonal
+                          }}
+                        >
+                          <span className={`pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accentBarClass} opacity-80 transition-opacity duration-500 group-hover:opacity-100`} />
+                          <span className="pointer-events-none absolute -bottom-10 -right-16 h-28 w-28 rounded-full bg-gradient-to-tr from-cyan-200/40 via-blue-200/20 to-transparent blur-3xl dark:from-cyan-500/20 dark:via-blue-500/10" />
+                          <div className="relative flex items-center gap-3 p-4">
+                            <div className={`flex-shrink-0 rounded-xl p-3 transition-colors duration-500 ${iconWrapperClass}`}>
+                              <Target className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                              <h4 className="font-medium text-sm truncate text-slate-900 dark:text-slate-100">{goal.title}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs backdrop-blur-sm">
+                                  {goal.goal_type || 'Standard'}
                                 </Badge>
-                              )}
-                              {goal.streak > 0 && (
-                                <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
-                                  <Flame className="h-3 w-3 text-orange-500 dark:text-orange-400" />
-                                  <span>{goal.streak}d</span>
-                                </div>
-                              )}
+                                {isSeasonalGoal && (
+                                  <Badge variant="outline" className="text-xs bg-amber-50/80 text-amber-700 border-amber-200">
+                                    <Star className="h-3 w-3 mr-1" />
+                                    Seasonal
+                                  </Badge>
+                                )}
+                                {goal.streak > 0 && (
+                                  <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
+                                    <Flame className="h-3 w-3 text-orange-500 dark:text-orange-400" />
+                                    <span>{goal.streak}d</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0 flex flex-col justify-center">
+                              <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{goal.progress || 0}%</div>
+                              <Progress value={goal.progress || 0} className={`w-16 h-1.5 mt-1 ${getProgressColor(goal.progress || 0)}`} />
                             </div>
                           </div>
-                          <div className="text-right flex-shrink-0 flex flex-col justify-center">
-                            <div className="text-xs font-medium text-slate-700 dark:text-slate-300">{goal.progress || 0}%</div>
-                            <Progress value={goal.progress || 0} className={`w-16 h-1.5 mt-1 ${getProgressColor(goal.progress || 0)}`} />
-                          </div>
-                        </div>
                         </div>
                       )
                     })
@@ -705,7 +765,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Recent Activity - Matches Active Goals Styling */}
-          <Card className="hover-lift h-auto w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-blue-400/50">
+          <Card className="hover-lift h-auto w-full flex flex-col hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 shadow-slate-900/15 transition-all duration-200 border-2 border-blue-400/50">
             <CardHeader className="flex-shrink-0 pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
@@ -747,7 +807,7 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={activity.id}
-                        className={`relative shimmer-sweep rounded-lg transition-all duration-500 ease-in-out hover:scale-105 ${
+                        className={`relative aurora-glow rounded-lg transition-all duration-500 ease-in-out hover:scale-105 ${
                           exitingItems.has(activity.id) 
                             ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
                             : enteringItems.has(activity.id)
@@ -757,7 +817,7 @@ export default function DashboardPage() {
                             : 'opacity-0'
                         }`}
                       >
-                        <div className="flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}" onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}>
+                        <div className={`flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}`} onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}>
                           <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5">
                             <Icon className={`h-3.5 w-3.5 ${activity.color}`} />
                           </div>
@@ -835,44 +895,43 @@ export default function DashboardPage() {
                     }
                     
                     return (
-                      <div 
-                        key={goal.id} 
-                        className={`relative gradient-pulse rounded-lg transition-all duration-500 ease-in-out hover:scale-105 ${
-                          exitingItems.has(goal.id) 
-                            ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
+                      <div
+                        key={goal.id}
+                        className={`${
+                          exitingItems.has(goal.id)
+                            ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards'
                             : enteringItems.has(goal.id)
                             ? 'animate-in slide-in-from-top-full duration-800 fill-mode-forwards'
-                            : animationsLoaded 
+                            : animationsLoaded
                             ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
                             : 'opacity-0'
-                        }`}
+                        } flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${getUrgencyColor()}`}
+                        onClick={() => goal.id && router.push(`/goals/${goal.id}`)}
                       >
-                        <div className="flex items-center gap-2 p-2 rounded-lg border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors ${getUrgencyColor()}" onClick={() => goal.id && router.push(`/goals/${goal.id}`)}>
-                          <div className="p-1.5 rounded bg-white dark:bg-slate-800/50">
-                            <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        <div className="p-1.5 rounded bg-white dark:bg-slate-800/50">
+                          <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">{goal.title}</h4>
+                            <Badge
+                              variant={goal.priority === 'high' ? 'destructive' : goal.priority === 'medium' ? 'default' : 'secondary'}
+                              className="text-xs h-5"
+                            >
+                              {goal.priority}
+                            </Badge>
                           </div>
-                          <div className="flex-1 min-w-0 flex flex-col justify-center">
-                            <div className="flex items-center justify-between mb-1">
-                              <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{goal.title}</h4>
-                              <Badge 
-                                variant={goal.priority === 'high' ? 'destructive' : goal.priority === 'medium' ? 'default' : 'secondary'} 
-                                className="text-xs h-5"
-                              >
-                                {goal.priority}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">
-                              {getDueDateText()}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-slate-500 dark:text-slate-400">
-                                {goal.progress}% complete
-                              </span>
-                              <Progress 
-                                value={goal.progress} 
-                                className={`flex-1 h-2 ${getProgressColor(goal.progress)}`} 
-                              />
-                            </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">
+                            {getDueDateText()}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {goal.progress}% complete
+                            </span>
+                            <Progress
+                              value={goal.progress}
+                              className={`flex-1 h-2 ${getProgressColor(goal.progress)}`}
+                            />
                           </div>
                         </div>
                       </div>
@@ -1055,12 +1114,12 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-2">
                   {recentActivity.slice(0, 3).map((activity: any, index) => {
-                    const Icon = activity.type === 'goal_completed' ? CheckCircle2 : 
+                    const Icon = activity.type === 'goal_completed' ? CheckCircle2 :
                                  activity.type === 'streak_milestone' ? Flame :
                                  activity.type === 'achievement_unlocked' ? Trophy :
                                  activity.type === 'partner_request' ? Users :
                                  Target
-                    
+
                     const getNotificationColor = (type: string) => {
                       if (type === 'goal_completed') return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
                       if (type === 'streak_milestone') return 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'
@@ -1075,16 +1134,19 @@ export default function DashboardPage() {
                       <div
                         key={activity.id}
                         className={`relative aurora-glow rounded-lg transition-all duration-500 ease-in-out hover:scale-105 ${
-                          exitingItems.has(activity.id) 
-                            ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards' 
+                          exitingItems.has(activity.id)
+                            ? 'animate-out slide-out-to-bottom-full duration-600 fill-mode-forwards'
                             : enteringItems.has(activity.id)
                             ? 'animate-in slide-in-from-top-full duration-800 fill-mode-forwards'
-                            : animationsLoaded 
+                            : animationsLoaded
                             ? `animate-in slide-in-from-top-full duration-800 fill-mode-forwards ${index === 0 ? 'delay-200' : index === 1 ? 'delay-400' : 'delay-600'}`
                             : 'opacity-0'
                         }`}
                       >
-                        <div className="flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}" onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}>
+                        <div
+                          className={`flex items-start gap-2 p-2 rounded-lg border transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 ${getNotificationColor(activity.type)}`}
+                          onClick={() => activity.goalId && router.push(`/goals/${activity.goalId}`)}
+                        >
                           <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5">
                             <Icon className={`h-3.5 w-3.5 ${activity.color}`} />
                           </div>

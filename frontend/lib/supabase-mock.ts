@@ -43,7 +43,7 @@ const STORAGE_KEYS = {
 const delay = (ms: number = 300) => new Promise(resolve => setTimeout(resolve, ms))
 
 // Helper to get data from localStorage
-function getStoredData(key: string, defaultValue: any = null) {
+function getStoredData<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') return defaultValue
   try {
     const item = localStorage.getItem(key)
@@ -54,7 +54,7 @@ function getStoredData(key: string, defaultValue: any = null) {
 }
 
 // Helper to set data in localStorage
-function setStoredData(key: string, value: any) {
+function setStoredData(key: string, value: unknown): void {
   if (typeof window === 'undefined') return
   try {
     localStorage.setItem(key, JSON.stringify(value))
@@ -65,7 +65,7 @@ function setStoredData(key: string, value: any) {
 
 // Mock auth implementation
 class MockAuth {
-  async signUp({ email, password }: { email: string, password: string }): Promise<AuthResponse> {
+  async signUp({ email, password }: { email: string; password: string }): Promise<AuthResponse> {
     await delay()
     
     const user: User = {
@@ -88,7 +88,7 @@ class MockAuth {
     }
   }
   
-  async signInWithPassword({ email, password }: { email: string, password: string }): Promise<AuthResponse> {
+  async signInWithPassword({ email, password }: { email: string; password: string }): Promise<AuthResponse> {
     await delay()
     
     // For demo purposes, accept any email/password
@@ -126,7 +126,7 @@ class MockAuth {
   async getUser(): Promise<UserResponse> {
     await delay(100)
     
-    const user = getStoredData(STORAGE_KEYS.USER)
+    const user = getStoredData<User | null>(STORAGE_KEYS.USER, null)
     return {
       data: { user },
       error: null
@@ -143,8 +143,8 @@ class MockAuth {
 // Mock database query builder
 class MockQueryBuilder {
   private tableName: string
-  private queryData: any[] = []
-  private filters: any[] = []
+  private queryData: unknown[] = []
+  private filters: Array<{ type: string; column: string; value: unknown }> = []
   private selectedColumns: string | string[] = '*'
   private orderBy?: { column: string, ascending: boolean }
   private limitCount?: number
@@ -158,12 +158,12 @@ class MockQueryBuilder {
     return this
   }
   
-  eq(column: string, value: any) {
+  eq(column: string, value: unknown) {
     this.filters.push({ type: 'eq', column, value })
     return this
   }
   
-  neq(column: string, value: any) {
+  neq(column: string, value: unknown) {
     this.filters.push({ type: 'neq', column, value })
     return this
   }
@@ -184,14 +184,14 @@ class MockQueryBuilder {
     return this
   }
   
-  private applyFilters(data: any[]) {
+  private applyFilters(data: unknown[]) {
     return data.filter(item => {
       return this.filters.every(filter => {
         switch (filter.type) {
           case 'eq':
-            return item[filter.column] === filter.value
+            return (item as Record<string, unknown>)[filter.column] === filter.value
           case 'neq':
-            return item[filter.column] !== filter.value
+            return (item as Record<string, unknown>)[filter.column] !== filter.value
           default:
             return true
         }
@@ -199,20 +199,27 @@ class MockQueryBuilder {
     })
   }
   
-  private applyOrder(data: any[]) {
+  private applyOrder(data: unknown[]) {
     if (!this.orderBy) return data
     
     return [...data].sort((a, b) => {
-      const aVal = a[this.orderBy!.column]
-      const bVal = b[this.orderBy!.column]
+      const aVal = (a as Record<string, unknown>)[this.orderBy!.column]
+      const bVal = (b as Record<string, unknown>)[this.orderBy!.column]
       
-      if (aVal < bVal) return this.orderBy!.ascending ? -1 : 1
-      if (aVal > bVal) return this.orderBy!.ascending ? 1 : -1
+      if (aVal == null && bVal == null) return 0
+      if (aVal == null) return this.orderBy!.ascending ? -1 : 1
+      if (bVal == null) return this.orderBy!.ascending ? 1 : -1
+      
+      const aStr = String(aVal)
+      const bStr = String(bVal)
+      
+      if (aStr < bStr) return this.orderBy!.ascending ? -1 : 1
+      if (aStr > bStr) return this.orderBy!.ascending ? 1 : -1
       return 0
     })
   }
   
-  async then(resolve?: any, reject?: any) {
+  async then(resolve?: (result: { data: unknown; error: unknown }) => void, reject?: (result: { data: unknown; error: unknown }) => void) {
     await delay(200)
     
     try {
@@ -237,17 +244,17 @@ class MockQueryBuilder {
     }
   }
   
-  private getTableData(): any[] {
+  private getTableData(): unknown[] {
     const key = `${STORAGE_KEYS.GOALS}_${this.tableName}`
     return getStoredData(key, [])
   }
   
-  private setTableData(data: any[]) {
+  private setTableData(data: unknown[]) {
     const key = `${STORAGE_KEYS.GOALS}_${this.tableName}`
     setStoredData(key, data)
   }
   
-  async insert(values: any | any[]) {
+  async insert(values: unknown | unknown[]) {
     await delay(200)
     
     try {
@@ -255,9 +262,9 @@ class MockQueryBuilder {
       const itemsToInsert = Array.isArray(values) ? values : [values]
       
       const newItems = itemsToInsert.map(item => ({
-        ...item,
-        id: item.id || `${this.tableName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        created_at: item.created_at || new Date().toISOString(),
+        ...item as Record<string, unknown>,
+        id: (item as Record<string, unknown>).id || `${this.tableName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        created_at: (item as Record<string, unknown>).created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       }))
       
@@ -270,7 +277,7 @@ class MockQueryBuilder {
     }
   }
   
-  async update(values: any) {
+  async update(values: unknown) {
     await delay(200)
     
     try {
@@ -281,9 +288,9 @@ class MockQueryBuilder {
         const matches = this.filters.every(filter => {
           switch (filter.type) {
             case 'eq':
-              return item[filter.column] === filter.value
+              return (item as Record<string, unknown>)[filter.column] === filter.value
             case 'neq':
-              return item[filter.column] !== filter.value
+              return (item as Record<string, unknown>)[filter.column] !== filter.value
             default:
               return true
           }
@@ -292,8 +299,8 @@ class MockQueryBuilder {
         if (matches) {
           updated = true
           return {
-            ...item,
-            ...values,
+            ...item as Record<string, unknown>,
+            ...values as Record<string, unknown>,
             updated_at: new Date().toISOString()
           }
         }
@@ -320,9 +327,9 @@ class MockQueryBuilder {
         return !this.filters.every(filter => {
           switch (filter.type) {
             case 'eq':
-              return item[filter.column] === filter.value
+              return (item as Record<string, unknown>)[filter.column] === filter.value
             case 'neq':
-              return item[filter.column] !== filter.value
+              return (item as Record<string, unknown>)[filter.column] !== filter.value
             default:
               return true
           }

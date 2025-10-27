@@ -104,8 +104,8 @@ export default function TermsOfServicePage() {
                 <h3 className="text-lg sm:text-xl font-semibold mb-4">1. Introduction</h3>
                 <div className="prose prose-sm sm:prose-base max-w-none text-muted-foreground">
                   <p>
-                    Welcome to Commitly. These Terms of Service ("Terms") govern your use of our website,
-                    mobile application, and related services (collectively, the "Service"). By accessing or using
+                    Welcome to Commitly. These Terms of Service (&ldquo;Terms&rdquo;) govern your use of our website,
+                    mobile application, and related services (collectively, the &ldquo;Service&rdquo;). By accessing or using
                     the Service, you agree to be bound by these Terms.
                   </p>
                   <p>
@@ -195,7 +195,7 @@ export default function TermsOfServicePage() {
                 <h3 className="text-lg sm:text-xl font-semibold mb-4">8. Disclaimer of Warranties</h3>
                 <div className="prose prose-sm sm:prose-base max-w-none text-muted-foreground">
                   <p>
-                    The Service is provided on an "AS IS" and "AS AVAILABLE" basis. We make no warranties,
+                    The Service is provided on an &ldquo;AS IS&rdquo; and &ldquo;AS AVAILABLE&rdquo; basis. We make no warranties,
                     expressed or implied, and hereby disclaim all warranties including, without limitation,
                     implied warranties of merchantability, fitness for a particular purpose, and non-infringement.
                   </p>
