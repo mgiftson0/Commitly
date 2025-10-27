@@ -49,6 +49,7 @@ export default function GroupGoalDetailPage() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const params = useParams()
+  const router = useRouter()
   const goalId = params.id as string
 
   const currentUser = { id: 'mock-user-id', name: 'You' }

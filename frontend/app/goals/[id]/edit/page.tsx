@@ -27,10 +27,6 @@ export default function EditGoalPage() {
   const [startDate, setStartDate] = useState('')
   const [targetDate, setTargetDate] = useState('')
 
-  useEffect(() => {
-    loadGoalData()
-  }, [loadGoalData])
-
   const loadGoalData = useCallback(async () => {
     try {
       const user = await authHelpers.getCurrentUser()
@@ -98,8 +94,24 @@ export default function EditGoalPage() {
     }
   }, [goalId, router])
 
+  useEffect(() => {
+    loadGoalData()
+  }, [loadGoalData])
+
   const addActivity = () => {
-    setActivities([...activities, { title: '', order_index: activities.length }])
+    const newActivity = {
+      id: `temp-${Date.now()}`,
+      goal_id: goalId,
+      title: '',
+      description: null,
+      completed: false,
+      order_index: activities.length,
+      due_date: null,
+      assigned_to: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    setActivities([...activities, newActivity])
   }
 
   const removeActivity = (index: number) => {
@@ -119,7 +131,7 @@ export default function EditGoalPage() {
       return
     }
 
-    if (goal.goal_type === 'multi-activity' && activities.some(a => !a.title.trim())) {
+    if (goal?.goal_type === 'multi-activity' && activities.some(a => !a.title.trim())) {
       toast.error('All activities must have a title')
       return
     }
@@ -157,7 +169,7 @@ export default function EditGoalPage() {
       if (goalError) throw goalError
 
       // Update activities for multi-activity goals
-      if (goal.goal_type === 'multi-activity') {
+      if (goal?.goal_type === 'multi-activity') {
         // Delete existing activities
         await supabase
           .from('goal_activities')
@@ -219,7 +231,7 @@ export default function EditGoalPage() {
           <div>
             <h1 className="text-2xl font-bold">Edit Goal</h1>
             <p className="text-sm text-muted-foreground">
-              {goal.status === 'pending' ? 'Edit activities and dates for pending goal' : 'Edit goal details and activities'}
+              {goal?.status === 'pending' ? 'Edit activities and dates for pending goal' : 'Edit goal details and activities'}
             </p>
           </div>
           <Button variant="outline" onClick={() => router.push('/goals')}>
@@ -228,7 +240,7 @@ export default function EditGoalPage() {
           </Button>
         </div>
 
-        {goal.status === 'pending' && (
+        {goal?.status === 'pending' && (
           <Card className="border-blue-200 bg-blue-50 shadow-[0_16px_38px_rgba(15,23,42,0.12)]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -291,7 +303,7 @@ export default function EditGoalPage() {
           </CardContent>
         </Card>
 
-        {goal.goal_type === 'multi-activity' && (
+        {goal?.goal_type === 'multi-activity' && (
           <Card className="border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-900">
             <CardHeader>
               <div className="flex items-center justify-between">

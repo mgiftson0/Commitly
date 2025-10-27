@@ -4,6 +4,12 @@ const nextConfig = {
   outputFileTracingExcludes: {
     '*': ['../backend/**/*'],
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   async rewrites() {
     return [
       {

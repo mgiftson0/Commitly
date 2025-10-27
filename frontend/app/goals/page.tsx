@@ -64,7 +64,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { EncouragementCard } from "@/components/goals/encouragement-card"
 import * as React from "react"
-import { getProgressColor } from "@/lib/utils/progress-colors"
 import { authHelpers, supabase } from "@/lib/supabase-client"
 
 // Define types
@@ -421,7 +420,7 @@ const myPartnerIds = new Set<string>(['6','7','9','10','11','12'])
 
 const isPartnerWithOwner = (goal: typeof mockGoals[0], currentUserId: string = 'mock-user-id') => {
   if (!goal.goalOwner) return false
-  if (goal.accountabilityPartners.some(p => p.id === currentUserId)) return false // not allowed if AP on this goal
+  if (goal.accountabilityPartners.some((p: { id: string; name: string; avatar: string }) => p.id === currentUserId)) return false // not allowed if AP on this goal
   return myPartnerIds.has(goal.goalOwner.id)
 }
 
@@ -430,7 +429,7 @@ const isGoalOwner = (goal: typeof mockGoals[0], currentUserId: string = 'mock-us
   if (goal.goalOwner) {
     return goal.goalOwner.id === currentUserId
   }
-  return !goal.accountabilityPartners.some(partner => partner.id === currentUserId)
+  return !goal.accountabilityPartners.some((partner: { id: string; name: string; avatar: string }) => partner.id === currentUserId)
 }
 
 // Check if current user can fork this goal per rule: must be partners with owner (not AP on this goal) and goal is public

@@ -76,5 +76,12 @@ export const authHelpers = {
       redirectTo: `${window.location.origin}/auth/reset-password/confirm`
     });
     if (error) throw error;
+  },
+
+  updatePassword: async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    if (error) throw error;
   }
 };

@@ -304,7 +304,7 @@ export default function DashboardPage() {
         setDashboardStats(stats)
         
         // Load seasonal stats
-        const seasonalData = await seasonalIntegration.getSeasonalStats(user.id)
+        const seasonalData: any = await seasonalIntegration.getSeasonalStats(user.id)
         setSeasonalStats(seasonalData)
         
         console.log('Dashboard stats:', stats)
@@ -403,19 +403,19 @@ export default function DashboardPage() {
       setTimeout(() => setBellShake(false), 1000)
     }
 
-    const handleAchievementUnlocked = (event: AchievementEvent) => {
+    const handleAchievementUnlocked = (event: any) => {
       setCelebrationAchievement(event.detail)
       setShowCelebration(true)
     }
 
     if (typeof window !== 'undefined') {
       window.addEventListener('newNotification', handleNewNotification)
-      window.addEventListener('achievementUnlocked', handleAchievementUnlocked)
+      window.addEventListener('achievementUnlocked', handleAchievementUnlocked as EventListener)
     }
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('newNotification', handleNewNotification)
-        window.removeEventListener('achievementUnlocked', handleAchievementUnlocked)
+        window.removeEventListener('achievementUnlocked', handleAchievementUnlocked as EventListener)
       }
     }
   }, [])

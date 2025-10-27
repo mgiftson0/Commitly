@@ -201,7 +201,7 @@ export default function UpdateGoalPage() {
             .eq('user_id', user.id)
             .eq('status', 'completed')
           
-          if (completedGoals === 1) {
+          if (completedGoals && completedGoals.length === 1) {
             await supabase
               .from('user_achievements')
               .insert({
@@ -212,14 +212,14 @@ export default function UpdateGoalPage() {
               })
           }
           
-          if (completedGoals === 10) {
+          if (completedGoals && completedGoals.length === 10) {
             await supabase
               .from('user_achievements')
               .insert({
                 user_id: user.id,
                 achievement_type: 'goal_master',
                 unlocked_at: new Date().toISOString(),
-                data: { completed_goals: completedGoals }
+                data: { completed_goals: completedGoals.length }
               })
           }
         } catch (achievementError) {

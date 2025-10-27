@@ -134,11 +134,14 @@ export default function CreateGoalPage() {
         
         const partnersList = (myFollowing || []).filter(f => 
           followerIds.has(f.following_id)
-        ).map(f => ({
-          id: f.following_id,
-          name: `${f.following_profile?.first_name || ''} ${f.following_profile?.last_name || ''}`.trim() || 'Partner',
-          username: f.following_profile?.username || 'partner'
-        }))
+        ).map(f => {
+          const profile = Array.isArray(f.following_profile) ? f.following_profile[0] : f.following_profile;
+          return {
+            id: f.following_id,
+            name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Partner',
+            username: profile?.username || 'partner'
+          };
+        })
 
         setAvailablePartners(partnersList)
       } catch (error) {
