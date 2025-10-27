@@ -65,5 +65,9 @@ export const authHelpers = {
       .maybeSingle();
     
     return data?.has_completed_kyc === true;
+  },
+
+  clearSession: async () => {
+    await supabase.auth.signOut();
   }
 };

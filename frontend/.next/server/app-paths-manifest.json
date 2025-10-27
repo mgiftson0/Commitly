@@ -1,5 +1,3 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/goals/create/page": "app/goals/create/page.js",
-  "/goals/[id]/page": "app/goals/[id]/page.js"
+  "/goals/create/page": "app/goals/create/page.js"
 }
