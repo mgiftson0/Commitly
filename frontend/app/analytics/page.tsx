@@ -98,12 +98,13 @@ export default function AnalyticsPage() {
       const categoryStats = categories.map(category => {
         const categoryGoals = goals.filter(goal => {
           const goalCategory = goal.category || goal.goal_type || 'personal';
-          const mappedCategory = {
+          const categoryMap: Record<string, string> = {
             'health-fitness': 'Health & Fitness',
             'learning': 'Learning',
             'career': 'Career',
             'personal': 'Personal'
-          }[goalCategory] || goalCategory;
+          };
+          const mappedCategory = categoryMap[goalCategory] || goalCategory;
 
           return mappedCategory === category;
         });
