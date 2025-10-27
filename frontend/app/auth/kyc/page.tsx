@@ -143,7 +143,7 @@ export default function KYCPage() {
       }
       
       // Prepare profile data (exclude columns that might not exist yet)
-      const profileData = {
+      const profileData: any = {
         id: user.id,
         username: username.toLowerCase(),
         first_name: displayName.split(' ')[0] || displayName,
