@@ -69,5 +69,12 @@ export const authHelpers = {
 
   clearSession: async () => {
     await supabase.auth.signOut();
+  },
+
+  resetPassword: async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password/confirm`
+    });
+    if (error) throw error;
   }
 };
