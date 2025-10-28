@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Trophy, Star, Award, Target } from "lucide-react"
+import { Trophy, Star, Award, Target, Lock } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface AchievementCardProps {
@@ -28,38 +28,43 @@ export function AchievementCard({ achievement, size = 'md', onClick }: Achieveme
     switch (achievement.rarity) {
       case 'common':
         return {
-          bg: 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900',
-          border: 'border-gray-300 dark:border-gray-700',
-          icon: 'bg-gray-200 dark:bg-gray-700',
-          text: 'text-gray-700 dark:text-gray-300'
+          bg: 'bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800',
+          border: 'border-slate-200 dark:border-slate-700',
+          icon: 'bg-slate-200 dark:bg-slate-700',
+          text: 'text-slate-700 dark:text-slate-300',
+          lockedBg: 'bg-gradient-to-br from-slate-50/50 to-slate-100/50 dark:from-slate-900/50 dark:to-slate-800/50'
         }
       case 'rare':
         return {
-          bg: 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800',
-          border: 'border-blue-300 dark:border-blue-700',
-          icon: 'bg-blue-200 dark:bg-blue-700',
-          text: 'text-blue-700 dark:text-blue-300'
+          bg: 'bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950 dark:to-cyan-900',
+          border: 'border-cyan-200 dark:border-cyan-800',
+          icon: 'bg-cyan-200 dark:bg-cyan-700',
+          text: 'text-cyan-700 dark:text-cyan-300',
+          lockedBg: 'bg-gradient-to-br from-cyan-50/50 to-cyan-100/50 dark:from-cyan-950/50 dark:to-cyan-900/50'
         }
       case 'epic':
         return {
-          bg: 'bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800',
-          border: 'border-purple-300 dark:border-purple-700',
-          icon: 'bg-purple-200 dark:bg-purple-700',
-          text: 'text-purple-700 dark:text-purple-300'
+          bg: 'bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950 dark:to-violet-900',
+          border: 'border-violet-200 dark:border-violet-800',
+          icon: 'bg-violet-200 dark:bg-violet-700',
+          text: 'text-violet-700 dark:text-violet-300',
+          lockedBg: 'bg-gradient-to-br from-violet-50/50 to-violet-100/50 dark:from-violet-950/50 dark:to-violet-900/50'
         }
       case 'legendary':
         return {
-          bg: 'bg-gradient-to-br from-yellow-100 to-orange-200 dark:from-yellow-900 dark:to-orange-800',
-          border: 'border-yellow-300 dark:border-yellow-700',
-          icon: 'bg-yellow-200 dark:bg-yellow-700',
-          text: 'text-yellow-700 dark:text-yellow-300'
+          bg: 'bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-100 dark:from-amber-950 dark:via-yellow-950 dark:to-orange-900',
+          border: 'border-amber-300 dark:border-amber-700',
+          icon: 'bg-amber-200 dark:bg-amber-700',
+          text: 'text-amber-700 dark:text-amber-300',
+          lockedBg: 'bg-gradient-to-br from-amber-50/50 via-yellow-50/50 to-orange-100/50 dark:from-amber-950/50 dark:via-yellow-950/50 dark:to-orange-900/50'
         }
       default:
         return {
-          bg: 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900',
-          border: 'border-gray-300 dark:border-gray-700',
-          icon: 'bg-gray-200 dark:bg-gray-700',
-          text: 'text-gray-700 dark:text-gray-300'
+          bg: 'bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800',
+          border: 'border-slate-200 dark:border-slate-700',
+          icon: 'bg-slate-200 dark:bg-slate-700',
+          text: 'text-slate-700 dark:text-slate-300',
+          lockedBg: 'bg-gradient-to-br from-slate-50/50 to-slate-100/50 dark:from-slate-900/50 dark:to-slate-800/50'
         }
     }
   }
@@ -68,12 +73,12 @@ export function AchievementCard({ achievement, size = 'md', onClick }: Achieveme
     switch (size) {
       case 'sm':
         return {
-          card: 'p-3',
-          icon: 'h-8 w-8 p-1.5',
-          iconSize: 'h-5 w-5',
-          title: 'text-sm',
+          card: 'p-2',
+          icon: 'h-6 w-6 p-1',
+          iconSize: 'h-4 w-4',
+          title: 'text-xs',
           description: 'text-xs',
-          badge: 'text-xs px-2 py-0.5'
+          badge: 'text-xs px-1.5 py-0.5'
         }
       case 'lg':
         return {
@@ -86,12 +91,12 @@ export function AchievementCard({ achievement, size = 'md', onClick }: Achieveme
         }
       default:
         return {
-          card: 'p-4',
-          icon: 'h-12 w-12 p-2.5',
-          iconSize: 'h-7 w-7',
-          title: 'text-lg',
-          description: 'text-sm',
-          badge: 'text-xs px-2.5 py-1'
+          card: 'p-3',
+          icon: 'h-8 w-8 p-1.5',
+          iconSize: 'h-5 w-5',
+          title: 'text-sm',
+          description: 'text-xs',
+          badge: 'text-xs px-2 py-0.5'
         }
     }
   }
@@ -114,13 +119,22 @@ export function AchievementCard({ achievement, size = 'md', onClick }: Achieveme
     <Card 
       className={cn(
         "relative overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg",
-        rarityStyles.bg,
+        achievement.unlocked ? rarityStyles.bg : rarityStyles.lockedBg,
         rarityStyles.border,
-        !achievement.unlocked && "opacity-60 grayscale",
+        !achievement.unlocked && "grayscale",
         onClick && "cursor-pointer"
       )}
       onClick={onClick}
     >
+      {/* Lock overlay for locked achievements */}
+      {!achievement.unlocked && (
+        <div className="absolute inset-0 bg-black/10 dark:bg-black/20 flex items-center justify-center z-10">
+          <div className="bg-white/90 dark:bg-gray-800/90 rounded-full p-2 shadow-lg">
+            <Lock className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          </div>
+        </div>
+      )}
+
       <CardContent className={sizeStyles.card}>
         <div className="flex items-start gap-3">
           <div className={cn(

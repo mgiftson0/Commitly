@@ -1,7 +1,7 @@
 {
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/goals/page": "app/goals/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
+  "/goals/[id]/update/page": "app/goals/[id]/update/page.js",
   "/goals/create/page": "app/goals/create/page.js",
   "/notifications/page": "app/notifications/page.js",
   "/goals/[id]/page": "app/goals/[id]/page.js"

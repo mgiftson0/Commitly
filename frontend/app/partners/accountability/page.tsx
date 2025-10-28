@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,104 +30,180 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { MainLayout } from "@/components/layout/main-layout"
+import { authHelpers, supabase } from "@/lib/supabase-client"
+import { toast } from "sonner"
 
-// Mock data for accountability goals
-const mockAccountabilityGoals = [
-  {
-    id: 1,
-    title: "Daily Morning Workout",
-    description: "Build strength and consistency with daily exercise",
-    creator: {
-      name: "Sarah Martinez",
-      username: "sarah_m",
-      avatar: "/placeholder-avatar.jpg"
-    },
-    goalType: "recurring",
-    status: "active",
-    progress: 75,
-    streak: 12,
-    yourRole: "accountability_partner",
-    createdAt: "2024-01-15",
-    lastActivity: "2 hours ago",
-    priority: "high",
-    category: "Health & Fitness",
-    totalCompletions: 45,
-    encouragementNeeded: true,
-    lastCheckIn: "yesterday"
-  },
-  {
-    id: 2,
-    title: "Read 30 minutes daily",
-    description: "Expand knowledge through consistent reading habits",
-    creator: {
-      name: "Mike Chen",
-      username: "mike_c",
-      avatar: "/placeholder-avatar.jpg"
-    },
-    goalType: "recurring",
-    status: "active",
-    progress: 60,
-    streak: 8,
-    yourRole: "accountability_partner",
-    createdAt: "2024-02-01",
-    lastActivity: "1 day ago",
-    priority: "medium",
-    category: "Learning",
-    totalCompletions: 23,
-    encouragementNeeded: false,
-    lastCheckIn: "today"
-  },
-  {
-    id: 3,
-    title: "Complete React Certification",
-    description: "Master React development skills for career advancement",
-    creator: {
-      name: "Emily Rodriguez",
-      username: "emily_r",
-      avatar: "/placeholder-avatar.jpg"
-    },
-    goalType: "single",
-    status: "completed",
-    progress: 100,
-    streak: 0,
-    yourRole: "accountability_partner",
-    createdAt: "2024-01-20",
-    lastActivity: "3 days ago",
-    priority: "high",
-    category: "Career",
-    totalCompletions: 1,
-    encouragementNeeded: false,
-    lastCheckIn: "last week"
-  },
-  {
-    id: 4,
-    title: "Meditation Practice",
-    description: "10 minutes of daily mindfulness and stress reduction",
-    creator: {
-      name: "Alex Thompson",
-      username: "alex_t",
-      avatar: "/placeholder-avatar.jpg"
-    },
-    goalType: "recurring",
-    status: "struggling",
-    progress: 30,
-    streak: 2,
-    yourRole: "accountability_partner",
-    createdAt: "2024-02-10",
-    lastActivity: "5 days ago",
-    priority: "medium",
-    category: "Wellness",
-    totalCompletions: 15,
-    encouragementNeeded: true,
-    lastCheckIn: "3 days ago"
+interface AccountabilityGoal {
+  id: string | number
+  title: string
+  description: string
+  goalType: string
+  status: string
+  progress: number
+  streak: number
+  totalCompletions: number
+  visibility: string
+  createdAt: string
+  dueDate?: string
+  category: string
+  priority: string
+  creator: {
+    name: string
+    username: string
+    avatar: string
   }
-]
+  yourRole: string
+  lastActivity: string
+  priority: string
+  category: string
+  totalCompletions: number
+  encouragementNeeded: boolean
+  lastCheckIn: string
+}
 
 export default function AccountabilityGoalsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [realGoals, setRealGoals] = useState<AccountabilityGoal[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const filteredGoals = mockAccountabilityGoals.filter(goal => {
+  // Load real accountability partner goals from database
+  useEffect(() => {
+    const loadAccountabilityGoals = async () => {
+      try {
+        const user = await authHelpers.getCurrentUser()
+        if (!user) {
+          console.log('No user logged in')
+          setRealGoals([])
+          setLoading(false)
+          return
+        }
+
+        // Fetch goals where current user is an accountability partner
+        // This is done by looking at accepted notifications
+        const { data: acceptedNotifications, error: partnerGoalsError } = await supabase
+          .from('notifications')
+          .select('data')
+          .eq('user_id', user.id)
+          .eq('type', 'goal_created')
+          .eq('read', true)
+
+        console.log('Accepted notifications:', acceptedNotifications)
+
+        const partnerGoalIds = (acceptedNotifications || [])
+          .filter(n => n.data?.goal_id && n.data?.partner_id)
+          .map(n => n.data.goal_id)
+
+        console.log('Partner goal IDs:', partnerGoalIds)
+
+        if (partnerGoalIds.length === 0) {
+          setRealGoals([])
+          setLoading(false)
+          return
+        }
+
+        // Fetch the actual goals
+        const { data: goals, error: goalsError } = await supabase
+          .from('goals')
+          .select('id, title, description, goal_type, status, progress, category, priority, target_date, created_at, visibility, user_id')
+          .in('id', partnerGoalIds)
+
+        if (goalsError) {
+          console.error('Error fetching accountability goals:', goalsError)
+          setRealGoals([])
+          setLoading(false)
+          return
+        }
+
+        // Get owner profiles
+        const ownerIds = [...new Set(goals.map(g => g.user_id))]
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, username, profile_picture_url')
+          .in('id', ownerIds)
+
+        // Get goal activities to calculate real progress and stats
+        const goalsWithDetails = await Promise.all(goals.map(async (goal) => {
+          // Get activities
+          let activities = []
+          if (goal.goal_type === 'multi-activity') {
+            const { data: goalActivities } = await supabase
+              .from('goal_activities')
+              .select('*')
+              .eq('goal_id', goal.id)
+              .order('order_index', { ascending: true })
+            activities = goalActivities || []
+          }
+
+          // Calculate real progress
+          let realProgress = 0
+          let completedActivities = 0
+          let totalActivities = 0
+
+          if (activities && Array.isArray(activities)) {
+            if (goal.goal_type === 'multi-activity') {
+              totalActivities = activities.length
+              completedActivities = activities.filter((activity: { completed: boolean }) => activity.completed).length
+              realProgress = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0
+            } else if (goal.goal_type === 'single-activity') {
+              const activity = activities[0]
+              realProgress = activity && activity.completed ? 100 : 0
+              completedActivities = realProgress === 100 ? 1 : 0
+              totalActivities = 1
+            }
+          }
+
+          // Calculate streak (simplified)
+          let calculatedStreak = 0
+          if (goal.goal_type === 'recurring' && goal.goal_type !== 'single-activity') {
+            const goalAge = Math.floor((Date.now() - new Date(goal.created_at).getTime()) / (1000 * 60 * 60 * 24))
+            if (goalAge >= 1) {
+              calculatedStreak = goal.streak !== undefined ? goal.streak : Math.min(goalAge, 5)
+            }
+          }
+
+          const profile = profiles?.find(p => p.id === goal.user_id)
+
+          return {
+            id: String(goal.id),
+            title: goal.title,
+            description: goal.description || '',
+            goalType: goal.goal_type,
+            status: goal.completed_at ? 'completed' : goal.status || 'active',
+            progress: goal.completed_at ? 100 : realProgress,
+            streak: calculatedStreak,
+            totalCompletions: completedActivities,
+            visibility: goal.visibility || 'private',
+            createdAt: goal.created_at,
+            dueDate: goal.target_date,
+            category: goal.category?.replace('_', ' '),
+            priority: goal.priority || 'medium',
+            creator: {
+              name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || profile?.username || 'Owner',
+              username: profile?.username || '',
+              avatar: profile?.profile_picture_url || '/placeholder-avatar.jpg'
+            },
+            yourRole: "accountability_partner",
+            lastActivity: new Date(goal.created_at).toLocaleDateString(),
+            encouragementNeeded: realProgress < 50, // Simple heuristic
+            lastCheckIn: "recent" // Could be enhanced with actual check-in tracking
+          }
+        }))
+
+        console.log('Loaded accountability goals:', goalsWithDetails)
+        setRealGoals(goalsWithDetails)
+      } catch (error) {
+        console.error('Error loading accountability goals:', error)
+        setRealGoals([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadAccountabilityGoals()
+  }, [])
+
+  const filteredGoals = realGoals.filter(goal => {
     const matchesSearch = goal.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          goal.creator.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === "all" || goal.status === filterStatus
@@ -136,10 +212,23 @@ export default function AccountabilityGoalsPage() {
   })
 
   const stats = {
-    total: mockAccountabilityGoals.length,
-    active: mockAccountabilityGoals.filter(g => g.status === "active").length,
-    completed: mockAccountabilityGoals.filter(g => g.status === "completed").length,
-    needEncouragement: mockAccountabilityGoals.filter(g => g.encouragementNeeded).length
+    total: realGoals.length,
+    active: realGoals.filter(g => g.status === "active").length,
+    completed: realGoals.filter(g => g.status === "completed").length,
+    needEncouragement: realGoals.filter(g => g.encouragementNeeded).length
+  }
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Target className="h-12 w-12 text-blue-600 animate-pulse mx-auto mb-4" />
+            <p className="text-slate-600">Loading your accountability goals...</p>
+          </div>
+        </div>
+      </MainLayout>
+    )
   }
 
   return (
@@ -351,7 +440,7 @@ function AccountabilityGoalCard({ goal }: { goal: typeof mockAccountabilityGoals
             <span className="text-muted-foreground">Their Progress</span>
             <span className="font-medium">{goal.progress}%</span>
           </div>
-          <Progress value={goal.progress} className="h-2" />
+          <Progress value={goal.progress} className={`w-16 h-1.5 mt-1 ${(goal.progress || 0) <= 30 ? '[&>div]:bg-red-500' : (goal.progress || 0) <= 70 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`} />
         </div>
 
         {/* Stats */}
