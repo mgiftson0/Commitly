@@ -443,6 +443,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/activities/[id]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/activities/[id]">> = Specific
+  const handler = {} as typeof import("../../app/api/activities/[id]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/auth/set-session/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/auth/set-session">> = Specific
@@ -474,6 +483,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/follows/status">> = Specific
   const handler = {} as typeof import("../../app/api/follows/status/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/group-goals/invitations/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/group-goals/invitations">> = Specific
+  const handler = {} as typeof import("../../app/api/group-goals/invitations/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/group-goals/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/group-goals">> = Specific
+  const handler = {} as typeof import("../../app/api/group-goals/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

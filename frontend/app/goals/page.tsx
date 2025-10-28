@@ -459,7 +459,7 @@ const getGoalCardStyle = (goal: typeof mockGoals[0]) => {
     return "ring-1 ring-amber-200/50 hover:ring-amber-300/70 shadow-amber-100/50 hover:shadow-amber-200/60 bg-gradient-to-br from-amber-50/60 via-white to-amber-50/30 dark:from-amber-950/30 dark:via-background dark:to-amber-950/20"
   }
   if (goal.isGroupGoal) {
-    return "ring-1 ring-purple-200/50 hover:ring-purple-300/70 shadow-purple-100/50 hover:shadow-purple-200/60 bg-gradient-to-br from-purple-50/60 via-white to-purple-50/30 dark:from-purple-950/30 dark:via-background dark:to-purple-950/20"
+    return "ring-1 ring-pink-200/50 hover:ring-pink-300/70 shadow-md shadow-pink-100/50 hover:shadow-lg hover:shadow-pink-200/60 bg-gradient-to-br from-pink-50/60 via-white to-pink-50/30 dark:from-pink-950/30 dark:via-background dark:to-pink-950/20 border-pink-200/40"
   }
   if (goal.isForked) {
     return "ring-1 ring-blue-200/50 hover:ring-blue-300/70 shadow-blue-100/50 hover:shadow-blue-200/60 bg-gradient-to-br from-blue-50/60 via-white to-blue-50/30 dark:from-blue-950/30 dark:via-background dark:to-blue-950/20"
@@ -492,7 +492,7 @@ export default function GoalsPage() {
         // Fetch user's own goals
         const { data: userGoals, error: userGoalsError } = await supabase
           .from('goals')
-          .select('*')
+          .select('*, is_group_goal, group_goal_status')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
 
@@ -547,8 +547,43 @@ export default function GoalsPage() {
           console.error('Error fetching partner goals:', partnerGoalsError)
         }
 
+        // Fetch group goals where user is an accepted member
+        let memberGoals = []
+        try {
+          const { data: membershipGoals, error: membershipError } = await supabase
+            .from('group_goal_members')
+            .select('goal_id')
+            .eq('user_id', user.id)
+            .eq('status', 'accepted')
+
+          if (membershipError) {
+            console.error('Error fetching group memberships:', membershipError)
+          } else {
+            const memberGoalIds = (membershipGoals || []).map(m => m.goal_id)
+            
+            if (memberGoalIds.length > 0) {
+              const { data: goals, error: memberGoalsError } = await supabase
+                .from('goals')
+                .select('*, is_group_goal, group_goal_status')
+                .in('id', memberGoalIds)
+                .order('created_at', { ascending: false })
+              
+              memberGoals = goals || []
+              
+              if (memberGoalsError) {
+                console.error('Error fetching member goals:', memberGoalsError)
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Group goals fetch failed:', error)
+        }
+
+        // Combine user's own goals and group goals they're members of
+        const allUserGoals = [...(userGoals || []), ...memberGoals]
+
         // Fetch goal activities and accountability partners for all goals
-        const goalsWithActivities = await Promise.all((userGoals || []).map(async (goal) => {
+        const goalsWithActivities = await Promise.all(allUserGoals.map(async (goal) => {
           // Get activities
           let activities = []
           if (goal.goal_type === 'multi-activity') {
@@ -584,10 +619,36 @@ export default function GoalsPage() {
             }))
           }
 
+          // Get group members if it's a group goal
+          let groupMembers = []
+          if (goal.is_group_goal) {
+            const { data: members } = await supabase
+              .from('group_goal_members')
+              .select('user_id, role, status')
+              .eq('goal_id', goal.id)
+              .eq('status', 'accepted')
+            
+            if (members && members.length > 0) {
+              const memberIds = members.map(m => m.user_id)
+              const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, first_name, last_name, username, profile_picture_url')
+                .in('id', memberIds)
+              
+              groupMembers = (profiles || []).map(profile => ({
+                id: profile.id,
+                name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Member',
+                avatar: profile.profile_picture_url || '/placeholder-avatar.jpg',
+                role: members.find(m => m.user_id === profile.id)?.role || 'member'
+              }))
+            }
+          }
+
           return {
             ...goal,
             activities,
             accountabilityPartners,
+            groupMembers,
             type: goal.goal_type,
             userId: goal.user_id,
             createdAt: goal.created_at,
@@ -704,7 +765,7 @@ export default function GoalsPage() {
         isForked: false,
         forkedFrom: null,
         accountabilityPartners: goal.accountabilityPartners || [],
-        isGroupGoal: goal.isGroupGoal || false,
+        isGroupGoal: goal.is_group_goal || false,
         groupMembers: goal.groupMembers || [],
         recurrencePattern: goal.recurrencePattern,
         recurrenceDays: goal.recurrenceDays,

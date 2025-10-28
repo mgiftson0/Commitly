@@ -386,22 +386,54 @@ export default function CreateGoalPage() {
       console.log('Creating goal with user_id:', authUser.id)
       console.log('Profile exists:', profile.id)
 
-      // Create goal in database
-      const { data: newGoal, error: goalError } = await supabase
-        .from('goals')
-        .insert([goalData])
-        .select()
-        .single()
-
-      if (goalError) {
-        console.error('Goal creation error:', goalError)
-        if (goalError.message?.includes('foreign key constraint')) {
-          toast.error('Profile setup incomplete. Please refresh and try again.')
-          router.push('/auth/kyc')
-        } else {
-          toast.error(goalError.message || 'Failed to create goal')
+      let newGoal;
+      
+      // Handle group goals differently
+      if (goalNature === "group" && groupMembers.length > 1) {
+        // Use group goals API
+        const memberIds = groupMembers.filter(id => id !== authUser.id); // Exclude owner
+        
+        const response = await fetch('/api/group-goals', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            goalData,
+            memberIds
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          console.error('Group goal creation error:', result.error)
+          toast.error(result.error || 'Failed to create group goal')
+          return
         }
-        return
+        
+        newGoal = result.goal;
+        toast.success(`Group goal created! Invitations sent to ${memberIds.length} members.`);
+      } else {
+        // Create regular goal in database
+        const { data: goal, error: goalError } = await supabase
+          .from('goals')
+          .insert([goalData])
+          .select()
+          .single()
+
+        if (goalError) {
+          console.error('Goal creation error:', goalError)
+          if (goalError.message?.includes('foreign key constraint')) {
+            toast.error('Profile setup incomplete. Please refresh and try again.')
+            router.push('/auth/kyc')
+          } else {
+            toast.error(goalError.message || 'Failed to create goal')
+          }
+          return
+        }
+        
+        newGoal = goal;
       }
 
       // Send notifications to selected accountability partners
@@ -441,7 +473,9 @@ export default function CreateGoalPage() {
             goal_id: newGoal.id,
             title: activity.trim(),
             completed: false,
-            order_index: index
+            order_index: index,
+            assigned_to: goalNature === "group" ? activityAssignments[index] || null : null,
+            assigned_to_all: goalNature === "group" && !activityAssignments[index] ? true : false
           }))
 
         if (goalActivities.length > 0) {

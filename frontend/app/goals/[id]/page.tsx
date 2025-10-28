@@ -194,12 +194,15 @@ export default function GoalDetailPage() {
 
   const toggleActivity = async (activityId: string, completed: boolean) => {
     try {
-      const { error } = await supabase
-        .from('goal_activities')
-        .update({ completed })
-        .eq('id', activityId)
+      // Only update database for real activities (not virtual 'single' activities)
+      if (activityId !== 'single') {
+        const { error } = await supabase
+          .from('goal_activities')
+          .update({ completed })
+          .eq('id', activityId)
 
-      if (error) throw error
+        if (error) throw error
+      }
 
       setActivities(prev => 
         prev.map(a => a.id === activityId ? { ...a, completed } : a)

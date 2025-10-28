@@ -55,12 +55,15 @@ export function ActivityCompletionDialog({
       }))
 
       for (const update of updates) {
-        const { error } = await supabase
-          .from('goal_activities')
-          .update({ completed: update.completed })
-          .eq('id', update.id)
+        // Skip virtual 'single' activities
+        if (update.id !== 'single') {
+          const { error } = await supabase
+            .from('goal_activities')
+            .update({ completed: update.completed })
+            .eq('id', update.id)
 
-        if (error) throw error
+          if (error) throw error
+        }
       }
 
       // Calculate new progress

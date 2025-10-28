@@ -471,26 +471,61 @@ function AccountabilityGoalCard({ goal }: { goal: typeof mockAccountabilityGoals
           </div>
         </div>
 
-        {/* Encouragement Needed */}
+        {/* Encouragement Section - Chat Style */}
         {goal.encouragementNeeded && (
-          <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Heart className="h-4 w-4 text-orange-600" />
-              <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                Encouragement Needed
-              </span>
+          <div className="space-y-3">
+            {/* Chat-style encouragement messages */}
+            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 scrollbar-track-transparent">
+              {/* System message */}
+              <div className="flex items-start gap-2">
+                <div className="p-1.5 rounded-full bg-orange-500/10 mt-1">
+                  <Heart className="h-3 w-3 text-orange-600" />
+                </div>
+                <div className="flex-1 bg-orange-50 dark:bg-orange-950/30 rounded-lg rounded-tl-none p-2.5 border border-orange-200/50 dark:border-orange-800/50">
+                  <p className="text-xs text-orange-800 dark:text-orange-200 font-medium mb-1">
+                    Support Needed
+                  </p>
+                  <p className="text-xs text-orange-700 dark:text-orange-300">
+                    {goal.creator.name} hasn&apos;t checked in recently. A quick message could make their day! 💪
+                  </p>
+                </div>
+              </div>
+              
+              {/* Suggested messages */}
+              <div className="flex items-start gap-2">
+                <Avatar className="h-6 w-6 mt-1">
+                  <AvatarImage src="/placeholder-avatar.jpg" />
+                  <AvatarFallback className="text-[10px]">You</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-1.5">
+                  <button className="w-full text-left bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg rounded-tl-none p-2 border border-blue-200/50 dark:border-blue-800/50 transition-colors">
+                    <p className="text-xs text-blue-900 dark:text-blue-100">
+                      "You&apos;ve got this! Keep pushing forward! 🚀"
+                    </p>
+                  </button>
+                  <button className="w-full text-left bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg rounded-tl-none p-2 border border-blue-200/50 dark:border-blue-800/50 transition-colors">
+                    <p className="text-xs text-blue-900 dark:text-blue-100">
+                      "How&apos;s it going? I&apos;m here if you need support! 💙"
+                    </p>
+                  </button>
+                  <button className="w-full text-left bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg rounded-tl-none p-2 border border-blue-200/50 dark:border-blue-800/50 transition-colors">
+                    <p className="text-xs text-blue-900 dark:text-blue-100">
+                      "Remember why you started. You&apos;re making progress! ⭐"
+                    </p>
+                  </button>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-orange-700 dark:text-orange-300 mb-3">
-              {goal.creator.name} hasn&apos;t checked in for {goal.lastCheckIn}. Send some motivation!
-            </p>
-            <div className="flex gap-2">
-              <Button size="sm" className="flex-1">
-                <MessageCircle className="h-3 w-3 mr-1" />
-                Send Message
+            
+            {/* Action buttons */}
+            <div className="flex gap-2 pt-1">
+              <Button size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700">
+                <MessageCircle className="h-3 w-3 mr-1.5" />
+                Send Custom Message
               </Button>
-              <Button size="sm" variant="outline">
-                <Zap className="h-3 w-3 mr-1" />
-                Quick Check-in
+              <Button size="sm" variant="outline" className="border-orange-300 text-orange-700 hover:bg-orange-50">
+                <Zap className="h-3 w-3 mr-1.5" />
+                Quick Nudge
               </Button>
             </div>
           </div>

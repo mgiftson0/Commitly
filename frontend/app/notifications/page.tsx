@@ -301,6 +301,32 @@ export default function NotificationsPage() {
     }
   }
 
+  const handleGroupGoalInvitation = async (notificationId: string, goalId: string, action: 'accepted' | 'declined') => {
+    try {
+      const response = await fetch('/api/group-goals/invitations', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invitationId: notificationId,
+          action
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to process invitation')
+      }
+
+      await deleteNotification(notificationId)
+      toast.success(`Group goal invitation ${action}!`)
+      
+    } catch (error: any) {
+      console.error('Error handling group goal invitation:', error)
+      toast.error(error.message || 'Failed to process invitation')
+    }
+  }
+
   const handlePartnerRequest = async (notificationId: string, senderId: string, action: 'accept' | 'decline') => {
     try {
       const user = await authHelpers.getCurrentUser()
@@ -624,6 +650,32 @@ export default function NotificationsPage() {
                                 size="sm"
                                 onClick={() => handlePartnerRequest(notification.id, notification.data.sender_id, 'accept')}
                                 className="flex-1 text-xs h-7 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                              >
+                                Accept
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Group goal invitation actions */}
+                        {notification.data?.invitation_type === 'group_goal' && notification.data?.goal_id && (
+                          <div className="space-y-2 mt-2">
+                            <div className="text-xs text-muted-foreground">
+                              Group Goal Invitation
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGroupGoalInvitation(notification.id, notification.data.goal_id, 'declined')}
+                                className="text-xs h-6 px-2 border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50"
+                              >
+                                Decline
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleGroupGoalInvitation(notification.id, notification.data.goal_id, 'accepted')}
+                                className="text-xs h-6 px-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
                               >
                                 Accept
                               </Button>
