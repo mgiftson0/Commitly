@@ -38,6 +38,7 @@ interface EncouragementCardProps {
   goalOwnerName?: string
   goalId?: string | number
   onSendEncouragement?: (message: string) => void
+  onMessageSent?: () => void
   messages?: EncouragementMessage[]
   newMessageCount?: number
   compact?: boolean
@@ -55,15 +56,48 @@ export function EncouragementCard({
   const [note, setNote] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [storeMessages, setStoreMessages] = useState<EncouragementMessage[]>([])
+  const [apiMessages, setApiMessages] = useState<any[]>([])
   const [sentEncouragements, setSentEncouragements] = useState<EncouragementMessage[]>([])
   const [messageReactions, setMessageReactions] = useState<Record<string, string[]>>({})
 
   const loadMessages = async () => {
-    console.log('loadMessages called for goalId:', goalId, 'isPartner:', isPartner)
     if (messages && messages.length > 0) return
     if (goalId !== undefined) {
-      const raw = getEncouragements(goalId) as StoreEncouragementMessage[]
-      setStoreMessages(raw.map(m => ({ id: m.id, author: { name: m.authorName, avatar: "/placeholder-avatar.jpg" }, content: m.content, timestamp: new Date(m.timestamp).toLocaleString() })))
+      // Try to load from API first
+      try {
+        const response = await fetch(`/api/encouragement?goalId=${goalId}`)
+        if (response.ok) {
+          const data = await response.json()
+          const formattedMessages = (data.messages || []).map((msg: any) => ({
+            id: msg.id,
+            author: {
+              name: msg.sender_name || 'Anonymous',
+              avatar: msg.sender_avatar || '/placeholder-avatar.jpg'
+            },
+            content: msg.message,
+            timestamp: new Date(msg.created_at).toLocaleString()
+          }))
+          setApiMessages(formattedMessages)
+        } else {
+          // Fallback to localStorage
+          const raw = getEncouragements(goalId) as StoreEncouragementMessage[]
+          setStoreMessages(raw.map(m => ({ 
+            id: m.id, 
+            author: { name: m.authorName, avatar: "/placeholder-avatar.jpg" }, 
+            content: m.content, 
+            timestamp: new Date(m.timestamp).toLocaleString() 
+          })))
+        }
+      } catch (error) {
+        // Fallback to localStorage
+        const raw = getEncouragements(goalId) as StoreEncouragementMessage[]
+        setStoreMessages(raw.map(m => ({ 
+          id: m.id, 
+          author: { name: m.authorName, avatar: "/placeholder-avatar.jpg" }, 
+          content: m.content, 
+          timestamp: new Date(m.timestamp).toLocaleString() 
+        })))
+      }
       
       // Load message reactions
       const reactionsKey = `message_reactions_${goalId}`
@@ -74,14 +108,12 @@ export function EncouragementCard({
       if (isPartner) {
         const sentKey = `sent_encouragements_${goalId}`
         const sentData = JSON.parse(localStorage.getItem(sentKey) || '[]')
-        console.log('Loading sent encouragements:', sentData)
         const sentMessages = sentData.map((item: any) => ({
           id: item.id,
           author: { name: 'You', avatar: '/placeholder-avatar.jpg' },
           content: item.message,
           timestamp: new Date(item.timestamp).toLocaleString()
         }))
-        console.log('Processed sent messages:', sentMessages)
         setSentEncouragements(sentMessages)
       }
     }
@@ -150,38 +182,33 @@ export function EncouragementCard({
         console.log('Sending encouragement notification to:', goal.user_id)
         console.log('From:', senderName, 'To:', actualOwnerName, 'Message:', note.trim())
 
-        // Send notification to goal owner
-        const { error: notificationError } = await supabase
-          .from('notifications')
-          .insert([
-            {
-              user_id: goal.user_id,
-              title: 'Encouragement Received! 💝',
-              message: `${senderName} sent you encouragement: "${note.trim()}"`,
-              type: 'encouragement_received',
-              read: false,
-              data: JSON.stringify({ 
-                sender_id: user.id,
-                sender_name: senderName,
-                goal_id: goalId.toString(),
-                goal_title: goal.title,
-                message: note.trim()
-              })
-            }
-          ])
+        // Send encouragement message via API
+        const response = await fetch('/api/encouragement', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            goalId: goalId,
+            recipientId: goal.user_id,
+            message: note.trim()
+          })
+        })
 
-        if (notificationError) {
-          console.error('Notification error:', notificationError)
-          throw notificationError
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to send encouragement')
         }
 
-        console.log('Notification sent successfully!')
-        console.log('Notification data:', {
-          user_id: goal.user_id,
-          title: 'Encouragement Received! 💝',
-          message: `${senderName} sent you encouragement: "${note.trim()}"`,
-          type: 'encouragement_received'
-        })
+        // Trigger message sent callback
+        if (onMessageSent) {
+          onMessageSent()
+        }
+        
+        // Dispatch event for real-time updates
+        window.dispatchEvent(new CustomEvent('newEncouragementMessage', { 
+          detail: { goalId, recipientId: goal.user_id } 
+        }))
 
         // Store locally for sender tracking (no database notification needed)
         console.log('Encouragement sent successfully to', actualOwnerName)
@@ -240,8 +267,9 @@ export function EncouragementCard({
     localStorage.setItem(reactionsKey, JSON.stringify(currentReactions))
   }
 
-  // Use real messages only
-  const displayMessages = (messages && messages.length > 0) ? messages : storeMessages
+  // Use API messages first, then fallback to store messages
+  const displayMessages = (messages && messages.length > 0) ? messages : 
+                         (apiMessages.length > 0) ? apiMessages : storeMessages
 
   if (compact && isPartner) {
     return (

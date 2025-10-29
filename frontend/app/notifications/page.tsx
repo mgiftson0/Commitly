@@ -141,6 +141,7 @@ const sampleNotifications: Notification[] = [
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -225,6 +226,7 @@ export default function NotificationsPage() {
   }
 
   const handleGoalPartnerRequest = async (notificationId: string, requesterId: string, goalId: string, action: 'accept' | 'decline') => {
+    setActionLoading(notificationId)
     try {
       const user = await authHelpers.getCurrentUser()
       if (!user) return
@@ -298,6 +300,8 @@ export default function NotificationsPage() {
     } catch (error: any) {
       console.error('Error handling goal partner request:', error)
       toast.error(error.message || 'Failed to process request')
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -523,11 +527,11 @@ export default function NotificationsPage() {
                 <div className="absolute inset-0 bg-gradient-conic from-transparent via-white/20 to-transparent animate-spin" style={{ animationDuration: '8s' }} />
                 
                 {/* Main Card Content */}
-                <div className="relative bg-background/95 backdrop-blur-sm m-0.5 rounded-lg border border-border/50">
+                <div className="relative bg-background/95 backdrop-blur-sm m-0.5 rounded-lg border border-border/50 min-h-[140px] flex flex-col">
                   {/* Aurora Glow Effect */}
                   <div className={`absolute inset-0 bg-gradient-to-r ${gradient} opacity-30 blur-sm`} />
                   
-                  <div className="relative p-3">
+                  <div className="relative p-3 flex-1 flex flex-col justify-between">
                     <div className="flex items-start gap-3">
                       {/* Icon with shimmer effect */}
                       <div className={`relative flex-shrink-0 p-2 rounded-lg bg-gradient-to-br ${color.replace('text-', 'from-').replace('-600', '-100')} ${color.replace('text-', 'to-').replace('-600', '-50')} border border-current/20 overflow-hidden`}>
@@ -604,16 +608,28 @@ export default function NotificationsPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleGoalPartnerRequest(notification.id, notification.data.requester_id, notification.data.goal_id, 'decline')}
-                                className="text-xs h-6 px-2 border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50"
+                                className="flex-1 text-xs h-8 border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50 transition-all duration-200"
+                                disabled={actionLoading === notification.id}
                               >
-                                Decline
+                                {actionLoading === notification.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                                    <span className="hidden sm:inline">Processing</span>
+                                  </div>
+                                ) : 'Decline'}
                               </Button>
                               <Button
                                 size="sm"
                                 onClick={() => handleGoalPartnerRequest(notification.id, notification.data.requester_id, notification.data.goal_id, 'accept')}
-                                className="text-xs h-6 px-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                                className="flex-1 text-xs h-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200"
+                                disabled={actionLoading === notification.id}
                               >
-                                Accept
+                                {actionLoading === notification.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                                    <span className="hidden sm:inline">Processing</span>
+                                  </div>
+                                ) : 'Accept'}
                               </Button>
                             </div>
                           </div>
@@ -643,15 +659,21 @@ export default function NotificationsPage() {
                                 size="sm"
                                 onClick={() => handlePartnerRequest(notification.id, notification.data.sender_id, 'decline')}
                                 className="flex-1 text-xs h-7 border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50"
+                                disabled={actionLoading === notification.id}
                               >
-                                Decline
+                                {actionLoading === notification.id ? (
+                                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                                ) : 'Decline'}
                               </Button>
                               <Button
                                 size="sm"
                                 onClick={() => handlePartnerRequest(notification.id, notification.data.sender_id, 'accept')}
                                 className="flex-1 text-xs h-7 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                                disabled={actionLoading === notification.id}
                               >
-                                Accept
+                                {actionLoading === notification.id ? (
+                                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                                ) : 'Accept'}
                               </Button>
                             </div>
                           </div>

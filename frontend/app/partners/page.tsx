@@ -641,7 +641,10 @@ function DiscoverList({ people }: { people: any[] }) {
                 )}
                 <span>{person.compatibility}% match</span>
                 {person.mutualConnections > 0 && (
-                  <span>{person.mutualConnections} mutual</span>
+                  <span className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {person.mutualConnections} mutual follower{person.mutualConnections !== 1 ? 's' : ''}
+                  </span>
                 )}
               </div>
               

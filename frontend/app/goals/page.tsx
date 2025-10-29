@@ -66,6 +66,43 @@ import { EncouragementCard } from "@/components/goals/encouragement-card"
 import * as React from "react"
 import { authHelpers, supabase } from "@/lib/supabase-client"
 
+// Message count button component
+function MessageCountButton({ goalId }: { goalId: string | number }) {
+  const [messageCount, setMessageCount] = React.useState(0)
+  
+  React.useEffect(() => {
+    // Use localStorage for message count to avoid API errors
+    try {
+      const messages = JSON.parse(localStorage.getItem(`encouragement_${goalId}`) || '[]')
+      const unreadCount = messages.filter((msg: any) => !msg.read).length
+      setMessageCount(unreadCount)
+    } catch {
+      setMessageCount(0)
+    }
+  }, [goalId])
+  
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <div className="relative h-8 w-8 flex items-center justify-center cursor-pointer" title="View encouragement notes">
+          <MessageCircle className="h-4 w-4 text-primary" />
+          {messageCount > 0 && (
+            <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] bg-red-500 text-white animate-pulse">
+              {messageCount > 9 ? '9+' : messageCount}
+            </span>
+          )}
+        </div>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Encouragement Notes</DialogTitle>
+        </DialogHeader>
+        <EncouragementCard goalId={goalId} goalOwnerName="You" />
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // Define types
 interface Goal {
   id: string | number
@@ -432,6 +469,16 @@ const isGoalOwner = (goal: typeof mockGoals[0], currentUserId: string = 'mock-us
   return !goal.accountabilityPartners.some((partner: { id: string; name: string; avatar: string }) => partner.id === currentUserId)
 }
 
+// Check if current user is admin of group goal (works for both standard and seasonal)
+const isGroupGoalAdmin = (goal: typeof mockGoals[0], currentUserId: string = 'mock-user-id') => {
+  const isGroup = goal.isGroupGoal || goal.is_group_goal || goal.goal_nature === 'group'
+  if (!isGroup) return false
+  // Check if user is the creator/admin of the group goal
+  return goal.groupMembers?.some((member: any) => 
+    member.id === currentUserId && (member.role === 'admin' || member.role === 'creator')
+  ) || isGoalOwner(goal, currentUserId)
+}
+
 // Check if current user can fork this goal per rule: must be partners with owner (not AP on this goal) and goal is public
 const canForkGoal = (goal: typeof mockGoals[0], currentUserId: string = 'mock-user-id') => {
   return !isGoalOwner(goal, currentUserId) && goal.visibility === "public" && isPartnerWithOwner(goal, currentUserId)
@@ -449,16 +496,18 @@ const isAccountabilityPartner = (goal: typeof mockGoals[0], currentUserId: strin
   return goal.accountabilityPartners.some(partner => partner.id === currentUserId) && !isGoalOwner(goal, currentUserId)
 }
 
-// Get goal card styling based on type
+// Get goal card styling based on type (works for both standard and seasonal group goals)
 const getGoalCardStyle = (goal: typeof mockGoals[0]) => {
   // First check if goal is completed - add green shadow
   if (goal.status === 'completed') {
     return "ring-1 ring-green-200/50 hover:ring-green-300/70 shadow-green-100/50 hover:shadow-green-200/60 bg-gradient-to-br from-green-50/60 via-white to-green-50/30 dark:from-green-950/30 dark:via-background dark:to-green-950/20"
   }
+  // Check for seasonal goals (both standard and group)
   if ((goal.is_seasonal || goal.duration_type === 'seasonal')) {
     return "ring-1 ring-amber-200/50 hover:ring-amber-300/70 shadow-amber-100/50 hover:shadow-amber-200/60 bg-gradient-to-br from-amber-50/60 via-white to-amber-50/30 dark:from-amber-950/30 dark:via-background dark:to-amber-950/20"
   }
-  if (goal.isGroupGoal) {
+  // Check for group goals (both standard and seasonal)
+  if (goal.isGroupGoal || goal.is_group_goal || goal.goal_nature === 'group') {
     return "ring-1 ring-pink-200/50 hover:ring-pink-300/70 shadow-md shadow-pink-100/50 hover:shadow-lg hover:shadow-pink-200/60 bg-gradient-to-br from-pink-50/60 via-white to-pink-50/30 dark:from-pink-950/30 dark:via-background dark:to-pink-950/20 border-pink-200/40"
   }
   if (goal.isForked) {
@@ -1132,16 +1181,31 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
   }
   const handleDelete = async (goalId: number | string, goalTitle: string) => {
     try {
-      // Delete from Supabase
-      const { error } = await supabase
-        .from('goals')
-        .delete()
-        .eq('id', goalId)
+      const goal = goals.find(g => g.id === goalId)
+      const isGroupGoal = goal?.isGroupGoal || goal?.is_group_goal || goal?.goal_nature === 'group'
+      
+      if (isGroupGoal) {
+        // Use group goal admin API
+        const response = await fetch(`/api/group-goals/${goalId}`, {
+          method: 'DELETE'
+        })
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to delete group goal')
+        }
+      } else {
+        // Regular goal deletion
+        const { error } = await supabase
+          .from('goals')
+          .delete()
+          .eq('id', goalId)
 
-      if (error) {
-        console.error('Error deleting goal:', error)
-        toast.error("Failed to delete goal")
-        return
+        if (error) {
+          console.error('Error deleting goal:', error)
+          toast.error("Failed to delete goal")
+          return
+        }
       }
       
       toast.success(`Goal "${goalTitle}" deleted successfully`)
@@ -1153,9 +1217,9 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
       if (onGoalDeleted) {
         onGoalDeleted()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting goal:', error)
-      toast.error("Failed to delete goal")
+      toast.error(error.message || "Failed to delete goal")
     }
   }
 
@@ -1219,42 +1283,15 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 )}
               </div>
               <div className="flex items-center gap-2">
+                {/* Message count for group goals and accountability partners */}
+                {!isPartnerView && ((goal.accountabilityPartners && goal.accountabilityPartners.length > 0) || goal.isGroupGoal || goal.is_group_goal || goal.goal_nature === 'group') && (
+                  <MessageCountButton goalId={goal.id} />
+                )}
                 {/* Edit lock indicator if 5h window ended (owners/members) */}
                 {!isPartnerView && !canEditWithin5hFromCreated(goal.createdAt) && (
                   <div className="h-8 w-8 flex items-center justify-center" title="Editing period ended (5 hours)">
                     <Lock className="h-4 w-4 text-muted-foreground" />
                   </div>
-                )}
-                {/* New messages indicator for owners/members - show if has accountability partners or is group goal */}
-                {!isPartnerView && ((goal.accountabilityPartners && goal.accountabilityPartners.length > 0) || goal.isGroupGoal) && (
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <div className="relative h-8 w-8 flex items-center justify-center cursor-pointer" title="View encouragement notes">
-                        <MessageCircle className="h-4 w-4 text-primary" />
-                        {(() => {
-                          const messageCount = (() => {
-                            try {
-                              const messages = JSON.parse(localStorage.getItem(`encouragement_${goal.id}`) || '[]') as Array<{ read: boolean }>
-                              return messages.filter((msg: { read: boolean }) => !msg.read).length
-                            } catch {
-                              return 0
-                            }
-                          })()
-                          return messageCount > 0 && (
-                            <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] bg-primary text-primary-foreground">
-                              {messageCount}
-                            </span>
-                          )
-                        })()}
-                      </div>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Encouragement Notes</DialogTitle>
-                      </DialogHeader>
-                      <EncouragementCard goalId={goal.id} goalOwnerName={goal.goalOwner?.name || 'You'} />
-                    </DialogContent>
-                  </Dialog>
                 )}
                 {/* Fork Button - Only show for goals that can be forked (not owned by user) */}
                 {!isPartnerView && canForkGoal(goal) && (
@@ -1270,8 +1307,8 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                     <GitFork className="h-4 w-4" />
                   </Button>
                 )}
-                {/* Only show edit/delete menu for owned goals, not partner goals */}
-                {!isPartnerView && isGoalOwner(goal) && (
+                {/* Only show edit/delete menu for owned goals or group goal admins, not partner goals */}
+                {!isPartnerView && (isGoalOwner(goal) || isGroupGoalAdmin(goal)) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity blob-bounce">
@@ -1296,7 +1333,15 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                       {canEditWithin5hFromCreated(goal.createdAt, goal.status, goal.start_date) && goal.status !== 'completed' && (
                         <DropdownMenuItem onClick={() => {
                           const isSeasonalGoal = goal.duration_type === 'seasonal' || goal.is_seasonal
-                          const editPath = isSeasonalGoal ? `/goals/seasonal/${goal.id}/edit` : `/goals/${goal.id}/edit`
+                          const isGroupGoal = goal.isGroupGoal || goal.is_group_goal || goal.goal_nature === 'group'
+                          let editPath = `/goals/${goal.id}/edit`
+                          if (isSeasonalGoal && isGroupGoal) {
+                            editPath = `/goals/seasonal/group/${goal.id}/edit`
+                          } else if (isSeasonalGoal) {
+                            editPath = `/goals/seasonal/${goal.id}/edit`
+                          } else if (isGroupGoal) {
+                            editPath = `/goals/group/${goal.id}/edit`
+                          }
                           router.push(editPath)
                         }}>
                           <Edit className="mr-2 h-4 w-4" />
@@ -1340,20 +1385,20 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
             </div>
 
             <div className="space-y-2">
-              <CardTitle className="line-clamp-2 flex items-center gap-2">
-                {goal.title}
+              <CardTitle className="line-clamp-2 text-sm sm:text-base lg:text-lg xl:text-xl flex items-center gap-2">
+                <span className="truncate flex-1 break-words">{goal.title}</span>
                 {goal.isGroupGoal && (
-                  <Crown className="h-4 w-4 text-purple-600" />
+                  <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600 flex-shrink-0" />
                 )}
                 {isPartnerView && (
-                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 shadow-sm hover:shadow-green-200/50 transition-all duration-200">
-                    <User className="h-3 w-3 mr-1" />
+                  <Badge variant="outline" className="text-[10px] sm:text-xs bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 shadow-sm hover:shadow-green-200/50 transition-all duration-200 flex-shrink-0">
+                    <User className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
                     Partner
                   </Badge>
                 )}
               </CardTitle>
               {goal.description && (
-                <CardDescription className="line-clamp-2">
+                <CardDescription className="line-clamp-2 text-xs sm:text-sm lg:text-base break-words">
                   {goal.description}
                 </CardDescription>
               )}
@@ -1467,30 +1512,37 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
 
             {/* Compact Due Date and Streak */}
             <div className="flex items-center gap-2 text-xs">
-              {goal.dueDate && (() => {
-                const dueDate = new Date(goal.dueDate)
+              {(goal.dueDate || goal.target_date) && (() => {
+                const dueDate = new Date(goal.dueDate || goal.target_date)
                 const today = new Date()
-                const diffTime = dueDate.getTime() - today.getTime()
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                
+                // Set both dates to start of day for accurate comparison
+                const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+                const dueDateStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+                
+                const diffTime = dueDateStart.getTime() - todayStart.getTime()
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
                 
                 const getUrgencyColor = () => {
                   if (diffDays < 0) return 'text-red-600'
-                  if (diffDays <= 3) return 'text-red-600'
-                  if (diffDays <= 7) return 'text-yellow-600'
-                  return 'text-blue-600'
+                  if (diffDays === 0) return 'text-orange-600'
+                  if (diffDays <= 3) return 'text-yellow-600'
+                  if (diffDays <= 7) return 'text-blue-600'
+                  return 'text-muted-foreground'
                 }
                 
                 const getText = () => {
-                  if (diffDays < 0) return 'Overdue'
-                  if (diffDays === 0) return 'Today'
-                  if (diffDays === 1) return '1d'
-                  return `${diffDays}d`
+                  if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`
+                  if (diffDays === 0) return 'Due today'
+                  if (diffDays === 1) return 'Due tomorrow'
+                  if (diffDays <= 7) return `${diffDays}d left`
+                  return `${diffDays}d left`
                 }
                 
                 return (
                   <div className={`flex items-center gap-1 ${getUrgencyColor()}`}>
                     <Calendar className="h-3 w-3" />
-                    <span className="font-medium">{getText()}</span>
+                    <span className="font-medium text-xs">{getText()}</span>
                   </div>
                 )
               })()}

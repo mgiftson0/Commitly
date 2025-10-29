@@ -11,40 +11,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/goals/page.js"
     ],
-    "/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
-    ],
     "/goals/create/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/goals/create/page.js"
     ],
-    "/auth/login/page": [
+    "/api/group-goals/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/auth/login/page.js"
-    ],
-    "/dashboard/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/dashboard/page.js"
+      "static/chunks/app/api/group-goals/route.js"
     ],
     "/notifications/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/notifications/page.js"
     ],
-    "/goals/seasonal/create/page": [
+    "/api/group-goals/invitations/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/goals/seasonal/create/page.js"
-    ],
-    "/api/group-goals/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/group-goals/route.js"
+      "static/chunks/app/api/group-goals/invitations/route.js"
     ],
     "/goals/[id]/page": [
       "static/chunks/webpack.js",
@@ -56,10 +41,40 @@
       "static/chunks/main-app.js",
       "static/chunks/app/goals/[id]/update/page.js"
     ],
-    "/api/group-goals/invitations/route": [
+    "/profile/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/group-goals/invitations/route.js"
+      "static/chunks/app/profile/page.js"
+    ],
+    "/profile/[username]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/profile/[username]/page.js"
+    ],
+    "/auth/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/auth/login/page.js"
+    ],
+    "/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/page.js"
+    ],
+    "/api/encouragement/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/encouragement/route.js"
+    ],
+    "/goals/seasonal/create/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/goals/seasonal/create/page.js"
+    ],
+    "/api/group-goals/[goalId]/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/group-goals/[goalId]/route.js"
     ],
     "/goals/[id]/edit/page": [
       "static/chunks/webpack.js",

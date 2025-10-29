@@ -1,9 +1,10 @@
 {
-  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/_not-found/page": "app/_not-found/page.js",
-  "/goals/[id]/page": "app/goals/[id]/page.js",
-  "/goals/[id]/update/page": "app/goals/[id]/update/page.js",
+  "/api/group-goals/invitations/route": "app/api/group-goals/invitations/route.js",
   "/goals/page": "app/goals/page.js",
+  "/goals/seasonal/create/page": "app/goals/seasonal/create/page.js",
+  "/goals/[id]/update/page": "app/goals/[id]/update/page.js",
+  "/goals/create/page": "app/goals/create/page.js",
   "/notifications/page": "app/notifications/page.js",
   "/goals/[id]/edit/page": "app/goals/[id]/edit/page.js"
 }

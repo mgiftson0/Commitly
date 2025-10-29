@@ -1343,6 +1343,9 @@ video {
 .h-svh {
   height: 100svh;
 }
+.h-48 {
+  height: 12rem;
+}
 .max-h-60 {
   max-height: 15rem;
 }
@@ -1402,6 +1405,9 @@ video {
 }
 .min-h-svh {
   min-height: 100svh;
+}
+.min-h-\[120px\] {
+  min-height: 120px;
 }
 .w-0 {
   width: 0px;
@@ -2267,6 +2273,9 @@ video {
   --tw-border-opacity: 1;
   border-color: rgb(251 207 232 / var(--tw-border-opacity, 1));
 }
+.border-pink-200\/40 {
+  border-color: rgb(251 207 232 / 0.4);
+}
 .border-pink-200\/50 {
   border-color: rgb(251 207 232 / 0.5);
 }
@@ -2393,8 +2402,8 @@ video {
 .border-yellow-500\/20 {
   border-color: rgb(234 179 8 / 0.2);
 }
-.border-pink-200\/40 {
-  border-color: rgb(251 207 232 / 0.4);
+.border-purple-200\/40 {
+  border-color: rgb(233 213 255 / 0.4);
 }
 .border-b-transparent {
   border-bottom-color: transparent;
@@ -3063,6 +3072,11 @@ video {
   --tw-gradient-to: rgb(253 242 248 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
+.from-pink-50\/60 {
+  --tw-gradient-from: rgb(253 242 248 / 0.6) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(253 242 248 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
 .from-pink-500 {
   --tw-gradient-from: #ec4899 var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(236 72 153 / 0) var(--tw-gradient-to-position);
@@ -3266,16 +3280,6 @@ video {
 .from-yellow-600 {
   --tw-gradient-from: #ca8a04 var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(202 138 4 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-.from-pink-50\/70 {
-  --tw-gradient-from: rgb(253 242 248 / 0.7) var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(253 242 248 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-.from-pink-50\/60 {
-  --tw-gradient-from: rgb(253 242 248 / 0.6) var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(253 242 248 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 .via-amber-300 {
@@ -3563,6 +3567,9 @@ video {
 .to-orange-600 {
   --tw-gradient-to: #ea580c var(--tw-gradient-to-position);
 }
+.to-pink-50\/30 {
+  --tw-gradient-to: rgb(253 242 248 / 0.3) var(--tw-gradient-to-position);
+}
 .to-pink-500 {
   --tw-gradient-to: #ec4899 var(--tw-gradient-to-position);
 }
@@ -3688,12 +3695,6 @@ video {
 }
 .to-white {
   --tw-gradient-to: #fff var(--tw-gradient-to-position);
-}
-.to-pink-50\/40 {
-  --tw-gradient-to: rgb(253 242 248 / 0.4) var(--tw-gradient-to-position);
-}
-.to-pink-50\/30 {
-  --tw-gradient-to: rgb(253 242 248 / 0.3) var(--tw-gradient-to-position);
 }
 .bg-\[length\:24px_24px\] {
   background-size: 24px 24px;
@@ -4566,10 +4567,6 @@ video {
   --tw-shadow-color: rgb(254 240 138 / 0.9);
   --tw-shadow: var(--tw-shadow-colored);
 }
-.shadow-pink-100\/60 {
-  --tw-shadow-color: rgb(252 231 243 / 0.6);
-  --tw-shadow: var(--tw-shadow-colored);
-}
 .outline-none {
   outline: 2px solid transparent;
   outline-offset: 2px;
@@ -4611,17 +4608,14 @@ video {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(251 207 232 / var(--tw-ring-opacity, 1));
 }
+.ring-pink-200\/50 {
+  --tw-ring-color: rgb(251 207 232 / 0.5);
+}
 .ring-purple-200\/50 {
   --tw-ring-color: rgb(233 213 255 / 0.5);
 }
 .ring-ring\/50 {
   --tw-ring-color: hsl(var(--ring) / 0.5);
-}
-.ring-pink-200\/60 {
-  --tw-ring-color: rgb(251 207 232 / 0.6);
-}
-.ring-pink-200\/50 {
-  --tw-ring-color: rgb(251 207 232 / 0.5);
 }
 .ring-offset-background {
   --tw-ring-offset-color: hsl(var(--background));
@@ -5535,6 +5529,10 @@ nextjs-portal {
   --tw-shadow-color: rgb(251 207 232 / 0.5);
   --tw-shadow: var(--tw-shadow-colored);
 }
+.hover\:shadow-pink-200\/60:hover {
+  --tw-shadow-color: rgb(251 207 232 / 0.6);
+  --tw-shadow: var(--tw-shadow-colored);
+}
 .hover\:shadow-primary\/10:hover {
   --tw-shadow-color: hsl(var(--primary) / 0.1);
   --tw-shadow: var(--tw-shadow-colored);
@@ -5555,14 +5553,6 @@ nextjs-portal {
   --tw-shadow-color: rgb(15 23 42 / 0.2);
   --tw-shadow: var(--tw-shadow-colored);
 }
-.hover\:shadow-pink-200\/70:hover {
-  --tw-shadow-color: rgb(251 207 232 / 0.7);
-  --tw-shadow: var(--tw-shadow-colored);
-}
-.hover\:shadow-pink-200\/60:hover {
-  --tw-shadow-color: rgb(251 207 232 / 0.6);
-  --tw-shadow: var(--tw-shadow-colored);
-}
 .hover\:ring-4:hover {
   --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
   --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(4px + var(--tw-ring-offset-width)) var(--tw-ring-color);
@@ -5577,17 +5567,14 @@ nextjs-portal {
 .hover\:ring-green-300\/70:hover {
   --tw-ring-color: rgb(134 239 172 / 0.7);
 }
+.hover\:ring-pink-300\/70:hover {
+  --tw-ring-color: rgb(249 168 212 / 0.7);
+}
 .hover\:ring-primary\/30:hover {
   --tw-ring-color: hsl(var(--primary) / 0.3);
 }
 .hover\:ring-purple-300\/70:hover {
   --tw-ring-color: rgb(216 180 254 / 0.7);
-}
-.hover\:ring-pink-300\/80:hover {
-  --tw-ring-color: rgb(249 168 212 / 0.8);
-}
-.hover\:ring-pink-300\/70:hover {
-  --tw-ring-color: rgb(249 168 212 / 0.7);
 }
 .hover\:backdrop-blur-md:hover {
   --tw-backdrop-blur: blur(12px);
@@ -5616,6 +5603,9 @@ nextjs-portal {
 }
 .focus\:text-accent-foreground:focus {
   color: hsl(var(--accent-foreground));
+}
+.focus\:text-destructive:focus {
+  color: hsl(var(--destructive));
 }
 .focus\:outline-none:focus {
   outline: 2px solid transparent;
@@ -6563,6 +6553,9 @@ nextjs-portal {
   --tw-border-opacity: 1;
   border-color: rgb(133 77 14 / var(--tw-border-opacity, 1));
 }
+.dark\:border-purple-800\/40:is(.dark *) {
+  border-color: rgb(107 33 168 / 0.4);
+}
 .dark\:border-r-gray-700:is(.dark *) {
   --tw-border-opacity: 1;
   border-right-color: rgb(55 65 81 / var(--tw-border-opacity, 1));
@@ -6971,11 +6964,6 @@ nextjs-portal {
   --tw-gradient-to: rgb(66 32 6 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
-.dark\:from-pink-950\/40:is(.dark *) {
-  --tw-gradient-from: rgb(80 7 36 / 0.4) var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(80 7 36 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
 .dark\:via-background:is(.dark *) {
   --tw-gradient-to: hsl(var(--background) / 0)  var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), hsl(var(--background)) var(--tw-gradient-via-position), var(--tw-gradient-to);
@@ -7081,6 +7069,9 @@ nextjs-portal {
 .dark\:to-orange-950\/50:is(.dark *) {
   --tw-gradient-to: rgb(67 20 7 / 0.5) var(--tw-gradient-to-position);
 }
+.dark\:to-pink-950\/20:is(.dark *) {
+  --tw-gradient-to: rgb(80 7 36 / 0.2) var(--tw-gradient-to-position);
+}
 .dark\:to-purple-500\/10:is(.dark *) {
   --tw-gradient-to: rgb(168 85 247 / 0.1) var(--tw-gradient-to-position);
 }
@@ -7126,11 +7117,8 @@ nextjs-portal {
 .dark\:to-violet-900\/50:is(.dark *) {
   --tw-gradient-to: rgb(76 29 149 / 0.5) var(--tw-gradient-to-position);
 }
-.dark\:to-pink-950\/30:is(.dark *) {
-  --tw-gradient-to: rgb(80 7 36 / 0.3) var(--tw-gradient-to-position);
-}
-.dark\:to-pink-950\/20:is(.dark *) {
-  --tw-gradient-to: rgb(80 7 36 / 0.2) var(--tw-gradient-to-position);
+.dark\:to-purple-900\/20:is(.dark *) {
+  --tw-gradient-to: rgb(88 28 135 / 0.2) var(--tw-gradient-to-position);
 }
 .dark\:text-amber-200:is(.dark *) {
   --tw-text-opacity: 1;
@@ -7562,6 +7550,10 @@ nextjs-portal {
     height: 220px;
   }
 
+  .sm\:h-3 {
+    height: 0.75rem;
+  }
+
   .sm\:max-h-96 {
     max-height: 24rem;
   }
@@ -7624,6 +7616,10 @@ nextjs-portal {
 
   .sm\:w-auto {
     width: auto;
+  }
+
+  .sm\:w-3 {
+    width: 0.75rem;
   }
 
   .sm\:max-w-2xl {
@@ -8047,6 +8043,11 @@ nextjs-portal {
     line-height: 1.75rem;
   }
 
+  .md\:text-lg {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+
   .md\:opacity-0 {
     opacity: 0;
   }
@@ -8123,6 +8124,16 @@ nextjs-portal {
   .lg\:justify-between {
     justify-content: space-between;
   }
+
+  .lg\:text-base {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+
+  .lg\:text-lg {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
 }
 @media (min-width: 1280px) {
 
@@ -8140,6 +8151,11 @@ nextjs-portal {
 
   .xl\:gap-5 {
     gap: 1.25rem;
+  }
+
+  .xl\:text-xl {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
   }
 }
 @media (min-width: 1536px) {
@@ -8198,8 +8214,16 @@ nextjs-portal {
   --tw-gradient-to: rgb(236 72 153 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
+.\[\&\>div\]\:from-amber-500>div {
+  --tw-gradient-from: #f59e0b var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(245 158 11 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
 .\[\&\>div\]\:to-purple-500>div {
   --tw-gradient-to: #a855f7 var(--tw-gradient-to-position);
+}
+.\[\&\>div\]\:to-orange-500>div {
+  --tw-gradient-to: #f97316 var(--tw-gradient-to-position);
 }
 .\[\&\>span\:last-child\]\:truncate>span:last-child {
   overflow: hidden;

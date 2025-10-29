@@ -49,13 +49,30 @@ export function Header({ onMenuClick }: HeaderProps) {
     setMounted(true)
   }, [])
 
-  // Load unread notifications count
-  const loadUnreadCount = () => {
+  // Load unread notifications count from database
+  const loadUnreadCount = async () => {
     try {
-      const notifications = JSON.parse(localStorage.getItem('notifications') || '[]')
-      const unread = notifications.filter((n: any) => !n.is_read).length
-      setUnreadCount(unread)
-    } catch {
+      const user = await authHelpers.getCurrentUser()
+      if (!user) {
+        setUnreadCount(0)
+        return
+      }
+
+      // Get unread notifications
+      const { data: notifications, error: notifError } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('read', false)
+
+      let notificationCount = 0
+      if (!notifError) {
+        notificationCount = notifications?.length || 0
+      }
+
+      setUnreadCount(notificationCount)
+    } catch (error) {
+      console.error('Error loading unread count:', error)
       setUnreadCount(0)
     }
   }
@@ -92,15 +109,42 @@ export function Header({ onMenuClick }: HeaderProps) {
       setTimeout(() => setBellShake(false), 1000)
     }
 
+    // Set up real-time subscription for notifications
+    const setupNotificationSubscription = async () => {
+      const user = await authHelpers.getCurrentUser()
+      if (!user) return
+
+      const subscription = supabase
+        .channel('notifications')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          }, 
+          () => {
+            handleNewNotification()
+          }
+        )
+        .subscribe()
+
+      return () => {
+        subscription.unsubscribe()
+      }
+    }
+
+    const unsubscribe = setupNotificationSubscription()
+
     if (typeof window !== 'undefined') {
       window.addEventListener('newNotification', handleNewNotification)
-      window.addEventListener('storage', loadUnreadCount)
     }
+    
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('newNotification', handleNewNotification)
-        window.removeEventListener('storage', loadUnreadCount)
       }
+      unsubscribe.then(unsub => unsub?.())
     }
   }, [])
 

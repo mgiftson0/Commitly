@@ -517,10 +517,11 @@ function GoalsList({ goals }: { goals: any[] }) {
   const activeGoals = goals.filter(g => !g.completed_at && g.status !== 'paused')
   const completedGoals = goals.filter(g => g.completed_at || g.status === 'completed')
   const pausedGoals = goals.filter(g => g.status === 'paused')
+  const groupGoals = goals.filter(g => g.is_group_goal)
 
   const GoalCard = ({ goal }: { goal: any }) => {
     const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
-    const isGroupGoal = goal.goal_nature === 'group'
+    const isGroupGoal = goal.is_group_goal
     const isCompleted = goal.completed_at || goal.status === 'completed'
     const isPaused = goal.status === 'paused'
     const progress = isCompleted ? 100 : (goal.progress || 0)
@@ -533,12 +534,6 @@ function GoalsList({ goals }: { goals: any[] }) {
         case "pending": return "bg-orange-500"
         default: return "bg-gray-500"
       }
-    }
-    
-    const getProgressColor = (progress: number) => {
-      if (progress < 30) return 'bg-red-500'
-      if (progress <= 70) return 'bg-yellow-500'
-      return 'bg-green-500'
     }
     
     const getTypeIcon = (type: string) => {
@@ -558,7 +553,7 @@ function GoalsList({ goals }: { goals: any[] }) {
         return "ring-1 ring-amber-200/50 hover:ring-amber-300/70 shadow-amber-100/50 hover:shadow-amber-200/60 bg-gradient-to-br from-amber-50/60 via-white to-amber-50/30 dark:from-amber-950/30 dark:via-background dark:to-amber-950/20"
       }
       if (isGroupGoal) {
-        return "ring-1 ring-purple-200/50 hover:ring-purple-300/70 shadow-purple-100/50 hover:shadow-purple-200/60 bg-gradient-to-br from-purple-50/60 via-white to-purple-50/30 dark:from-purple-950/30 dark:via-background dark:to-purple-950/20"
+        return "ring-1 ring-pink-200/50 hover:ring-pink-300/70 shadow-md shadow-pink-100/50 hover:shadow-lg hover:shadow-pink-200/60 bg-gradient-to-br from-pink-50/60 via-white to-pink-50/30 dark:from-pink-950/30 dark:via-background dark:to-pink-950/20 border-pink-200/40"
       }
       return "ring-1 ring-border/50 hover:ring-primary/30 shadow-slate-100/50 hover:shadow-slate-200/60"
     }
@@ -566,6 +561,19 @@ function GoalsList({ goals }: { goals: any[] }) {
     return (
       <Link href={`/goals/${goal.id}`}>
         <Card className={`hover-lift group transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 border-0 shadow-slate-900/15 bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm ${getGoalCardStyle()}`}>
+          {isGroupGoal && (
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 border-b border-purple-200/40 dark:border-purple-800/40 px-4 py-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Group Goal</span>
+                {goal.group_goal_status && (
+                  <Badge variant="outline" className="text-xs border-purple-200 text-purple-600 dark:border-purple-700 dark:text-purple-400">
+                    {goal.group_goal_status}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
@@ -586,20 +594,20 @@ function GoalsList({ goals }: { goals: any[] }) {
                   </Badge>
                 )}
               </div>
-              {goal.streak && goal.streak.current_streak > 0 && (
+              {goal.streak && goal.streak > 0 && (
                 <Badge className="bg-orange-500 text-white text-xs px-2">
                   <Flame className="h-3 w-3 mr-1" />
-                  {goal.streak.current_streak}
+                  {goal.streak}
                 </Badge>
               )}
             </div>
 
-            <div className="space-y-2">
-              <CardTitle className="line-clamp-2 flex items-center gap-2">
-                {goal.title}
+            <div className="space-y-2 mt-3">
+              <CardTitle className="line-clamp-2 text-sm sm:text-base lg:text-lg flex items-center gap-2">
+                <span className="truncate flex-1 break-words">{goal.title}</span>
               </CardTitle>
               {goal.description && (
-                <CardDescription className="line-clamp-2">
+                <CardDescription className="line-clamp-2 text-xs sm:text-sm lg:text-base break-words">
                   {goal.description}
                 </CardDescription>
               )}
@@ -607,7 +615,6 @@ function GoalsList({ goals }: { goals: any[] }) {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {/* Progress */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Progress</span>
@@ -624,27 +631,33 @@ function GoalsList({ goals }: { goals: any[] }) {
               {goal.target_date && (() => {
                 const dueDate = new Date(goal.target_date)
                 const today = new Date()
-                const diffTime = dueDate.getTime() - today.getTime()
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                
+                // Set both dates to start of day for accurate comparison
+                const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+                const dueDateStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+                
+                const diffTime = dueDateStart.getTime() - todayStart.getTime()
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
                 
                 const getUrgencyColor = () => {
                   if (diffDays < 0) return 'text-red-600'
-                  if (diffDays <= 3) return 'text-red-600'
-                  if (diffDays <= 7) return 'text-yellow-600'
-                  return 'text-blue-600'
+                  if (diffDays === 0) return 'text-orange-600'
+                  if (diffDays <= 3) return 'text-yellow-600'
+                  if (diffDays <= 7) return 'text-blue-600'
+                  return 'text-muted-foreground'
                 }
                 
                 const getText = () => {
-                  if (diffDays < 0) return 'Overdue'
-                  if (diffDays === 0) return 'Today'
-                  if (diffDays === 1) return '1d'
-                  return `${diffDays}d`
+                  if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`
+                  if (diffDays === 0) return 'Due today'
+                  if (diffDays === 1) return 'Due tomorrow'
+                  return `${diffDays}d left`
                 }
                 
                 return (
                   <div className={`flex items-center gap-1 ${getUrgencyColor()}`}>
                     <Calendar className="h-3 w-3" />
-                    <span className="font-medium">{getText()}</span>
+                    <span className="font-medium text-xs">{getText()}</span>
                   </div>
                 )
               })()}
@@ -668,10 +681,11 @@ function GoalsList({ goals }: { goals: any[] }) {
 
   return (
     <Tabs defaultValue="active" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="active">Active ({activeGoals.length})</TabsTrigger>
         <TabsTrigger value="completed">Completed ({completedGoals.length})</TabsTrigger>
         <TabsTrigger value="paused">Paused ({pausedGoals.length})</TabsTrigger>
+        <TabsTrigger value="groups">Groups ({groupGoals.length})</TabsTrigger>
       </TabsList>
       
       <TabsContent value="active" className="mt-6">
@@ -709,6 +723,19 @@ function GoalsList({ goals }: { goals: any[] }) {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {pausedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
+          </div>
+        )}
+      </TabsContent>
+      
+      <TabsContent value="groups" className="mt-6">
+        {groupGoals.length === 0 ? (
+          <div className="py-12 text-center">
+            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No group goals</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {groupGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
           </div>
         )}
       </TabsContent>

@@ -8,6 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
+import {
   Users,
   Target,
   CheckCircle2,
@@ -19,12 +26,18 @@ import {
   Crown,
   Heart,
   MessageCircle,
-  Zap
+  Zap,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  Settings
 } from "lucide-react"
 import { ActivityAssignment } from "./activity-assignment"
 import {
   getGroupGoalMembers,
   getGroupGoalProgress,
+  deleteGroupGoal,
+  isGroupGoalAdmin,
   type GroupGoalMember
 } from "@/lib/group-goals"
 import { supabase, authHelpers } from "@/lib/supabase-client"
@@ -40,6 +53,7 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
   const [progress, setProgress] = useState<any>(null)
   const [isOwner, setIsOwner] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [customMessage, setCustomMessage] = useState('')
 
   useEffect(() => {
     loadGoalData()
@@ -88,6 +102,24 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
     setLoading(false)
   }
 
+  const handleDeleteGoal = async () => {
+    if (!confirm('Are you sure you want to delete this group goal? This action cannot be undone and will notify all members.')) {
+      return
+    }
+
+    const result = await deleteGroupGoal(goalId)
+    if (result.success) {
+      toast.success('Group goal deleted successfully')
+      // Redirect to goals page or dashboard
+      window.location.href = '/goals'
+    } else {
+      const errorMessage = result.error && typeof result.error === 'object' && 'message' in result.error 
+        ? (result.error as any).message 
+        : 'Failed to delete group goal'
+      toast.error(errorMessage)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -127,6 +159,59 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
     "We're crushing it! Keep up the great work! 🔥"
   ]
 
+  const sendEncouragement = async (message: string, targetUserId?: string) => {
+    try {
+      const user = await authHelpers.getCurrentUser()
+      if (!user) return
+
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, username, profile_picture_url')
+        .eq('id', user.id)
+        .single()
+
+      const senderName = senderProfile 
+        ? `${senderProfile.first_name} ${senderProfile.last_name}`.trim() || senderProfile.username
+        : 'Someone'
+
+      // Determine recipients
+      const recipients = targetUserId 
+        ? [targetUserId]
+        : acceptedMembers.filter(m => m.user_id !== user.id).map(m => m.user_id)
+
+      if (recipients.length === 0) {
+        toast.error('No recipients to send message to')
+        return
+      }
+
+      // Create notifications for each recipient
+      const notifications = recipients.map(recipientId => ({
+        user_id: recipientId,
+        type: 'encouragement_received',
+        title: 'Encouragement Received 💝',
+        message: `${senderName}: "${message}"`,
+        data: {
+          goal_id: goalId,
+          goal_title: goal?.title,
+          sender_id: user.id,
+          sender_name: senderName,
+          sender_avatar: senderProfile?.profile_picture_url,
+          message: message,
+          group_goal: true
+        },
+        read: false
+      }))
+
+      const { error } = await supabase.from('notifications').insert(notifications)
+      if (error) throw error
+
+      toast.success(`Encouragement sent to ${recipients.length} member${recipients.length > 1 ? 's' : ''}!`)
+    } catch (error) {
+      console.error('Error sending encouragement:', error)
+      toast.error('Failed to send encouragement')
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -157,6 +242,34 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
                 {goal.description}
               </CardDescription>
             </div>
+            
+            {/* Admin Actions */}
+            {isOwner && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Goal
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Manage Members
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handleDeleteGoal}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Goal
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -266,10 +379,20 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
                     <p className="text-xs text-muted-foreground">
                       @{member.profile?.username}
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Joined {new Date(member.invited_at).toLocaleDateString()}
+                    </p>
                   </div>
-                  <Badge variant={member.role === 'owner' ? 'default' : 'secondary'}>
-                    {member.role}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge variant={member.role === 'owner' ? 'default' : 'secondary'}>
+                      {member.role}
+                    </Badge>
+                    {progress?.memberProgress?.find((p: any) => p.user_id === member.user_id) && (
+                      <div className="text-xs text-muted-foreground">
+                        {progress.memberProgress.find((p: any) => p.user_id === member.user_id)?.progress || 0}% complete
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </CardContent>
@@ -399,6 +522,7 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
                   {encouragementMessages.map((msg, idx) => (
                     <button
                       key={idx}
+                      onClick={() => sendEncouragement(msg)}
                       className="w-full text-left bg-white dark:bg-slate-900 hover:bg-pink-50 dark:hover:bg-pink-950/30 rounded-lg p-3 border border-pink-200 dark:border-pink-800 transition-all group"
                     >
                       <div className="flex items-start gap-2">
@@ -426,15 +550,30 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
                 <h4 className="text-sm font-medium mb-3">Custom Message</h4>
                 <div className="space-y-2">
                   <textarea
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
                     placeholder="Write your own encouragement message..."
                     className="w-full min-h-[100px] p-3 rounded-lg border border-pink-200 dark:border-pink-800 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500 resize-none"
                   />
                   <div className="flex gap-2">
-                    <Button className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600">
+                    <Button 
+                      onClick={() => {
+                        if (customMessage.trim()) {
+                          sendEncouragement(customMessage.trim())
+                          setCustomMessage('')
+                        }
+                      }}
+                      disabled={!customMessage.trim()}
+                      className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
+                    >
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Send to All Members
                     </Button>
-                    <Button variant="outline" className="border-pink-300 text-pink-700 hover:bg-pink-50">
+                    <Button 
+                      variant="outline" 
+                      className="border-pink-300 text-pink-700 hover:bg-pink-50"
+                      onClick={() => sendEncouragement("Keep it up! 💪")}
+                    >
                       <Zap className="h-4 w-4 mr-2" />
                       Quick Nudge
                     </Button>
@@ -468,7 +607,12 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
                           </Badge>
                         )}
                       </div>
-                      <Button size="sm" variant="ghost" className="text-pink-600 hover:text-pink-700 hover:bg-pink-50">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="text-pink-600 hover:text-pink-700 hover:bg-pink-50"
+                        onClick={() => sendEncouragement("Keep up the great work! 🌟", member.user_id)}
+                      >
                         <MessageCircle className="h-4 w-4" />
                       </Button>
                     </div>

@@ -39,13 +39,15 @@ interface GroupGoalCardProps {
     status: string
     category?: string
     created_at: string
+    target_date?: string
   }
   members: GroupGoalMember[]
   isAdmin?: boolean
+  messageCount?: number
   onViewDetails?: () => void
 }
 
-export function GroupGoalCard({ goal, members, isAdmin, onViewDetails }: GroupGoalCardProps) {
+export function GroupGoalCard({ goal, members, isAdmin, messageCount = 0, onViewDetails }: GroupGoalCardProps) {
   const [showEncouragement, setShowEncouragement] = useState(false)
   
   const acceptedMembers = members.filter(m => m.status === 'accepted')
@@ -74,8 +76,8 @@ export function GroupGoalCard({ goal, members, isAdmin, onViewDetails }: GroupGo
                 </Badge>
               )}
             </div>
-            <CardTitle className="text-lg mb-1">{goal.title}</CardTitle>
-            <CardDescription className="line-clamp-2">
+            <CardTitle className="text-lg sm:text-xl mb-1 line-clamp-2">{goal.title}</CardTitle>
+            <CardDescription className="line-clamp-2 text-sm">
               {goal.description}
             </CardDescription>
           </div>
@@ -130,7 +132,7 @@ export function GroupGoalCard({ goal, members, isAdmin, onViewDetails }: GroupGo
 
         {/* Status and Category */}
         <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {goal.category && (
               <Badge variant="outline" className="text-xs">
                 {goal.category}
@@ -145,21 +147,34 @@ export function GroupGoalCard({ goal, members, isAdmin, onViewDetails }: GroupGo
           </div>
           <div className="flex items-center gap-1 text-muted-foreground">
             <Clock className="h-3 w-3" />
-            <span>{new Date(goal.created_at).toLocaleDateString()}</span>
+            <span className="truncate">
+              {goal.target_date 
+                ? `Due ${new Date(goal.target_date).toLocaleDateString()}` 
+                : `Created ${new Date(goal.created_at).toLocaleDateString()}`
+              }
+            </span>
           </div>
         </div>
 
         {/* Encouragement Section */}
         <div className="space-y-3 pt-2 border-t">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-pink-600 hover:text-pink-700 hover:bg-pink-50 dark:hover:bg-pink-950/20"
-            onClick={() => setShowEncouragement(!showEncouragement)}
-          >
-            <Heart className="h-4 w-4 mr-2" />
-            {showEncouragement ? 'Hide' : 'Send'} Encouragement
-          </Button>
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1 justify-start text-pink-600 hover:text-pink-700 hover:bg-pink-50 dark:hover:bg-pink-950/20"
+              onClick={() => setShowEncouragement(!showEncouragement)}
+            >
+              <Heart className="h-4 w-4 mr-2" />
+              {showEncouragement ? 'Hide' : 'Send'} Encouragement
+            </Button>
+            {messageCount > 0 && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MessageCircle className="h-3 w-3" />
+                <span>{messageCount}</span>
+              </div>
+            )}
+          </div>
 
           {showEncouragement && (
             <div className="space-y-2 animate-in slide-in-from-top-2">

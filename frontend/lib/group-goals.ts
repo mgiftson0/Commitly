@@ -393,17 +393,177 @@ export async function canUserUpdateActivity(activityId: string, userId: string) 
     if (activity.assigned_to_all) return true
     if (activity.assigned_to === userId) return true
 
-    // Check if user is goal owner
-    const { data: goal } = await supabase
-      .from('goals')
-      .select('user_id')
-      .eq('id', activity.goal_id)
-      .single()
-
-    return goal?.user_id === userId
+    // Check if user is goal admin (owner)
+    const isAdmin = await isGroupGoalAdmin(activity.goal_id, userId)
+    return isAdmin
   } catch (error) {
     console.error('Error checking permissions:', error)
     return false
+  }
+}
+
+/**
+ * Check if user is admin (owner) of a group goal
+ */
+export async function isGroupGoalAdmin(goalId: string, userId: string): Promise<boolean> {
+  try {
+    // Check if user is the goal owner
+    const { data: goal } = await supabase
+      .from('goals')
+      .select('user_id, is_group_goal')
+      .eq('id', goalId)
+      .single()
+
+    if (!goal) return false
+    
+    // For group goals, check if user is the owner
+    if (goal.is_group_goal) {
+      return goal.user_id === userId
+    }
+    
+    // For regular goals, only owner can manage
+    return goal.user_id === userId
+  } catch (error) {
+    console.error('Error checking admin permissions:', error)
+    return false
+  }
+}
+
+/**
+ * Delete group goal (admin only)
+ */
+export async function deleteGroupGoal(goalId: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    // Check if user is admin
+    const isAdmin = await isGroupGoalAdmin(goalId, user.id)
+    if (!isAdmin) {
+      throw new Error('Only the goal admin can delete this goal')
+    }
+
+    // Get goal details for notifications
+    const { data: goal } = await supabase
+      .from('goals')
+      .select('title')
+      .eq('id', goalId)
+      .single()
+
+    // Get all members to notify them
+    const { data: members } = await supabase
+      .from('group_goal_members')
+      .select('user_id, profile:profiles(first_name, last_name)')
+      .eq('goal_id', goalId)
+      .eq('status', 'accepted')
+      .neq('user_id', user.id) // Exclude the admin
+
+    // Delete the goal (cascade will handle related records)
+    const { error } = await supabase
+      .from('goals')
+      .delete()
+      .eq('id', goalId)
+
+    if (error) throw error
+
+    // Notify all members about goal deletion
+    if (members && members.length > 0 && goal) {
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, username')
+        .eq('id', user.id)
+        .single()
+
+      const adminName = adminProfile 
+        ? `${adminProfile.first_name} ${adminProfile.last_name}`.trim() || adminProfile.username
+        : 'Admin'
+
+      const notifications = members.map(member => ({
+        user_id: member.user_id,
+        type: 'goal_deleted',
+        title: 'Group Goal Deleted',
+        message: `${adminName} deleted the group goal: "${goal.title}"`,
+        data: {
+          goal_id: goalId,
+          goal_title: goal.title,
+          deleted_by: user.id,
+          deleted_by_name: adminName
+        },
+        read: false
+      }))
+
+      await supabase.from('notifications').insert(notifications)
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting group goal:', error)
+    return { error, success: false }
+  }
+}
+
+/**
+ * Update group goal (admin only)
+ */
+export async function updateGroupGoal(goalId: string, updates: any) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    // Check if user is admin
+    const isAdmin = await isGroupGoalAdmin(goalId, user.id)
+    if (!isAdmin) {
+      throw new Error('Only the goal admin can edit this goal')
+    }
+
+    const { error } = await supabase
+      .from('goals')
+      .update(updates)
+      .eq('id', goalId)
+
+    if (error) throw error
+
+    // If significant changes, notify members
+    if (updates.title || updates.description || updates.target_date) {
+      const { data: members } = await supabase
+        .from('group_goal_members')
+        .select('user_id')
+        .eq('goal_id', goalId)
+        .eq('status', 'accepted')
+        .neq('user_id', user.id)
+
+      if (members && members.length > 0) {
+        const { data: adminProfile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, username')
+          .eq('id', user.id)
+          .single()
+
+        const adminName = adminProfile 
+          ? `${adminProfile.first_name} ${adminProfile.last_name}`.trim() || adminProfile.username
+          : 'Admin'
+
+        const notifications = members.map(member => ({
+          user_id: member.user_id,
+          type: 'goal_updated',
+          title: 'Group Goal Updated',
+          message: `${adminName} updated the group goal details`,
+          data: {
+            goal_id: goalId,
+            updated_by: user.id,
+            updated_by_name: adminName
+          },
+          read: false
+        }))
+
+        await supabase.from('notifications').insert(notifications)
+      }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating group goal:', error)
+    return { error, success: false }
   }
 }
 
