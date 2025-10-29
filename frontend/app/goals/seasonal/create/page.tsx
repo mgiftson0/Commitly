@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
 import { supabase, authHelpers } from "@/lib/supabase-client"
+import { ActivityAssignment } from "@/components/goals/activity-assignment"
 
 const SEASONAL_TEMPLATES = {
   annual: [
@@ -67,7 +68,7 @@ export default function CreateSeasonalGoalPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("")
-  const [seasonalYear, setSeasonalYear] = useState(new Date().getFullYear())
+  const [seasonalYear, setSeasonalYear] = useState(2026)
   const [seasonalQuarter, setSeasonalQuarter] = useState(Math.ceil((new Date().getMonth() + 1) / 3))
   const [milestones, setMilestones] = useState<string[]>([""])
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
@@ -79,6 +80,7 @@ export default function CreateSeasonalGoalPage() {
   const [groupMembers, setGroupMembers] = useState<string[]>([])
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [availablePartners, setAvailablePartners] = useState<any[]>([])
+  const [activityAssignments, setActivityAssignments] = useState<{[key: number]: string}>({})
 
   const router = useRouter()
 
@@ -139,7 +141,7 @@ export default function CreateSeasonalGoalPage() {
     if (goalNature === "group" && currentUser) {
       setGroupMembers((prev) => {
         if (prev.includes(currentUser.id)) return prev
-        return [currentUser.id, ...prev].slice(0, 5)
+        return [currentUser.id, ...prev].slice(0, 2)
       })
     } else {
       setGroupMembers([])
@@ -193,22 +195,62 @@ export default function CreateSeasonalGoalPage() {
         duration_type: durationType,
         seasonal_year: seasonalYear,
         seasonal_quarter: durationType === 'quarterly' ? seasonalQuarter : null,
+        start_date: new Date().toISOString().split('T')[0],
         category: category.replace('-', '_'),
         status: 'active',
         progress: 0,
         visibility,
         priority: 'high',
         is_seasonal: true,
-        target_date: null
+        target_date: durationType === 'annual' 
+          ? `${seasonalYear}-12-31` 
+          : durationType === 'quarterly'
+            ? `${seasonalYear}-${seasonalQuarter * 3}-${new Date(seasonalYear, seasonalQuarter * 3, 0).getDate()}`
+            : durationType === 'biannual'
+              ? `${seasonalYear}-06-30`
+              : null
       }
 
-      const { data: newGoal, error } = await supabase
-        .from('goals')
-        .insert([goalData])
-        .select()
-        .single()
+      let newGoal;
+      
+      // Handle group goals differently
+      if (goalNature === "group" && groupMembers.length > 1) {
+        // Use group goals API
+        const memberIds = groupMembers.filter(id => id !== user.id); // Exclude owner
+        
+        const response = await fetch('/api/group-goals', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            goalData,
+            memberIds
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          console.error('Group goal creation error:', result.error)
+          toast.error(result.error || 'Failed to create group goal')
+          return
+        }
+        
+        newGoal = result.goal;
+        toast.success(`Seasonal group goal created! Invitations sent to ${memberIds.length} members.`);
+      } else {
+        // Create regular seasonal goal
+        const { data: goal, error } = await supabase
+          .from('goals')
+          .insert([goalData])
+          .select()
+          .single()
 
-      if (error) throw error
+        if (error) throw error
+        
+        newGoal = goal;
+      }
 
       // Create milestones as goal activities
       if (milestones.filter(m => m.trim()).length > 0) {
@@ -218,7 +260,9 @@ export default function CreateSeasonalGoalPage() {
             goal_id: newGoal.id,
             title: milestone.trim(),
             completed: false,
-            order_index: index
+            order_index: index,
+            assigned_to: goalNature === "group" && activityAssignments[index] ? activityAssignments[index] : null,
+            assigned_to_all: goalNature === "group" && !activityAssignments[index] ? true : false
           }))
 
         await supabase
@@ -374,8 +418,8 @@ export default function CreateSeasonalGoalPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Array.from({length: 3}, (_, i) => {
-                            const year = new Date().getFullYear() + i
+                          {Array.from({length: 5}, (_, i) => {
+                            const year = 2026 + i
                             return <SelectItem key={year} value={year.toString()} className="text-xs">{year}</SelectItem>
                           })}
                         </SelectContent>
@@ -463,7 +507,7 @@ export default function CreateSeasonalGoalPage() {
                               Group
                             </Label>
                             <p className="text-xs text-muted-foreground">
-                              Up to 5 people
+                              Up to 2 people
                             </p>
                           </div>
                           <Users className="h-3 w-3 text-muted-foreground" />
@@ -478,12 +522,12 @@ export default function CreateSeasonalGoalPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <Label className="text-xs font-medium">Members</Label>
-                          <p className="text-xs text-muted-foreground">Add up to 4 more (max 5)</p>
+                          <p className="text-xs text-muted-foreground">Add 1 more (max 2)</p>
                         </div>
-                        <Badge variant="outline" className="text-xs">{groupMembers.length}/5</Badge>
+                        <Badge variant="outline" className="text-xs">{groupMembers.length}/2</Badge>
                       </div>
                       <Select value="" onValueChange={(value) => {
-                        if (!groupMembers.includes(value) && groupMembers.length < 5) {
+                        if (!groupMembers.includes(value) && groupMembers.length < 2) {
                           setGroupMembers([...groupMembers, value])
                         }
                       }}>
@@ -566,24 +610,45 @@ export default function CreateSeasonalGoalPage() {
                     
                     <div className="space-y-2">
                       {milestones.map((milestone, index) => (
-                        <div key={index} className="flex gap-2">
-                          <Input
-                            placeholder={`Milestone ${index + 1}`}
-                            value={milestone}
-                            onChange={(e) => updateMilestone(index, e.target.value)}
-                            className="h-7 text-xs"
-                            required
-                          />
-                          {milestones.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => removeMilestone(index)}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
+                        <div key={index} className="space-y-2 p-3 rounded-lg border bg-card">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder={`Milestone ${index + 1}`}
+                              value={milestone}
+                              onChange={(e) => updateMilestone(index, e.target.value)}
+                              className="h-7 text-xs"
+                              required
+                            />
+                            {milestones.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => removeMilestone(index)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+
+                          {/* Activity Assignment for Group Goals */}
+                          {goalNature === "group" && groupMembers.length > 1 && (
+                            <ActivityAssignment
+                              activityIndex={index}
+                              groupMembers={allGroupCandidates.filter(m => groupMembers.includes(m.id)).map(m => ({ ...m, status: 'accepted' as const }))}
+                              assignment={activityAssignments[index] || null}
+                              assignedToAll={!activityAssignments[index]}
+                              onAssignmentChange={(idx, assignment, assignedToAll) => {
+                                const newAssignments = { ...activityAssignments };
+                                if (assignedToAll) {
+                                  delete newAssignments[idx];
+                                } else {
+                                  newAssignments[idx] = assignment;
+                                }
+                                setActivityAssignments(newAssignments);
+                              }}
+                            />
                           )}
                         </div>
                       ))}

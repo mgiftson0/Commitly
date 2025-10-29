@@ -579,8 +579,10 @@ export default function GoalsPage() {
           console.error('Group goals fetch failed:', error)
         }
 
-        // Combine user's own goals and group goals they're members of
-        const allUserGoals = [...(userGoals || []), ...memberGoals]
+        // Combine user's own goals and group goals they're members of, avoiding duplicates
+        const userGoalIds = new Set((userGoals || []).map(g => g.id))
+        const uniqueMemberGoals = (memberGoals || []).filter(g => !userGoalIds.has(g.id))
+        const allUserGoals = [...(userGoals || []), ...uniqueMemberGoals]
 
         // Fetch goal activities and accountability partners for all goals
         const goalsWithActivities = await Promise.all(allUserGoals.map(async (goal) => {
@@ -1355,8 +1357,39 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                   {goal.description}
                 </CardDescription>
               )}
-              {/* Show accountability partners for all goals that have them */}
-              {goal.accountabilityPartners && goal.accountabilityPartners.length > 0 && (
+              {/* Show group members for group goals */}
+              {goal.isGroupGoal && goal.groupMembers && goal.groupMembers.length > 0 && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-muted-foreground">Members:</span>
+                  <div className="flex -space-x-1">
+                    {goal.groupMembers.slice(0, 2).map((member: any, index: number) => (
+                      <div key={member.id} className="relative w-6 h-6 rounded-full border-2 border-background overflow-hidden">
+                        {member.avatar && member.avatar !== '/placeholder-avatar.jpg' ? (
+                          <img 
+                            src={member.avatar} 
+                            alt={member.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                              const parent = target.parentElement
+                              if (parent) {
+                                parent.innerHTML = `<div class="w-full h-full bg-primary/10 flex items-center justify-center"><span class="text-xs font-medium text-primary">${member.name.charAt(0)}</span></div>`
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-medium text-primary">{member.name.charAt(0)}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Show accountability partners for non-group goals */}
+              {!goal.isGroupGoal && goal.accountabilityPartners && goal.accountabilityPartners.length > 0 && (
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-xs text-muted-foreground">Partners:</span>
                   <div className="flex -space-x-1">
@@ -1535,15 +1568,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="flex items-center gap-2">
                       {goal.category}
-                      {/* Group invite membership indicator */}
-                      {goal.isGroupGoal && groupInvites[String(goal.id)] && (
-                        <Badge
-                          variant={groupInvites[String(goal.id)] === 'accepted' ? 'default' : (groupInvites[String(goal.id)] === 'pending' ? 'secondary' : 'outline')}
-                          className="text-[10px]"
-                        >
-                          {groupInvites[String(goal.id)] === 'accepted' ? 'Joined' : groupInvites[String(goal.id)] === 'pending' ? 'Invite Sent' : 'Declined'}
-                        </Badge>
-                      )}
+
                     </span>
                     <div className="flex items-center gap-2">
                       {goal.isForked && (

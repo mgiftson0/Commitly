@@ -30,7 +30,7 @@ export function GroupMembers({ goalId, className = "" }: GroupMembersProps) {
 
   const loadMembers = async () => {
     try {
-      // Get group members
+      // Get all group members (accepted, pending, declined)
       const { data: memberData } = await supabase
         .from('group_goal_members')
         .select('user_id, role, status, joined_at')

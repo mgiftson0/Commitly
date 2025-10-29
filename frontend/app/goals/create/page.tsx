@@ -57,6 +57,7 @@ import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/main-layout";
 import { authHelpers, supabase } from "@/lib/supabase-client";
 import { groupGoalSamples, type GoalSample } from "../goal-sample-data";
+import { ActivityAssignment } from "@/components/goals/activity-assignment";
 
 export default function CreateGoalPage() {
   const [title, setTitle] = useState("");
@@ -192,7 +193,7 @@ export default function CreateGoalPage() {
     if (goalNature === "group" && currentUser) {
       setGroupMembers((prev) => {
         if (prev.includes(currentUser.id)) return prev;
-        return [currentUser.id, ...prev].slice(0, 5);
+        return [currentUser.id, ...prev].slice(0, 2);
       });
     } else {
       setGroupMembers([]);
@@ -474,7 +475,7 @@ export default function CreateGoalPage() {
             title: activity.trim(),
             completed: false,
             order_index: index,
-            assigned_to: goalNature === "group" ? activityAssignments[index] || null : null,
+            assigned_to: goalNature === "group" && activityAssignments[index] ? activityAssignments[index] : null,
             assigned_to_all: goalNature === "group" && !activityAssignments[index] ? true : false
           }))
 
@@ -757,7 +758,7 @@ export default function CreateGoalPage() {
                           </div>
                           <div className="flex-1">
                             <p className="font-semibold text-slate-800">Group</p>
-                            <p className="text-[11px] text-slate-500">Up to 5 teammates</p>
+                            <p className="text-[11px] text-slate-500">Up to 2 people</p>
                           </div>
                         </label>
                       </div>
@@ -772,7 +773,7 @@ export default function CreateGoalPage() {
                           Members
                         </Label>
                         <Badge variant="outline" className="text-xs bg-white text-slate-600 border-slate-200 dark:bg-slate-900/60 dark:text-slate-200">
-                          {groupMembers.length}/5
+                          {groupMembers.length}/2
                         </Badge>
                       </div>
 
@@ -781,7 +782,7 @@ export default function CreateGoalPage() {
                         onValueChange={(value) => {
                           if (
                             !groupMembers.includes(value) &&
-                            groupMembers.length < 5
+                            groupMembers.length < 2
                           ) {
                             setGroupMembers([...groupMembers, value]);
                           }
@@ -1303,41 +1304,21 @@ export default function CreateGoalPage() {
 
                             {/* Activity Assignment (for group goals) */}
                             {goalNature === "group" && groupMembers.length > 1 && (
-                              <div className="flex items-center gap-2">
-                                <Label className="text-xs font-medium text-muted-foreground">
-                                  Assign to
-                                </Label>
-                                <Select
-                                  value={activityAssignments[index] || ''}
-                                  onValueChange={(value) => {
-                                    const newAssignments = { ...activityAssignments };
-                                    newAssignments[index] = value;
-                                    setActivityAssignments(newAssignments);
-                                  }}
-                                >
-                                  <SelectTrigger className="focus-ring h-8 text-xs">
-                                    <SelectValue placeholder="Select member..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {groupMembers.map((memberId) => {
-                                      const member = allGroupCandidates.find(p => p.id === memberId);
-                                      if (!member) return null;
-                                      return (
-                                        <SelectItem key={memberId} value={memberId}>
-                                          <div className="flex items-center gap-2">
-                                            <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-                                              <span className="text-xs font-medium">
-                                                {member.name.charAt(0)}
-                                              </span>
-                                            </div>
-                                            <span className="text-sm">{member.name}</span>
-                                          </div>
-                                        </SelectItem>
-                                      );
-                                    })}
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                              <ActivityAssignment
+                                activityIndex={index}
+                                groupMembers={allGroupCandidates.filter(m => groupMembers.includes(m.id)).map(m => ({ ...m, status: 'accepted' as const }))}
+                                assignment={activityAssignments[index] || null}
+                                assignedToAll={!activityAssignments[index]}
+                                onAssignmentChange={(idx, assignment, assignedToAll) => {
+                                  const newAssignments = { ...activityAssignments };
+                                  if (assignedToAll) {
+                                    delete newAssignments[idx];
+                                  } else {
+                                    newAssignments[idx] = assignment;
+                                  }
+                                  setActivityAssignments(newAssignments);
+                                }}
+                              />
                             )}
                           </div>
                         ))}
