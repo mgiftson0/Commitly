@@ -1,9 +1,8 @@
 {
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/_not-found/page": "app/_not-found/page.js",
+  "/notifications/page": "app/notifications/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/profile/[username]/page": "app/profile/[username]/page.js",
   "/goals/page": "app/goals/page.js",
-  "/goals/[id]/page": "app/goals/[id]/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/goals/create/page": "app/goals/create/page.js",
-  "/notifications/page": "app/notifications/page.js"
+  "/analytics/page": "app/analytics/page.js",
+  "/goals/[id]/page": "app/goals/[id]/page.js"
 }

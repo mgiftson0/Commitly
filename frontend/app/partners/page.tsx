@@ -7,6 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { FollowButton } from "@/components/profile/follow-button"
+import { FollowersList } from "@/components/profile/followers-list"
+import { useToast } from "@/hooks/use-toast"
 import {
   Users,
   Plus,
@@ -149,9 +152,42 @@ export default function PartnersPage() {
   const [partners, setPartners] = useState<any[]>([])
   const [requests, setRequests] = useState<any[]>([])
   const [discover, setDiscover] = useState<any[]>([])
+  const [followRequests, setFollowRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
   const [encouragementModal, setEncouragementModal] = useState<{open: boolean, partnerId: string, partnerName: string}>({open: false, partnerId: '', partnerName: ''})
+  const { toast } = useToast()
+
+  const handleFollowRequestAction = async (requestId: string, action: 'accept' | 'reject') => {
+    try {
+      const response = await fetch('/api/follows/requests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_id: requestId, action }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Failed to ${action} request`)
+      }
+
+      toast.success(`Request ${action}ed successfully!`)
+      
+      // Reload follow requests
+      try {
+        const response = await fetch('/api/follows?type=pending')
+        if (response.ok) {
+          const data = await response.json()
+          setFollowRequests(data.pending || [])
+        }
+      } catch (error) {
+        console.error('Error reloading follow requests:', error)
+      }
+    } catch (error: any) {
+      toast.error(error.message || `Failed to ${action} request`)
+    }
+  }
 
   const handleRequestAction = async (requestId: string, action: 'accept' | 'decline') => {
     try {
@@ -239,6 +275,8 @@ export default function PartnersPage() {
       try {
         const user = await authHelpers.getCurrentUser()
         if (!user) return
+        
+        setCurrentUser(user)
 
         // Load current user profile with follow counts
         const { data: userProfile } = await supabase
@@ -249,7 +287,7 @@ export default function PartnersPage() {
         
         setCurrentUserProfile(userProfile)
 
-        // Load partners
+        // Load accountability partners (for mutual goals tracking)
         const { data: partnersData } = await supabase
           .from('accountability_partners')
           .select(`
@@ -279,7 +317,7 @@ export default function PartnersPage() {
           }
         })
 
-        // Load requests (pending incoming)
+        // Load accountability partner requests (pending incoming)
         const { data: requestsData } = await supabase
           .from('accountability_partners')
           .select(`
@@ -299,6 +337,17 @@ export default function PartnersPage() {
           sentAt: new Date(r.created_at).toLocaleDateString(),
           compatibility: Math.floor(Math.random() * 20) + 80
         }))
+
+        // Load follow requests
+        try {
+          const response = await fetch('/api/follows?type=pending')
+          if (response.ok) {
+            const data = await response.json()
+            setFollowRequests(data.pending || [])
+          }
+        } catch (error) {
+          console.error('Error loading follow requests:', error)
+        }
 
         // Load discover (other users not connected)
         const { data: discoverData } = await supabase
@@ -349,46 +398,47 @@ export default function PartnersPage() {
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-bold">Connect</h1>
-              <div className="hidden sm:flex items-center gap-6 text-sm text-muted-foreground">
+              <div className="hidden md:flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{currentUserProfile?.following_count || 0} Following</span>
-                <span>{requests.length} Requests</span>
+                <span>{currentUserProfile?.followers_count || 0} Followers</span>
+                {followRequests.length > 0 && <span>{followRequests.length} Requests</span>}
               </div>
             </div>
             <div className="flex gap-2">
-              <Link href="/search">
+              <Link href="/search" className="hidden sm:block">
                 <Button size="sm" variant="outline">
-                  <Search className="h-4 w-4 mr-2" />
-                  Search
+                  <Search className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Search</span>
                 </Button>
               </Link>
               <Link href="/partners/search">
                 <Button size="sm">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Find People
+                  <UserPlus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Find People</span>
                 </Button>
               </Link>
             </div>
           </div>
         </div>
 
-        {/* Twitter-like Quick Stats */}
+        {/* Quick Stats */}
         <div className="border-b">
-          <div className="grid grid-cols-4 text-center py-3">
+          <div className="grid grid-cols-3 sm:grid-cols-4 text-center py-3 gap-2">
             <div>
-              <div className="text-lg font-bold">{currentUserProfile?.following_count || 0}</div>
+              <div className="text-base sm:text-lg font-bold">{currentUserProfile?.following_count || 0}</div>
               <div className="text-xs text-muted-foreground">Following</div>
             </div>
             <div>
-              <div className="text-lg font-bold">{currentUserProfile?.followers_count || 0}</div>
+              <div className="text-base sm:text-lg font-bold">{currentUserProfile?.followers_count || 0}</div>
               <div className="text-xs text-muted-foreground">Followers</div>
             </div>
             <div>
-              <div className="text-lg font-bold">{requests.length}</div>
+              <div className="text-base sm:text-lg font-bold">{followRequests.length}</div>
               <div className="text-xs text-muted-foreground">Requests</div>
             </div>
-            <div>
-              <div className="text-lg font-bold">{partners.reduce((sum, p) => sum + p.sharedGoals, 0)}</div>
-              <div className="text-xs text-muted-foreground">Goals</div>
+            <div className="hidden sm:block">
+              <div className="text-base sm:text-lg font-bold">{partners.length}</div>
+              <div className="text-xs text-muted-foreground">Partners</div>
             </div>
           </div>
         </div>
@@ -406,19 +456,45 @@ export default function PartnersPage() {
           </div>
         </div>
 
-        {/* Twitter-like Tabs */}
-        <Tabs defaultValue="partners" className="space-y-0">
-          <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
-            <TabsTrigger value="partners" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3">
+        {/* Tabs */}
+        <Tabs defaultValue="following" className="space-y-0">
+          <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto overflow-x-auto">
+            <TabsTrigger value="following" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 sm:px-6 py-3 text-sm">
               Following
             </TabsTrigger>
-            <TabsTrigger value="requests" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3">
-              Requests {requests.length > 0 && <Badge className="ml-2 h-5 w-5 p-0 text-xs">{requests.length}</Badge>}
+            <TabsTrigger value="followers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 sm:px-6 py-3 text-sm">
+              Followers
             </TabsTrigger>
-            <TabsTrigger value="discover" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3">
+            <TabsTrigger value="follow-requests" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 sm:px-6 py-3 text-sm">
+              Requests {followRequests.length > 0 && <Badge className="ml-1 sm:ml-2 h-5 w-5 p-0 text-xs">{followRequests.length}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="partners" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 sm:px-6 py-3 text-sm">
+              Partners
+            </TabsTrigger>
+            <TabsTrigger value="discover" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 sm:px-6 py-3 text-sm">
               Discover
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="following" className="space-y-4">
+            <FollowersList 
+              userId={currentUser?.id || ''} 
+              type="following" 
+              currentUserId={currentUser?.id}
+            />
+          </TabsContent>
+
+          <TabsContent value="followers" className="space-y-4">
+            <FollowersList 
+              userId={currentUser?.id || ''} 
+              type="followers" 
+              currentUserId={currentUser?.id}
+            />
+          </TabsContent>
+
+          <TabsContent value="follow-requests" className="space-y-4">
+            <FollowRequestsList requests={followRequests} onRequestAction={handleFollowRequestAction} />
+          </TabsContent>
 
           <TabsContent value="partners" className="space-y-4">
             <PartnersList 
@@ -428,10 +504,6 @@ export default function PartnersPage() {
                 setEncouragementModal({open: true, partnerId, partnerName})
               }
             />
-          </TabsContent>
-
-          <TabsContent value="requests" className="space-y-4">
-            <RequestsList requests={requests} onRequestAction={handleRequestAction} />
           </TabsContent>
 
           <TabsContent value="discover" className="space-y-4">
@@ -606,6 +678,61 @@ function RequestsList({ requests, onRequestAction }: { requests: any[], onReques
   )
 }
 
+function FollowRequestsList({ requests, onRequestAction }: { requests: any[], onRequestAction: (requestId: string, action: 'accept' | 'reject') => void }) {
+  if (requests.length === 0) {
+    return (
+      <div className="py-12 text-center">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">No pending follow requests</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-0">
+      {requests.map((request) => (
+        <div key={request.request_id || request.id} className="border-b hover:bg-muted/50 transition-colors p-4">
+          <div className="flex items-start gap-3">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={request.profile_picture_url} />
+              <AvatarFallback>{request.display_name?.charAt(0) || request.username?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold truncate">{request.display_name}</h3>
+                  <p className="text-sm text-muted-foreground">@{request.username}</p>
+                </div>
+                
+                <div className="flex gap-2 ml-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => onRequestAction(request.request_id || request.id, 'reject')}
+                  >
+                    Reject
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={() => onRequestAction(request.request_id || request.id, 'accept')}
+                  >
+                    Accept
+                  </Button>
+                </div>
+              </div>
+              
+              <p className="text-sm mt-2 text-muted-foreground">
+                Requested to follow you {request.created_at ? new Date(request.created_at).toLocaleDateString() : 'recently'}
+              </p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function DiscoverList({ people }: { people: any[] }) {
   return (
     <div className="space-y-0">
@@ -624,10 +751,12 @@ function DiscoverList({ people }: { people: any[] }) {
                   <p className="text-sm text-muted-foreground">@{person.username}</p>
                 </div>
                 
-                <Button size="sm" variant="outline" className="ml-2">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Follow
-                </Button>
+                <FollowButton 
+                  userId={person.id} 
+                  username={person.username}
+                  variant="outline" 
+                  size="sm" 
+                />
               </div>
               
               <p className="text-sm mt-2 line-clamp-2">{person.bio}</p>

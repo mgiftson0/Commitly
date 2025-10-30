@@ -50,7 +50,7 @@ export function ActiveGoalsSection({
   }
 
   return (
-    <Card className="hover-lift h-[420px] w-full flex flex-col hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 shadow-slate-900/15 transition-all duration-200 border-2 border-yellow-400/50 overflow-hidden">
+    <Card className="hover-lift h-[380px] w-full flex flex-col hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 shadow-slate-900/15 transition-all duration-200 border-2 border-yellow-400/50 overflow-hidden">
       <CardHeader className="flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>

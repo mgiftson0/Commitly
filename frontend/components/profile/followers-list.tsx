@@ -28,10 +28,6 @@ export function FollowersList({ userId, type, currentUserId }: FollowersListProp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -48,6 +44,10 @@ export function FollowersList({ userId, type, currentUserId }: FollowersListProp
       setLoading(false);
     }
   }, [userId, type]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   if (loading) {
     return (

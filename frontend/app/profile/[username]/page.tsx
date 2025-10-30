@@ -574,23 +574,17 @@ function GoalsList({ goals }: { goals: any[] }) {
               </div>
             </div>
           )}
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
+          <CardHeader className="pb-2 space-y-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1 flex-wrap">
                 {getTypeIcon(goal.goal_type || goal.type)}
-                <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
                   {goal.goal_type || goal.type}
                 </Badge>
                 {isSeasonalGoal && (
-                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-sm hover:shadow-amber-200/50 transition-all duration-200">
-                    <Star className="h-3 w-3 mr-1" />
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-sm hover:shadow-amber-200/50 transition-all duration-200">
+                    <Star className="h-2.5 w-2.5 mr-0.5" />
                     Seasonal
-                  </Badge>
-                )}
-                {isGroupGoal && (
-                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200 shadow-sm hover:shadow-purple-200/50 transition-all duration-200">
-                    <Users className="h-3 w-3 mr-1" />
-                    Group
                   </Badge>
                 )}
               </div>
@@ -602,12 +596,15 @@ function GoalsList({ goals }: { goals: any[] }) {
               )}
             </div>
 
-            <div className="space-y-2 mt-3">
-              <CardTitle className="line-clamp-2 text-sm sm:text-base lg:text-lg flex items-center gap-2">
+            <div className="space-y-2">
+              <CardTitle className="line-clamp-2 text-sm sm:text-base flex items-center gap-1.5">
+                {isGroupGoal && (
+                  <Users className="h-3.5 w-3.5 text-purple-600 flex-shrink-0" />
+                )}
                 <span className="truncate flex-1 break-words">{goal.title}</span>
               </CardTitle>
               {goal.description && (
-                <CardDescription className="line-clamp-2 text-xs sm:text-sm lg:text-base break-words">
+                <CardDescription className="line-clamp-2 text-xs break-words">
                   {goal.description}
                 </CardDescription>
               )}
@@ -695,7 +692,7 @@ function GoalsList({ goals }: { goals: any[] }) {
             <p className="text-muted-foreground">No active goals</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {activeGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
           </div>
         )}
@@ -708,7 +705,7 @@ function GoalsList({ goals }: { goals: any[] }) {
             <p className="text-muted-foreground">No completed goals</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {completedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
           </div>
         )}
@@ -721,7 +718,7 @@ function GoalsList({ goals }: { goals: any[] }) {
             <p className="text-muted-foreground">No paused goals</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {pausedGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
           </div>
         )}
@@ -734,7 +731,7 @@ function GoalsList({ goals }: { goals: any[] }) {
             <p className="text-muted-foreground">No group goals</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {groupGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
           </div>
         )}

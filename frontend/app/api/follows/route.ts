@@ -15,6 +15,31 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('user_id') || user.id;
     const type = searchParams.get('type'); // 'followers' | 'following' | 'pending'
 
+    // Check if follows table exists by testing a simple query first
+    try {
+      const { data: testData, error: testError } = await supabase
+        .from('follows')
+        .select('id')
+        .limit(1);
+      
+      if (testError) {
+        // Table doesn't exist or any other database error, return empty results
+        console.log('Follows table error:', testError.message, 'Code:', testError.code);
+        return NextResponse.json({ 
+          followers: [], 
+          following: [], 
+          pending: [] 
+        });
+      }
+    } catch (testErr) {
+      console.log('Follows table test failed, assuming table does not exist:', testErr);
+      return NextResponse.json({ 
+        followers: [], 
+        following: [], 
+        pending: [] 
+      });
+    }
+
     if (type === 'followers') {
       // Get users who follow this user
       const { data, error } = await supabase
@@ -36,7 +61,10 @@ export async function GET(request: NextRequest) {
         .eq('status', 'accepted')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.log('Error fetching followers:', error.message);
+        return NextResponse.json({ followers: [] });
+      }
 
       return NextResponse.json({ 
         followers: data?.map(f => f.follower) || [] 
@@ -63,7 +91,10 @@ export async function GET(request: NextRequest) {
         .eq('status', 'accepted')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.log('Error fetching following:', error.message);
+        return NextResponse.json({ following: [] });
+      }
 
       return NextResponse.json({ 
         following: data?.map(f => f.following) || [] 
@@ -93,7 +124,10 @@ export async function GET(request: NextRequest) {
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.log('Error fetching pending requests:', error.message);
+        return NextResponse.json({ pending: [] });
+      }
 
       return NextResponse.json({ 
         pending: data?.map(f => ({ ...f.follower, request_id: f.id, created_at: f.created_at })) || [] 
@@ -120,6 +154,22 @@ export async function POST(request: NextRequest) {
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if follows table exists
+    try {
+      const { error: testError } = await supabase.from('follows').select('id').limit(1);
+      if (testError) {
+        console.log('Follows table error:', testError.message, 'Code:', testError.code);
+        return NextResponse.json({ 
+          error: 'Follow system not available - please run database migration' 
+        }, { status: 503 });
+      }
+    } catch (testErr) {
+      console.log('Follows table test failed, cannot follow user:', testErr);
+      return NextResponse.json({ 
+        error: 'Follow system not available - please run database migration' 
+      }, { status: 503 });
     }
 
     const { following_id } = await request.json();
@@ -187,6 +237,22 @@ export async function DELETE(request: NextRequest) {
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if follows table exists
+    try {
+      const { error: testError } = await supabase.from('follows').select('id').limit(1);
+      if (testError) {
+        console.log('Follows table error:', testError.message, 'Code:', testError.code);
+        return NextResponse.json({ 
+          error: 'Follow system not available - please run database migration' 
+        }, { status: 503 });
+      }
+    } catch (testErr) {
+      console.log('Follows table test failed, cannot unfollow user:', testErr);
+      return NextResponse.json({ 
+        error: 'Follow system not available - please run database migration' 
+      }, { status: 503 });
     }
 
     const searchParams = request.nextUrl.searchParams;

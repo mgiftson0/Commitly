@@ -402,7 +402,7 @@ export default function ProfilePage() {
                   </TabsList>
 
                   <TabsContent value="recent" className="space-y-3">
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                       {goals.slice(0, 6).map((goal) => {
                         const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
                         const isGroupGoal = goal.is_group_goal || goal.goal_nature === 'group'
@@ -444,18 +444,110 @@ export default function ProfilePage() {
                         return (
                           <Link key={goal.id} href={`/goals/${goal.id}`}>
                             <Card className={`hover-lift group transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 border-0 shadow-slate-900/15 bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm h-80 ${getGoalCardStyle()}`}>
-                              {isGroupGoal && (
-                                <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 border-b border-purple-200/40 dark:border-purple-800/40 px-4 py-2">
-                                  <div className="flex items-center gap-2">
-                                    <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Group Goal</span>
+                              <CardHeader className="pb-2 p-3 sm:p-4">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    {getTypeIcon(goal.goal_type || goal.type)}
+                                    <Badge variant="outline" className="text-[10px] sm:text-xs px-1 py-0.5">
+                                      {(goal.goal_type || goal.type)?.slice(0, 8)}
+                                    </Badge>
+                                    {isSeasonalGoal && (
+                                      <Badge variant="outline" className="text-[10px] sm:text-xs bg-amber-50 text-amber-700 border-amber-200 px-1 py-0.5">
+                                        <Star className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5" />
+                                        S
+                                      </Badge>
+                                    )}
+                                    {isGroupGoal && (
+                                      <Badge variant="outline" className="text-[10px] sm:text-xs bg-purple-50 text-purple-700 border-purple-200 px-1 py-0.5">
+                                        <Users className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5" />
+                                        G
+                                      </Badge>
+                                    )}
                                   </div>
+                                  {goal.streak && goal.streak > 0 && (
+                                    <Badge className="bg-orange-500 text-white text-[10px] sm:text-xs px-1 py-0.5">
+                                      <Flame className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5" />
+                                      {goal.streak}
+                                    </Badge>
+                                  )}
                                 </div>
-                              )}
+                                <CardTitle className="line-clamp-2 text-xs sm:text-sm lg:text-base font-semibold">
+                                  {goal.title}
+                                </CardTitle>
+                                {goal.description && (
+                                  <CardDescription className="line-clamp-2 text-[10px] sm:text-xs lg:text-sm mt-1">
+                                    {goal.description}
+                                  </CardDescription>
+                                )}
+                              </CardHeader>
+
+                              <CardContent className="space-y-3 p-3 sm:p-4">
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                                    <span className="text-muted-foreground">Progress</span>
+                                    <span className="font-medium">{progress}%</span>
+                                  </div>
+                                  <Progress value={progress} className={`h-2 sm:h-3 ${progress <= 30 ? '[&>div]:bg-red-500' : progress <= 70 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`} />
+                                </div>
+
+                                <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
+                                  <span className="text-muted-foreground truncate">
+                                    {(goal.category?.replace('_', ' ') || 'Personal').slice(0, 10)}
+                                  </span>
+                                  {goal.target_date && (() => {
+                                    const dueDate = new Date(goal.target_date)
+                                    const today = new Date()
+                                    const diffDays = Math.floor((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                                    return (
+                                      <div className="flex items-center gap-0.5 text-muted-foreground">
+                                        <Calendar className="h-2 w-2 sm:h-3 sm:w-3" />
+                                        <span>{diffDays}d</span>
+                                      </div>
+                                    )
+                                  })()}
+                                </div>
+
+                                <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground pt-1 border-t">
+                                  <div className="flex items-center gap-1">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${getStatusColor(goal.status)}`} />
+                                    <span className="capitalize truncate">{goal.status}</span>
+                                  </div>
+                                  <span className="truncate">
+                                    {new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="active" className="space-y-3">
+                    <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                      {activeGoals.slice(0, 6).map((goal) => {
+                        const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+                        const isGroupGoal = goal.is_group_goal || goal.goal_nature === 'group'
+                        const progress = goal.progress || 0
+                        
+                        const getGoalCardStyle = () => {
+                          if (isSeasonalGoal) {
+                            return "ring-1 ring-amber-200/50 hover:ring-amber-300/70 shadow-amber-100/50 hover:shadow-amber-200/60 bg-gradient-to-br from-amber-50/60 via-white to-amber-50/30 dark:from-amber-950/30 dark:via-background dark:to-amber-950/20"
+                          }
+                          if (isGroupGoal) {
+                            return "ring-1 ring-pink-200/50 hover:ring-pink-300/70 shadow-md shadow-pink-100/50 hover:shadow-lg hover:shadow-pink-200/60 bg-gradient-to-br from-pink-50/60 via-white to-pink-50/30 dark:from-pink-950/30 dark:via-background dark:to-pink-950/20 border-pink-200/40"
+                          }
+                          return "ring-1 ring-border/50 hover:ring-primary/30 shadow-slate-100/50 hover:shadow-slate-200/60"
+                        }
+
+                        return (
+                          <Link key={goal.id} href={`/goals/${goal.id}`}>
+                            <Card className={`hover-lift group transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 border-0 shadow-slate-900/15 bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm h-80 ${getGoalCardStyle()}`}>
                               <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                   <div className="flex items-center gap-2">
-                                    {getTypeIcon(goal.goal_type || goal.type)}
+                                    <Target className="h-4 w-4" />
                                     <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
                                       {goal.goal_type || goal.type}
                                     </Badge>
@@ -472,26 +564,14 @@ export default function ProfilePage() {
                                       </Badge>
                                     )}
                                   </div>
-                                  {goal.streak && goal.streak > 0 && (
-                                    <Badge className="bg-orange-500 text-white text-xs px-2">
-                                      <Flame className="h-3 w-3 mr-1" />
-                                      {goal.streak}
-                                    </Badge>
-                                  )}
                                 </div>
-
-                                <div className="space-y-2">
-                                  <CardTitle className="line-clamp-2 text-sm sm:text-base lg:text-lg flex items-center gap-2">
-                                    <span className="truncate flex-1 break-words">{goal.title}</span>
-                                  </CardTitle>
-                                  {goal.description && (
-                                    <CardDescription className="line-clamp-2 text-xs sm:text-sm lg:text-base break-words">
-                                      {goal.description}
-                                    </CardDescription>
-                                  )}
-                                </div>
+                                <CardTitle className="line-clamp-2 text-sm sm:text-base lg:text-lg">{goal.title}</CardTitle>
+                                {goal.description && (
+                                  <CardDescription className="line-clamp-2 text-xs sm:text-sm lg:text-base break-words">
+                                    {goal.description}
+                                  </CardDescription>
+                                )}
                               </CardHeader>
-
                               <CardContent className="space-y-4">
                                 <div className="space-y-2">
                                   <div className="flex items-center justify-between text-sm">
@@ -500,7 +580,6 @@ export default function ProfilePage() {
                                   </div>
                                   <Progress value={progress} className={`h-3 rounded-full bg-gradient-to-r from-muted/50 to-muted/30 border border-border/30 shadow-inner ${progress <= 30 ? '[&>div]:bg-red-500' : progress <= 70 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`} />
                                 </div>
-
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-muted-foreground">
                                     {goal.category?.replace('_', ' ') || 'Personal'}
@@ -508,42 +587,14 @@ export default function ProfilePage() {
                                   {goal.target_date && (() => {
                                     const dueDate = new Date(goal.target_date)
                                     const today = new Date()
-                                    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-                                    const dueDateStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
-                                    const diffTime = dueDateStart.getTime() - todayStart.getTime()
-                                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-                                    
-                                    const getUrgencyColor = () => {
-                                      if (diffDays < 0) return 'text-red-600'
-                                      if (diffDays === 0) return 'text-orange-600'
-                                      if (diffDays <= 3) return 'text-yellow-600'
-                                      return 'text-muted-foreground'
-                                    }
-                                    
-                                    const getText = () => {
-                                      if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`
-                                      if (diffDays === 0) return 'Due today'
-                                      if (diffDays === 1) return 'Due tomorrow'
-                                      return `${diffDays}d left`
-                                    }
-                                    
+                                    const diffDays = Math.floor((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
                                     return (
-                                      <div className={`flex items-center gap-1 ${getUrgencyColor()}`}>
+                                      <div className="flex items-center gap-1 text-muted-foreground">
                                         <Calendar className="h-3 w-3" />
-                                        <span className="font-medium text-xs">{getText()}</span>
+                                        <span className="font-medium text-xs">{diffDays}d left</span>
                                       </div>
                                     )
                                   })()}
-                                </div>
-
-                                <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                                  <div className="flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${getStatusColor(goal.status)}`} />
-                                    <span className="capitalize">{goal.status}</span>
-                                  </div>
-                                  <span>
-                                    Created {new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                  </span>
                                 </div>
                               </CardContent>
                             </Card>
@@ -553,37 +604,82 @@ export default function ProfilePage() {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="active" className="space-y-3">
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                      {activeGoals.slice(0, 6).map((goal) => (
-                        <Link key={goal.id} href={`/goals/${goal.id}`}>
-                          <Card className="hover-lift h-80">
-                            <CardHeader>
-                              <CardTitle className="text-sm sm:text-base lg:text-lg line-clamp-2 break-words">{goal.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <Progress value={goal.progress || 0} className="h-2" />
-                            </CardContent>
-                          </Card>
-                        </Link>
-                      ))}
-                    </div>
-                  </TabsContent>
-
                   <TabsContent value="completed" className="space-y-3">
-                    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                      {completedGoals.slice(0, 6).map((goal) => (
-                        <Link key={goal.id} href={`/goals/${goal.id}`}>
-                          <Card className="hover-lift h-80 ring-1 ring-green-200/50">
-                            <CardHeader>
-                              <CardTitle className="text-sm sm:text-base lg:text-lg line-clamp-2 break-words">{goal.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <Progress value={100} className="h-2 [&>div]:bg-green-500" />
-                            </CardContent>
-                          </Card>
-                        </Link>
-                      ))}
+                    <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                      {completedGoals.slice(0, 6).map((goal) => {
+                        const isSeasonalGoal = goal.is_seasonal || goal.duration_type === 'seasonal'
+                        const isGroupGoal = goal.is_group_goal || goal.goal_nature === 'group'
+                        const progress = 100
+                        
+                        const getGoalCardStyle = () => {
+                          if (isSeasonalGoal) {
+                            return "ring-1 ring-green-200/50 hover:ring-green-300/70 shadow-green-100/50 hover:shadow-green-200/60 bg-gradient-to-br from-green-50/60 via-white to-green-50/30 dark:from-green-950/30 dark:via-background dark:to-green-950/20"
+                          }
+                          if (isGroupGoal) {
+                            return "ring-1 ring-green-200/50 hover:ring-green-300/70 shadow-md shadow-green-100/50 hover:shadow-lg hover:shadow-green-200/60 bg-gradient-to-br from-green-50/60 via-white to-green-50/30 dark:from-green-950/30 dark:via-background dark:to-green-950/20 border-green-200/40"
+                          }
+                          return "ring-1 ring-green-200/50 hover:ring-green-300/70 shadow-green-100/50 hover:shadow-green-200/60 bg-gradient-to-br from-green-50/60 via-white to-green-50/30"
+                        }
+
+                        return (
+                          <Link key={goal.id} href={`/goals/${goal.id}`}>
+                            <Card className={`hover-lift group transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 border-0 shadow-slate-900/15 bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm h-80 ${getGoalCardStyle()}`}>
+                              <CardHeader className="pb-3">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                    <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
+                                      {goal.goal_type || goal.type}
+                                    </Badge>
+                                    {isSeasonalGoal && (
+                                      <Badge variant="outline" className="text-xs bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-sm hover:shadow-amber-200/50 transition-all duration-200">
+                                        <Star className="h-3 w-3 mr-1" />
+                                        Seasonal
+                                      </Badge>
+                                    )}
+                                    {isGroupGoal && (
+                                      <Badge variant="outline" className="text-xs bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200 shadow-sm hover:shadow-purple-200/50 transition-all duration-200">
+                                        <Users className="h-3 w-3 mr-1" />
+                                        Group
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <Badge className="bg-green-500 text-white text-xs px-2">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Done
+                                  </Badge>
+                                </div>
+                                <CardTitle className="line-clamp-2 text-sm sm:text-base lg:text-lg">{goal.title}</CardTitle>
+                                {goal.description && (
+                                  <CardDescription className="line-clamp-2 text-xs sm:text-sm lg:text-base break-words">
+                                    {goal.description}
+                                  </CardDescription>
+                                )}
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Progress</span>
+                                    <span className="font-medium text-green-600">{progress}%</span>
+                                  </div>
+                                  <Progress value={progress} className="h-3 rounded-full bg-gradient-to-r from-muted/50 to-muted/30 border border-border/30 shadow-inner [&>div]:bg-green-500" />
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">
+                                    {goal.category?.replace('_', ' ') || 'Personal'}
+                                  </span>
+                                  {goal.completed_at && (
+                                    <div className="flex items-center gap-1 text-green-600">
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      <span className="font-medium text-xs">Completed</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </Link>
+                        )
+                      })}
                     </div>
                   </TabsContent>
                 </Tabs>

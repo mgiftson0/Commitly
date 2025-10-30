@@ -527,75 +527,73 @@ export default function NotificationsPage() {
                 <div className="absolute inset-0 bg-gradient-conic from-transparent via-white/20 to-transparent animate-spin" style={{ animationDuration: '8s' }} />
                 
                 {/* Main Card Content */}
-                <div className="relative bg-background/95 backdrop-blur-sm m-0.5 rounded-lg border border-border/50 min-h-[140px] flex flex-col">
+                <div 
+                  className={`relative bg-background/95 backdrop-blur-sm m-0.5 rounded-lg border border-border/50 h-[100px] flex flex-col cursor-pointer transition-all ${
+                    !notification.read ? 'hover:bg-accent/50' : 'hover:bg-accent/30'
+                  }`}
+                  onClick={() => !notification.read && markAsRead(notification.id)}
+                >
                   {/* Aurora Glow Effect */}
-                  <div className={`absolute inset-0 bg-gradient-to-r ${gradient} opacity-30 blur-sm`} />
+                  <div className={`absolute inset-0 bg-gradient-to-r ${gradient} opacity-20 blur-sm`} />
                   
-                  <div className="relative p-3 flex-1 flex flex-col justify-between">
-                    <div className="flex items-start gap-3">
-                      {/* Icon with shimmer effect */}
-                      <div className={`relative flex-shrink-0 p-2 rounded-lg bg-gradient-to-br ${color.replace('text-', 'from-').replace('-600', '-100')} ${color.replace('text-', 'to-').replace('-600', '-50')} border border-current/20 overflow-hidden`}>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer" style={{ animationDuration: '3s' }} />
-                        <Icon className={`h-4 w-4 ${color} relative z-10`} />
+                  <div className="relative p-2.5 flex-1 flex flex-col justify-between">
+                    <div className="flex items-start gap-2">
+                      {/* Icon */}
+                      <div className={`relative flex-shrink-0 p-1.5 rounded-lg bg-gradient-to-br ${color.replace('text-', 'from-').replace('-600', '-100')} ${color.replace('text-', 'to-').replace('-600', '-50')} border border-current/20`}>
+                        <Icon className={`h-3.5 w-3.5 ${color} relative z-10`} />
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-sm mb-1 flex items-center gap-2">
+                            <h3 className="font-medium text-xs mb-0.5 flex items-center gap-1.5">
                               <span className="truncate">{notification.title}</span>
                               {!notification.read && (
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-primary/10 text-primary border-primary/20 text-xs px-1.5 py-0.5 animate-pulse"
-                                >
-                                  New
-                                </Badge>
+                                <div className="h-1.5 w-1.5 bg-primary rounded-full animate-pulse flex-shrink-0" />
                               )}
                             </h3>
-                            <p className="text-xs text-muted-foreground leading-relaxed mb-1">
+                            <p className="text-xs text-muted-foreground leading-snug line-clamp-2">
                               {notification.message}
-                            </p>
-                            <p className="text-xs text-muted-foreground/60">
-                              {timeAgo(notification.created_at)}
                             </p>
                           </div>
 
                           {/* Action buttons */}
-                          <div className="flex gap-1 flex-shrink-0">
-                            {!notification.read && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => markAsRead(notification.id)}
-                                className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary transition-colors"
-                              >
-                                <CheckCircle2 className="h-3 w-3" />
-                              </Button>
-                            )}
+                          <div className="flex gap-0.5 flex-shrink-0">
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => deleteNotification(notification.id)}
-                              className="h-7 w-7 p-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                deleteNotification(notification.id)
+                              }}
+                              className="h-6 w-6 p-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
+                        
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-[10px] text-muted-foreground/60">
+                            {timeAgo(notification.created_at)}
+                          </p>
 
-                        {/* Goal view button */}
-                        {notification.data?.goal_id && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 h-7"
-                            onClick={() => router.push(`/goals/${notification.data.goal_id}`)}
-                          >
-                            <Target className="h-3 w-3 mr-1" />
-                            View Goal
-                          </Button>
-                        )}
+                          {/* Goal view button */}
+                          {notification.data?.goal_id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-[10px] h-5 px-2 text-primary hover:bg-primary/10 transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                router.push(`/goals/${notification.data.goal_id}`)
+                              }}
+                            >
+                              <Target className="h-2.5 w-2.5 mr-1" />
+                              View
+                            </Button>
+                          )}
+                        </div>
 
                         {/* Goal partner request actions - show for partner requests with goal_id */}
                         {notification.type === 'partner_request' && notification.data?.requester_id && notification.data?.goal_id && (

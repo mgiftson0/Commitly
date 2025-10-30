@@ -11,6 +11,22 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check if follows table exists
+    try {
+      const { error: testError } = await supabase.from('follows').select('id').limit(1);
+      if (testError) {
+        console.log('Follows table error:', testError.message, 'Code:', testError.code);
+        return NextResponse.json({ 
+          error: 'Follow system not available - please run database migration' 
+        }, { status: 503 });
+      }
+    } catch (testErr) {
+      console.log('Follows table test failed, cannot handle follow requests:', testErr);
+      return NextResponse.json({ 
+        error: 'Follow system not available - please run database migration' 
+      }, { status: 503 });
+    }
+
     const { request_id, action } = await request.json();
 
     if (!request_id || !action) {

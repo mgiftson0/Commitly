@@ -113,15 +113,36 @@ export function useDashboardData() {
       const user = await authHelpers.getCurrentUser()
       if (!user) return
 
-      // Load recent notifications
-      const { data: notifications } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(3)
+      // Load mutual followers' public activities
+      // First, get mutual followers (users who follow you and you follow them)
+      const { data: mutualFollowers } = await supabase
+        .from('follows')
+        .select('follower_id, following_id')
+        .or(`follower_id.eq.${user.id},following_id.eq.${user.id}`)
+        .eq('status', 'accepted')
 
-      console.log('Loaded notifications:', notifications)
+      // Find mutual followers (both directions exist)
+      const followerIds = mutualFollowers?.filter(f => f.following_id === user.id).map(f => f.follower_id) || []
+      const followingIds = mutualFollowers?.filter(f => f.follower_id === user.id).map(f => f.following_id) || []
+      const mutualIds = followerIds.filter(id => followingIds.includes(id))
+
+      console.log('Mutual follower IDs:', mutualIds)
+
+      // Load recent public activities from mutual followers
+      let notifications: any[] = []
+      if (mutualIds.length > 0) {
+        const { data: mutualActivities } = await supabase
+          .from('notifications')
+          .select('*, profiles!notifications_user_id_fkey(first_name, last_name, username)')
+          .in('user_id', mutualIds)
+          .in('type', ['goal_completed', 'goal_created', 'streak_milestone', 'achievement_unlocked', 'activity_completed'])
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        notifications = mutualActivities || []
+      }
+
+      console.log('Loaded mutual followers activities:', notifications)
 
       const iconMap = {
         goal_completed: require("lucide-react").CheckCircle2,
@@ -148,16 +169,22 @@ export function useDashboardData() {
         return 'Just now'
       }
 
-      const activities = (notifications || []).map((n: any) => ({
-        id: n.id,
-        type: n.type || 'general',
-        title: n.title || 'Notification',
-        description: n.message || 'No message',
-        time: timeAgo(n.created_at),
-        icon: iconMap[n.type as keyof typeof iconMap] || require("lucide-react").Bell,
-        color: colorMap[n.type as keyof typeof colorMap] || 'text-gray-600',
-        goalId: n.data?.goal_id
-      }))
+      const activities = (notifications || []).map((n: any) => {
+        const userName = n.profiles 
+          ? `${n.profiles.first_name || ''} ${n.profiles.last_name || ''}`.trim() || n.profiles.username || 'Someone'
+          : 'Someone'
+        
+        return {
+          id: n.id,
+          type: n.type || 'general',
+          title: `${userName} - ${n.title || 'Activity'}`,
+          description: n.message || 'No message',
+          time: timeAgo(n.created_at),
+          icon: iconMap[n.type as keyof typeof iconMap] || require("lucide-react").Bell,
+          color: colorMap[n.type as keyof typeof colorMap] || 'text-gray-600',
+          goalId: n.data?.goal_id
+        }
+      })
 
       console.log('Processed activities:', activities)
 

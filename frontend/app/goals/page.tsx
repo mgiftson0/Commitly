@@ -1244,45 +1244,39 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
   }
 
   return (
-    <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
       {goals.map((goal, index) => (
         <Card key={`${goal.id}-${index}-${goal.title.replace(/\s+/g, '-').toLowerCase()}`} className={`hover-lift group transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 border-0 shadow-slate-900/15 bg-gradient-to-br from-card via-card to-card/95 backdrop-blur-sm ${getGoalCardStyle(goal)}`}>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2 space-y-1">
             {/* Requests handled in Notifications. Status shown below. */}
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1 flex-wrap">
                 {getTypeIcon(goal.type)}
-                <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 shadow-sm bg-background/80 backdrop-blur-sm border-primary/20 hover:border-primary/40 transition-colors duration-200">
                   {goal.type}
                 </Badge>
                 {(goal.is_seasonal || goal.duration_type === 'seasonal') && (
-                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-sm hover:shadow-amber-200/50 transition-all duration-200">
-                    <Star className="h-3 w-3 mr-1" />
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-sm hover:shadow-amber-200/50 transition-all duration-200">
+                    <Star className="h-2.5 w-2.5 mr-0.5" />
                     Seasonal
-                  </Badge>
-                )}
-                {goal.isGroupGoal && (
-                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200 shadow-sm hover:shadow-purple-200/50 transition-all duration-200">
-                    <Users className="h-3 w-3 mr-1" />
-                    Group
                   </Badge>
                 )}
                 {/* Recurrence badge if available */}
                 {(goal.recurrencePattern) && (
-                  <Badge variant="outline" className="text-xs shadow-sm bg-background/80 backdrop-blur-sm border-blue-200/50 hover:border-blue-300/70 transition-colors duration-200">
-                    <Calendar className="h-3 w-3 mr-1" />
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 shadow-sm bg-background/80 backdrop-blur-sm border-blue-200/50 hover:border-blue-300/70 transition-colors duration-200">
+                    <Calendar className="h-2.5 w-2.5 mr-0.5" />
                     {formatRecurrence(goal)}
                   </Badge>
                 )}
                 {/* Only show forked badge if user owns the goal */}
                 {goal.isForked && isGoalOwner(goal) && (
-                  <Badge variant="outline" className="text-xs bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 shadow-sm hover:shadow-blue-200/50 transition-all duration-200">
-                    <GitFork className="h-3 w-3 mr-1" />
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 shadow-sm hover:shadow-blue-200/50 transition-all duration-200">
+                    <GitFork className="h-2.5 w-2.5 mr-0.5" />
                     Forked
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 {/* Message count for group goals and accountability partners */}
                 {!isPartnerView && ((goal.accountabilityPartners && goal.accountabilityPartners.length > 0) || goal.isGroupGoal || goal.is_group_goal || goal.goal_nature === 'group') && (
                   <MessageCountButton goalId={goal.id} />
@@ -1385,11 +1379,11 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
             </div>
 
             <div className="space-y-2">
-              <CardTitle className="line-clamp-2 text-sm sm:text-base lg:text-lg xl:text-xl flex items-center gap-2">
-                <span className="truncate flex-1 break-words">{goal.title}</span>
+              <CardTitle className="line-clamp-2 text-sm sm:text-base flex items-center gap-1.5">
                 {goal.isGroupGoal && (
-                  <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600 flex-shrink-0" />
+                  <Users className="h-3.5 w-3.5 text-purple-600 flex-shrink-0" />
                 )}
+                <span className="truncate flex-1 break-words">{goal.title}</span>
                 {isPartnerView && (
                   <Badge variant="outline" className="text-[10px] sm:text-xs bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 shadow-sm hover:shadow-green-200/50 transition-all duration-200 flex-shrink-0">
                     <User className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
@@ -1398,7 +1392,7 @@ function GoalsGrid({ goals, router, isPartnerView = false, onGoalDeleted }: { go
                 )}
               </CardTitle>
               {goal.description && (
-                <CardDescription className="line-clamp-2 text-xs sm:text-sm lg:text-base break-words">
+                <CardDescription className="line-clamp-2 text-xs break-words">
                   {goal.description}
                 </CardDescription>
               )}

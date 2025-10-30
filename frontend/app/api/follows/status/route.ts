@@ -18,26 +18,103 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'target_id is required' }, { status: 400 });
     }
 
-    // Use the database function to get follow status
-    const { data, error } = await supabase
-      .rpc('get_follow_status', {
-        requester_id: user.id,
-        target_id: target_id
+    // Check if follows table exists
+    try {
+      const { error: testError } = await supabase.from('follows').select('id').limit(1);
+      if (testError) {
+        console.log('Follows table error:', testError.message, 'Code:', testError.code);
+        return NextResponse.json({
+          is_following: false,
+          is_follower: false,
+          is_mutual: false,
+          follow_status: 'none',
+          is_pending: false,
+          target_followers_count: 0,
+          target_following_count: 0,
+          target_is_private: false
+        });
+      }
+    } catch (testErr) {
+      console.log('Follows table test failed, returning default status:', testErr);
+      return NextResponse.json({
+        is_following: false,
+        is_follower: false,
+        is_mutual: false,
+        follow_status: 'none',
+        is_pending: false,
+        target_followers_count: 0,
+        target_following_count: 0,
+        target_is_private: false
       });
+    }
 
-    if (error) throw error;
+    // Use the database function to get follow status
+    let followStatus;
+    try {
+      const { data, error } = await supabase
+        .rpc('get_follow_status', {
+          requester_id: user.id,
+          target_id: target_id
+        });
+
+      if (error) {
+        console.log('get_follow_status function not found, using fallback query');
+        // Fallback to manual query if function doesn't exist
+        const { data: followData, error: followError } = await supabase
+          .from('follows')
+          .select('status')
+          .or(`and(follower_id.eq.${user.id},following_id.eq.${target_id}),and(follower_id.eq.${target_id},following_id.eq.${user.id})`);
+
+        followStatus = {
+          is_following: followData?.some(f => f.follower_id === user.id && f.following_id === target_id && f.status === 'accepted') || false,
+          is_follower: followData?.some(f => f.follower_id === target_id && f.following_id === user.id && f.status === 'accepted') || false,
+          is_mutual: followData?.filter(f => f.status === 'accepted').length === 2 || false,
+          follow_status: followData?.find(f => f.follower_id === user.id && f.following_id === target_id)?.status || 'none',
+          is_pending: followData?.some(f => f.follower_id === user.id && f.following_id === target_id && f.status === 'pending') || false
+        };
+      } else {
+        followStatus = data[0];
+      }
+    } catch (funcErr) {
+      console.log('Follow status check failed, using defaults');
+      followStatus = {
+        is_following: false,
+        is_follower: false,
+        is_mutual: false,
+        follow_status: 'none',
+        is_pending: false
+      };
+    }
 
     // Also get counts
-    const { data: targetProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('followers_count, following_count, is_private')
-      .eq('id', target_id)
-      .single();
+    let targetProfile;
+    try {
+      const { data, error: profileError } = await supabase
+        .from('profiles')
+        .select('followers_count, following_count, is_private')
+        .eq('id', target_id)
+        .single();
 
-    if (profileError) throw profileError;
+      if (profileError) {
+        // If columns don't exist, use defaults
+        targetProfile = {
+          followers_count: 0,
+          following_count: 0,
+          is_private: false
+        };
+      } else {
+        targetProfile = data;
+      }
+    } catch (profileErr) {
+      targetProfile = {
+        followers_count: 0,
+        following_count: 0,
+        is_private: false
+      };
+    }
 
     return NextResponse.json({
-      ...data[0],
+      ...followStatus,
       target_followers_count: targetProfile.followers_count,
       target_following_count: targetProfile.following_count,
       target_is_private: targetProfile.is_private

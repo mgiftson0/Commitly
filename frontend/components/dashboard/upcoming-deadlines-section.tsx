@@ -31,7 +31,7 @@ export function UpcomingDeadlinesSection({
   const router = useRouter()
 
   return (
-    <Card className="hover-lift h-[420px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-orange-400/50 overflow-hidden">
+    <Card className="hover-lift h-[380px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-orange-400/50 overflow-hidden">
       <CardHeader className="flex-shrink-0 pb-2">
         <div className="flex items-center justify-between">
           <div>
