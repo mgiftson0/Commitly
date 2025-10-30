@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Users, User, CheckCircle2, Clock, Target, Settings } from "lucide-react"
@@ -31,14 +33,16 @@ interface ActivityAssignmentProps {
     title: string
     assigned_to?: string
     assigned_to_all?: boolean
+    assigned_members?: string[]
     goal_id: string
   }
   activityIndex?: number
   groupMembers: GroupMember[]
   assignment?: string | null
   assignedToAll?: boolean
+  assignedMembers?: string[]
   isOwner?: boolean
-  onAssignmentChange?: (index: number, assignment: string | null, assignedToAll: boolean) => void
+  onAssignmentChange?: (index: number, assignment: string | null, assignedToAll: boolean, assignedMembers?: string[]) => void
   onUpdate?: () => void
 }
 
@@ -62,6 +66,7 @@ export function ActivityAssignment({
   // Use activity data if provided, otherwise use props
   const currentAssignment = activity?.assigned_to || assignment
   const currentAssignedToAll = activity?.assigned_to_all ?? assignedToAll
+  const currentAssignedMembers = activity?.assigned_members || assignedMembers || []
 
   useEffect(() => {
     if (activity?.id) {
@@ -106,8 +111,9 @@ export function ActivityAssignment({
       setUpdating(true)
       try {
         const result = await updateActivityAssignment(activity.id, {
-          assignedTo: value === 'all' || value === 'unassigned' ? undefined : value,
-          assignedToAll: value === 'all'
+          assignedTo: value === 'all' || value === 'unassigned' || value === 'multiple' ? undefined : value,
+          assignedToAll: value === 'all',
+          assignedMembers: value === 'multiple' ? currentAssignedMembers : undefined
         })
         
         if (result.success) {
@@ -128,18 +134,31 @@ export function ActivityAssignment({
     } else if (onAssignmentChange) {
       // Update in parent component (for creation flow)
       if (value === 'all') {
-        onAssignmentChange(activityIndex, null, true)
+        onAssignmentChange(activityIndex, null, true, [])
       } else if (value === 'unassigned') {
-        onAssignmentChange(activityIndex, null, false)
+        onAssignmentChange(activityIndex, null, false, [])
+      } else if (value === 'multiple') {
+        onAssignmentChange(activityIndex, null, false, currentAssignedMembers)
       } else {
-        onAssignmentChange(activityIndex, value, false)
+        onAssignmentChange(activityIndex, value, false, [])
       }
+    }
+  }
+
+  const handleMemberToggle = (memberId: string, checked: boolean) => {
+    const newAssignedMembers = checked 
+      ? [...currentAssignedMembers, memberId]
+      : currentAssignedMembers.filter(id => id !== memberId)
+    
+    if (onAssignmentChange) {
+      onAssignmentChange(activityIndex, null, false, newAssignedMembers)
     }
   }
 
   const getCurrentValue = () => {
     if (currentAssignedToAll) return 'all'
-    if (currentAssignment) return currentAssignment
+    if (currentAssignedMembers.length > 1) return 'multiple'
+    if (currentAssignment || currentAssignedMembers.length === 1) return currentAssignment || currentAssignedMembers[0]
     return 'unassigned'
   }
 
@@ -153,8 +172,18 @@ export function ActivityAssignment({
       )
     }
     
-    if (currentAssignment) {
-      const member = acceptedMembers.find(m => m.id === currentAssignment)
+    if (currentAssignedMembers.length > 1) {
+      return (
+        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+          <Users className="h-3 w-3 mr-1" />
+          {currentAssignedMembers.length} Members
+        </Badge>
+      )
+    }
+    
+    if (currentAssignment || currentAssignedMembers.length === 1) {
+      const memberId = currentAssignment || currentAssignedMembers[0]
+      const member = acceptedMembers.find(m => m.id === memberId)
       const memberName = member ? (
         member.profile 
           ? `${member.profile.first_name || ''} ${member.profile.last_name || ''}`.trim() || member.profile.username || member.name
@@ -243,6 +272,12 @@ export function ActivityAssignment({
                       <span>All Members ({acceptedMembers.length})</span>
                     </div>
                   </SelectItem>
+                  <SelectItem value="multiple">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3 w-3" />
+                      <span>Select Multiple</span>
+                    </div>
+                  </SelectItem>
                   {acceptedMembers.map((member) => {
                     const memberName = member.profile 
                       ? `${member.profile.first_name || ''} ${member.profile.last_name || ''}`.trim() || member.profile.username || member.name
@@ -266,6 +301,41 @@ export function ActivityAssignment({
               </Select>
               {updating && (
                 <p className="text-xs text-muted-foreground">Updating assignment...</p>
+              )}
+              
+              {/* Multiple Member Selection */}
+              {getCurrentValue() === 'multiple' && (
+                <div className="space-y-2 mt-2 p-2 border rounded-lg bg-muted/20">
+                  <p className="text-xs font-medium">Select Members:</p>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {acceptedMembers.map((member) => {
+                      const memberName = member.profile 
+                        ? `${member.profile.first_name || ''} ${member.profile.last_name || ''}`.trim() || member.profile.username || member.name
+                        : member.name
+                      
+                      return (
+                        <div key={member.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`member-${member.id}`}
+                            checked={currentAssignedMembers.includes(member.id)}
+                            onCheckedChange={(checked) => handleMemberToggle(member.id, checked as boolean)}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-4 w-4">
+                              <AvatarImage src={member.profile?.profile_picture_url} />
+                              <AvatarFallback className="text-xs">
+                                {memberName.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <label htmlFor={`member-${member.id}`} className="text-xs cursor-pointer">
+                              {memberName}
+                            </label>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
               )}
             </div>
           )}

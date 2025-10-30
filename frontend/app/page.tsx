@@ -26,7 +26,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Target className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+              <img src="/Comittly-logo.png" alt="Commitly" className="h-6 w-6 sm:h-8 sm:w-8" />
               <span className="text-xl sm:text-2xl font-bold">Commitly</span>
             </div>
 
@@ -351,7 +351,7 @@ export default function LandingPage() {
             {/* Company Info */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Target className="h-6 w-6 text-primary" />
+                <img src="/commitly-logo.png" alt="Commitly" className="h-6 w-6" />
                 <span className="text-lg font-bold">Commitly</span>
               </div>
               <p className="text-sm text-muted-foreground">

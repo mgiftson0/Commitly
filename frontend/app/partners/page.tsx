@@ -465,9 +465,7 @@ export default function PartnersPage() {
             <TabsTrigger value="followers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 sm:px-6 py-3 text-sm">
               Followers
             </TabsTrigger>
-            <TabsTrigger value="follow-requests" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 sm:px-6 py-3 text-sm">
-              Requests {followRequests.length > 0 && <Badge className="ml-1 sm:ml-2 h-5 w-5 p-0 text-xs">{followRequests.length}</Badge>}
-            </TabsTrigger>
+
             <TabsTrigger value="partners" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 sm:px-6 py-3 text-sm">
               Partners
             </TabsTrigger>
@@ -492,9 +490,7 @@ export default function PartnersPage() {
             />
           </TabsContent>
 
-          <TabsContent value="follow-requests" className="space-y-4">
-            <FollowRequestsList requests={followRequests} onRequestAction={handleFollowRequestAction} />
-          </TabsContent>
+
 
           <TabsContent value="partners" className="space-y-4">
             <PartnersList 

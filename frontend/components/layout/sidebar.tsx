@@ -255,7 +255,7 @@ export function Sidebar({ className }: SidebarProps) {
       <div className="flex h-14 md:h-16 items-center justify-between px-3 sm:px-4 border-b">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <Target className="h-6 w-6 text-primary" />
+            <img src="/Comittly-logo.png" alt="Commitly" className="h-6 w-6" />
             <span className="text-lg font-bold">Commitly</span>
           </div>
         )}

@@ -280,14 +280,18 @@ export async function completeActivity(
     // Check if activity is assigned to this user
     const { data: activity } = await supabase
       .from('goal_activities')
-      .select('assigned_to, assigned_to_all, title')
+      .select('assigned_to, assigned_to_all, assigned_members, title')
       .eq('id', activityId)
       .single()
 
     if (!activity) throw new Error('Activity not found')
 
     // Verify user can complete this activity
-    if (!activity.assigned_to_all && activity.assigned_to !== user.id) {
+    const canComplete = activity.assigned_to_all || 
+                       activity.assigned_to === user.id || 
+                       (activity.assigned_members && activity.assigned_members.includes(user.id))
+    
+    if (!canComplete) {
       throw new Error('You are not assigned to this activity')
     }
 
@@ -450,7 +454,7 @@ export async function canUserEditActivity(activityId: string, userId: string): P
   try {
     const { data: activity } = await supabase
       .from('goal_activities')
-      .select('assigned_to, assigned_to_all, goal_id')
+      .select('assigned_to, assigned_to_all, assigned_members, goal_id')
       .eq('id', activityId)
       .single()
 
@@ -463,6 +467,7 @@ export async function canUserEditActivity(activityId: string, userId: string): P
     // Check if activity is assigned to this user
     if (activity.assigned_to_all) return true
     if (activity.assigned_to === userId) return true
+    if (activity.assigned_members && activity.assigned_members.includes(userId)) return true
 
     return false
   } catch (error) {
@@ -538,7 +543,7 @@ export async function getGroupGoalDetails(goalId: string) {
  */
 export async function updateActivityAssignment(
   activityId: string,
-  assignment: { assignedTo?: string; assignedToAll: boolean }
+  assignment: { assignedTo?: string; assignedToAll: boolean; assignedMembers?: string[] }
 ) {
   try {
     const { data: { user } } = await supabase.auth.getUser()
@@ -564,7 +569,8 @@ export async function updateActivityAssignment(
       .update({
         assigned_to: assignment.assignedTo || null,
         assigned_to_all: assignment.assignedToAll,
-        activity_type: assignment.assignedToAll ? 'collaborative' : 'individual'
+        assigned_members: assignment.assignedMembers || null,
+        activity_type: assignment.assignedToAll ? 'collaborative' : (assignment.assignedMembers?.length ? 'multi_member' : 'individual')
       })
       .eq('id', activityId)
 
@@ -806,6 +812,14 @@ export async function getActivityProgress(activityId: string) {
         .eq('goal_id', activity.goal_id)
         .eq('status', 'accepted')
       assignedMembers = allMembers || []
+    } else if (activity.assigned_members && activity.assigned_members.length > 0) {
+      const { data: multipleMembers } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, username, profile_picture_url')
+        .in('id', activity.assigned_members)
+      if (multipleMembers) {
+        assignedMembers = multipleMembers.map(member => ({ user_id: member.id, profile: member }))
+      }
     } else if (activity.assigned_to) {
       const { data: specificMember } = await supabase
         .from('profiles')

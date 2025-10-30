@@ -213,7 +213,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <SheetContent side="left" className="w-64 p-0">
               <div className="flex h-full flex-col">
                 <div className="flex items-center gap-2 px-3 py-3 border-b">
-                  <Target className="h-5 w-5 text-primary" />
+                  <img src="/Comittly-logo.png" alt="Commitly" className="h-5 w-5" />
                   <span className="text-base font-bold">Commitly</span>
                 </div>
                 <nav className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -266,7 +266,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary/60 rounded-lg blur opacity-75" />
               <div className="relative bg-background rounded-lg p-1 border">
-                <Target className="h-5 w-5 text-primary" />
+                <img src="/Comittly-logo.png" alt="Commitly" className="h-5 w-5" />
               </div>
             </div>
             <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">

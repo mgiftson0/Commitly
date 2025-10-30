@@ -363,14 +363,14 @@ function UserResults({ users, followStates, onFollowAction }: {
                       {followState === 'pending' && (
                         <Button size="sm" variant="outline" disabled>
                           <UserCheck className="h-4 w-4 mr-2" />
-                          Pending
+                          Mutual
                         </Button>
                       )}
                       
                       {followState === 'following' && (
                         <Button size="sm" variant="outline">
                           <UserCheck className="h-4 w-4 mr-2" />
-                          Following
+                          Mutual
                         </Button>
                       )}
                     </div>

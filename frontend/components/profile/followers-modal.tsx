@@ -218,7 +218,7 @@ export function FollowersModal({ open, onOpenChange, userId, initialTab = 'follo
                     handleFollowAction(user.id, 'unfollow')
                   }}
                 >
-                  <UserCheck className="h-3 w-3" />
+                  Mutual
                 </Button>
               ) : (
                 <Button 
