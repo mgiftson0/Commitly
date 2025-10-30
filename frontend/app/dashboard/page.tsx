@@ -412,13 +412,13 @@ export default function DashboardPage() {
               </SortableContext>
             </DndContext>
           ) : (
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 auto-rows-fr">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
               {layout.map((sectionType) => {
                 const section = renderSection(sectionType)
                 if (!section) return null
 
                 return (
-                  <div key={`static-${sectionType}`} className="h-[420px]">
+                  <div key={`static-${sectionType}`}>
                     {section}
                   </div>
                 )

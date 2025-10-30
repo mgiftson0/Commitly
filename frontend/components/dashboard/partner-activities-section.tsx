@@ -31,7 +31,7 @@ export function PartnerActivitiesSection({
   enteringItems
 }: PartnerActivitiesSectionProps) {
   return (
-    <Card className="hover-lift h-[380px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-teal-400/50 overflow-hidden">
+    <Card className="hover-lift h-[420px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-teal-400/50">
       <CardHeader className="flex-shrink-0 pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -46,7 +46,7 @@ export function PartnerActivitiesSection({
           </Link>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto pb-4">
+      <CardContent className="flex-1 pb-4">
         {activities.length === 0 ? (
           <div className="text-center py-6">
             <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />

@@ -431,19 +431,21 @@ export default function NotificationsPage() {
     }
   }
 
-  const getNotificationGradient = (type: string) => {
+  const getNotificationBackground = (type: string) => {
     switch (type) {
-      case 'goal_completed': return 'from-emerald-400/20 via-green-300/10 to-emerald-500/20'
-      case 'streak_milestone': return 'from-orange-400/20 via-red-300/10 to-orange-500/20'
-      case 'achievement_unlocked': return 'from-amber-400/20 via-yellow-300/10 to-amber-500/20'
-      case 'partner_request': return 'from-purple-400/20 via-violet-300/10 to-purple-500/20'
-      case 'encouragement_received': return 'from-pink-400/20 via-rose-300/10 to-pink-500/20'
-      case 'streak_at_risk': return 'from-red-400/20 via-orange-300/10 to-red-500/20'
-      case 'goal_reminder': return 'from-cyan-400/20 via-blue-300/10 to-cyan-500/20'
-      case 'weekly_report': return 'from-teal-400/20 via-emerald-300/10 to-teal-500/20'
-      case 'feature_announcement': return 'from-violet-400/20 via-purple-300/10 to-violet-500/20'
-      case 'goal_shared': return 'from-sky-400/20 via-blue-300/10 to-sky-500/20'
-      default: return 'from-slate-400/20 via-gray-300/10 to-slate-500/20'
+      case 'goal_completed': return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+      case 'streak_milestone': return 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'
+      case 'achievement_unlocked': return 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
+      case 'partner_request': return 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800'
+      case 'goal_partner_request': return 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800'
+      case 'encouragement_received': return 'bg-pink-50 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800'
+      case 'streak_at_risk': return 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
+      case 'goal_reminder': return 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800'
+      case 'weekly_report': return 'bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800'
+      case 'feature_announcement': return 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800'
+      case 'goal_shared': return 'bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800'
+      case 'goal_created': return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+      default: return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
     }
   }
 
@@ -513,7 +515,7 @@ export default function NotificationsPage() {
           {notifications.map((notification) => {
             const Icon = getNotificationIcon(notification.type)
             const color = getNotificationColor(notification.type)
-            const gradient = getNotificationGradient(notification.type)
+            const backgroundStyle = getNotificationBackground(notification.type)
 
             return (
               <div
@@ -522,19 +524,11 @@ export default function NotificationsPage() {
                   !notification.read ? 'shadow-md' : 'shadow-sm'
                 }`}
               >
-                {/* Animated Gradient Border */}
-                <div className={`absolute inset-0 bg-gradient-to-r ${gradient} opacity-60 animate-pulse`} />
-                <div className="absolute inset-0 bg-gradient-conic from-transparent via-white/20 to-transparent animate-spin" style={{ animationDuration: '8s' }} />
-                
                 {/* Main Card Content */}
                 <div 
-                  className={`relative bg-background/95 backdrop-blur-sm m-0.5 rounded-lg border border-border/50 h-[100px] flex flex-col cursor-pointer transition-all ${
-                    !notification.read ? 'hover:bg-accent/50' : 'hover:bg-accent/30'
-                  }`}
+                  className={`relative rounded-lg h-[100px] flex flex-col cursor-pointer transition-all hover:bg-accent/50 ${backgroundStyle}`}
                   onClick={() => !notification.read && markAsRead(notification.id)}
                 >
-                  {/* Aurora Glow Effect */}
-                  <div className={`absolute inset-0 bg-gradient-to-r ${gradient} opacity-20 blur-sm`} />
                   
                   <div className="relative p-2.5 flex-1 flex flex-col justify-between">
                     <div className="flex items-start gap-2">

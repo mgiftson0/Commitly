@@ -30,7 +30,7 @@ export function CategoryProgressSection({
   onToggleCategoryModal
 }: CategoryProgressSectionProps) {
   return (
-    <Card className="hover-lift h-[420px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-purple-400/50 overflow-hidden">
+    <Card className="hover-lift h-[420px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-purple-400/50">
       <CardHeader className="px-4 sm:px-6 py-1">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-sm font-medium bg-muted/30 px-2 py-1 rounded-md w-fit">
@@ -77,7 +77,7 @@ export function CategoryProgressSection({
           )}
         </div>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6 pt-0">
+      <CardContent className="flex-1 space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6 pt-0">
         {categories.length === 0 ? (
           <div className="text-center py-6">
             <TrendingUp className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
