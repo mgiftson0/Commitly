@@ -91,13 +91,17 @@ export async function createGroupGoal(
     if (goalError) throw goalError
 
     // Add owner as accepted member
-    await supabase.from('group_goal_members').insert({
+    const { error: memberError } = await supabase.from('group_goal_members').insert({
       goal_id: goal.id,
       user_id: user.id,
       role: 'owner',
       status: 'accepted',
       can_edit: true
     })
+    
+    if (memberError) {
+      console.error('Error adding owner as member:', memberError)
+    }
 
     // Send invitations to members
     const invitations = memberIds.map(memberId => ({
@@ -241,7 +245,7 @@ export async function getGroupGoalMembers(goalId: string) {
         profile:profiles(first_name, last_name, username, profile_picture_url)
       `)
       .eq('goal_id', goalId)
-      .order('invited_at', { ascending: true })
+      .order('created_at', { ascending: true })
 
     if (error) throw error
     return { data, success: true }
@@ -252,62 +256,13 @@ export async function getGroupGoalMembers(goalId: string) {
 }
 
 /**
- * Assign activity to user(s)
+ * Assign activity to user(s) (deprecated - use updateActivityAssignment)
  */
 export async function assignActivity(
   activityId: string,
   assignment: { assignedTo?: string; assignedToAll: boolean }
 ) {
-  try {
-    const { error } = await supabase
-      .from('goal_activities')
-      .update({
-        assigned_to: assignment.assignedTo || null,
-        assigned_to_all: assignment.assignedToAll,
-        activity_type: assignment.assignedToAll ? 'collaborative' : 'individual'
-      })
-      .eq('id', activityId)
-
-    if (error) throw error
-
-    // If assigned to all, create notification for all members
-    if (assignment.assignedToAll) {
-      const { data: activity } = await supabase
-        .from('goal_activities')
-        .select('goal_id, title')
-        .eq('id', activityId)
-        .single()
-
-      if (activity) {
-        const { data: members } = await supabase
-          .from('group_goal_members')
-          .select('user_id')
-          .eq('goal_id', activity.goal_id)
-          .eq('status', 'accepted')
-
-        if (members) {
-          const notifications = members.map(m => ({
-            user_id: m.user_id,
-            type: 'goal_reminder',
-            title: 'New Activity Assigned',
-            message: `Activity assigned to all members: "${activity.title}"`,
-            data: {
-              activity_id: activityId,
-              goal_id: activity.goal_id
-            },
-            read: false
-          }))
-
-          await supabase.from('notifications').insert(notifications)
-        }
-      }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error('Error assigning activity:', error)
-    return { error, success: false }
-  }
+  return updateActivityAssignment(activityId, assignment)
 }
 
 /**
@@ -325,7 +280,7 @@ export async function completeActivity(
     // Check if activity is assigned to this user
     const { data: activity } = await supabase
       .from('goal_activities')
-      .select('assigned_to, assigned_to_all')
+      .select('assigned_to, assigned_to_all, title')
       .eq('id', activityId)
       .single()
 
@@ -334,6 +289,18 @@ export async function completeActivity(
     // Verify user can complete this activity
     if (!activity.assigned_to_all && activity.assigned_to !== user.id) {
       throw new Error('You are not assigned to this activity')
+    }
+
+    // Check if already completed by this user
+    const { data: existingCompletion } = await supabase
+      .from('activity_completions')
+      .select('id')
+      .eq('activity_id', activityId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (existingCompletion) {
+      throw new Error('Activity already completed by you')
     }
 
     // Insert completion record
@@ -347,9 +314,75 @@ export async function completeActivity(
       })
 
     if (error) throw error
+
+    // Notify other group members
+    const { data: members } = await supabase
+      .from('group_goal_members')
+      .select('user_id')
+      .eq('goal_id', goalId)
+      .eq('status', 'accepted')
+      .neq('user_id', user.id)
+
+    if (members && members.length > 0) {
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, username')
+        .eq('id', user.id)
+        .single()
+
+      const userName = userProfile 
+        ? `${userProfile.first_name} ${userProfile.last_name}`.trim() || userProfile.username
+        : 'Someone'
+
+      const notifications = members.map(member => ({
+        user_id: member.user_id,
+        type: 'activity_completed',
+        title: 'Activity Completed! 🎉',
+        message: `${userName} completed: "${activity.title}"`,
+        data: {
+          activity_id: activityId,
+          goal_id: goalId,
+          completed_by: user.id,
+          completed_by_name: userName
+        },
+        read: false
+      }))
+
+      await supabase.from('notifications').insert(notifications)
+    }
+
     return { success: true }
   } catch (error) {
     console.error('Error completing activity:', error)
+    return { error, success: false }
+  }
+}
+
+/**
+ * Uncomplete activity for current user (remove completion)
+ */
+export async function uncompleteActivity(activityId: string, goalId: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    // Check if user can edit this activity
+    const canEdit = await canUserEditActivity(activityId, user.id)
+    if (!canEdit) {
+      throw new Error('You cannot uncomplete this activity')
+    }
+
+    // Remove completion record
+    const { error } = await supabase
+      .from('activity_completions')
+      .delete()
+      .eq('activity_id', activityId)
+      .eq('user_id', user.id)
+
+    if (error) throw error
+    return { success: true }
+  } catch (error) {
+    console.error('Error uncompleting activity:', error)
     return { error, success: false }
   }
 }
@@ -377,29 +410,10 @@ export async function getActivityCompletions(activityId: string) {
 }
 
 /**
- * Check if user can update activity
+ * Check if user can update activity (deprecated - use canUserEditActivity)
  */
 export async function canUserUpdateActivity(activityId: string, userId: string) {
-  try {
-    const { data: activity } = await supabase
-      .from('goal_activities')
-      .select('assigned_to, assigned_to_all, goal_id')
-      .eq('id', activityId)
-      .single()
-
-    if (!activity) return false
-
-    // Check if user is assigned
-    if (activity.assigned_to_all) return true
-    if (activity.assigned_to === userId) return true
-
-    // Check if user is goal admin (owner)
-    const isAdmin = await isGroupGoalAdmin(activity.goal_id, userId)
-    return isAdmin
-  } catch (error) {
-    console.error('Error checking permissions:', error)
-    return false
-  }
+  return canUserEditActivity(activityId, userId)
 }
 
 /**
@@ -426,6 +440,140 @@ export async function isGroupGoalAdmin(goalId: string, userId: string): Promise<
   } catch (error) {
     console.error('Error checking admin permissions:', error)
     return false
+  }
+}
+
+/**
+ * Check if user can edit a specific activity
+ */
+export async function canUserEditActivity(activityId: string, userId: string): Promise<boolean> {
+  try {
+    const { data: activity } = await supabase
+      .from('goal_activities')
+      .select('assigned_to, assigned_to_all, goal_id')
+      .eq('id', activityId)
+      .single()
+
+    if (!activity) return false
+
+    // Check if user is goal admin first
+    const isAdmin = await isGroupGoalAdmin(activity.goal_id, userId)
+    if (isAdmin) return true
+
+    // Check if activity is assigned to this user
+    if (activity.assigned_to_all) return true
+    if (activity.assigned_to === userId) return true
+
+    return false
+  } catch (error) {
+    console.error('Error checking activity edit permissions:', error)
+    return false
+  }
+}
+
+/**
+ * Get detailed group goal with members and activities
+ */
+export async function getGroupGoalDetails(goalId: string) {
+  try {
+    // Get goal details
+    const { data: goal, error: goalError } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('id', goalId)
+      .single()
+
+    if (goalError) throw goalError
+
+    // Get members
+    const { data: members, error: membersError } = await supabase
+      .from('group_goal_members')
+      .select(`
+        *,
+        profile:profiles(first_name, last_name, username, profile_picture_url)
+      `)
+      .eq('goal_id', goalId)
+      .order('created_at', { ascending: true })
+
+    if (membersError) throw membersError
+
+    // Get activities with assignments
+    const { data: activities, error: activitiesError } = await supabase
+      .from('goal_activities')
+      .select('*')
+      .eq('goal_id', goalId)
+      .order('order_index', { ascending: true })
+
+    if (activitiesError) throw activitiesError
+
+    // Get activity completions
+    const { data: completions, error: completionsError } = await supabase
+      .from('activity_completions')
+      .select(`
+        *,
+        user:profiles(first_name, last_name, username, profile_picture_url)
+      `)
+      .eq('goal_id', goalId)
+      .order('completed_at', { ascending: false })
+
+    if (completionsError) throw completionsError
+
+    return {
+      data: {
+        goal,
+        members: members || [],
+        activities: activities || [],
+        completions: completions || []
+      },
+      success: true
+    }
+  } catch (error) {
+    console.error('Error fetching group goal details:', error)
+    return { error, success: false }
+  }
+}
+
+/**
+ * Update activity assignment (admin only)
+ */
+export async function updateActivityAssignment(
+  activityId: string,
+  assignment: { assignedTo?: string; assignedToAll: boolean }
+) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    // Get activity to check permissions
+    const { data: activity } = await supabase
+      .from('goal_activities')
+      .select('goal_id')
+      .eq('id', activityId)
+      .single()
+
+    if (!activity) throw new Error('Activity not found')
+
+    // Check if user is admin
+    const isAdmin = await isGroupGoalAdmin(activity.goal_id, user.id)
+    if (!isAdmin) {
+      throw new Error('Only admins can update activity assignments')
+    }
+
+    const { error } = await supabase
+      .from('goal_activities')
+      .update({
+        assigned_to: assignment.assignedTo || null,
+        assigned_to_all: assignment.assignedToAll,
+        activity_type: assignment.assignedToAll ? 'collaborative' : 'individual'
+      })
+      .eq('id', activityId)
+
+    if (error) throw error
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating activity assignment:', error)
+    return { error, success: false }
   }
 }
 
@@ -613,16 +761,90 @@ export async function getGroupGoalProgress(goalId: string) {
       }
     })
 
+    // Calculate overall progress
+    const totalAssignedActivities = memberProgress?.reduce((sum, member) => sum + member.assigned, 0) || 0
+    const totalCompletedActivities = memberProgress?.reduce((sum, member) => sum + member.completed, 0) || 0
+    const overallProgress = totalAssignedActivities > 0 
+      ? Math.round((totalCompletedActivities / totalAssignedActivities) * 100)
+      : 0
+
     return {
       data: {
         totalActivities: activities.length,
         completedActivities: activities.filter(a => a.completed).length,
+        overallProgress,
         memberProgress
       },
       success: true
     }
   } catch (error) {
     console.error('Error fetching progress:', error)
+    return { error, success: false }
+  }
+}
+
+/**
+ * Get activity progress for a specific activity
+ */
+export async function getActivityProgress(activityId: string) {
+  try {
+    // Get activity details
+    const { data: activity } = await supabase
+      .from('goal_activities')
+      .select('*, goal_id')
+      .eq('id', activityId)
+      .single()
+
+    if (!activity) throw new Error('Activity not found')
+
+    // Get assigned members
+    let assignedMembers = []
+    if (activity.assigned_to_all) {
+      const { data: allMembers } = await supabase
+        .from('group_goal_members')
+        .select('user_id, profile:profiles(first_name, last_name, username, profile_picture_url)')
+        .eq('goal_id', activity.goal_id)
+        .eq('status', 'accepted')
+      assignedMembers = allMembers || []
+    } else if (activity.assigned_to) {
+      const { data: specificMember } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, username, profile_picture_url')
+        .eq('id', activity.assigned_to)
+        .single()
+      if (specificMember) {
+        assignedMembers = [{ user_id: specificMember.id, profile: specificMember }]
+      }
+    }
+
+    // Get completions
+    const { data: completions } = await supabase
+      .from('activity_completions')
+      .select(`
+        *,
+        user:profiles(first_name, last_name, username, profile_picture_url)
+      `)
+      .eq('activity_id', activityId)
+      .order('completed_at', { ascending: false })
+
+    const completedUserIds = new Set(completions?.map(c => c.user_id) || [])
+    const progressPercentage = assignedMembers.length > 0 
+      ? Math.round((completions?.length || 0) / assignedMembers.length * 100)
+      : 0
+
+    return {
+      data: {
+        activity,
+        assignedMembers,
+        completions: completions || [],
+        progressPercentage,
+        completedCount: completions?.length || 0,
+        totalAssigned: assignedMembers.length
+      },
+      success: true
+    }
+  } catch (error) {
+    console.error('Error fetching activity progress:', error)
     return { error, success: false }
   }
 }

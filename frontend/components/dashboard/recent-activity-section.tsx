@@ -33,7 +33,7 @@ export function RecentActivitySection({
   const router = useRouter()
 
   return (
-    <Card className="hover-lift h-auto w-full flex flex-col hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 shadow-slate-900/15 transition-all duration-200 border-2 border-blue-400/50">
+    <Card className="hover-lift h-[420px] w-full flex flex-col hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-1 shadow-slate-900/15 transition-all duration-200 border-2 border-blue-400/50 overflow-hidden">
       <CardHeader className="flex-shrink-0 pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -47,11 +47,9 @@ export function RecentActivitySection({
             </Button>
           </Link>
         </div>
-        <CardDescription className="pt-1">
-          Your latest achievements and updates
-        </CardDescription>
+
       </CardHeader>
-      <CardContent className="pb-4">
+      <CardContent className="flex-1 overflow-y-auto pb-4">
         {activities.length === 0 ? (
           <div className="text-center py-6">
             <Bell className="h-10 w-10 text-muted-foreground mx-auto mb-3" />

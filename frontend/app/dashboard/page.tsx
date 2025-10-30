@@ -35,6 +35,23 @@ import {
 import Link from "next/link"
 import { Celebration } from "@/components/achievements/celebration"
 
+// Drag and drop imports
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+
 // Import new components
 import { DashboardStats } from "@/components/dashboard/dashboard-stats"
 import { MotivationCard } from "@/components/dashboard/motivation-card"
@@ -58,6 +75,11 @@ import { PartnerActivitiesSection } from "@/components/dashboard/partner-activit
 // New hooks
 import { useDashboardData } from "@/hooks/use-dashboard-data"
 import { useDashboardAnimations } from "@/hooks/use-dashboard-animations"
+import { useDashboardLayout, DashboardSection } from "@/hooks/use-dashboard-layout"
+
+// Layout components
+import { DraggableSection } from "@/components/dashboard/draggable-section"
+import { DashboardLayoutControls } from "@/components/dashboard/dashboard-layout-controls"
 
 // Import hooks and utilities
 import { useGoals } from "@/hooks/use-goals"
@@ -139,6 +161,17 @@ export default function DashboardPage() {
   })
   const router = useRouter()
 
+  // Layout management
+  const { layout, isEditMode, setLayout, resetLayout, toggleEditMode } = useDashboardLayout()
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
   // Use new hooks
   const {
     goals,
@@ -180,6 +213,71 @@ export default function DashboardPage() {
     setMotivationEnabled(newValue)
     localStorage.setItem('dailyMotivationEnabled', String(newValue))
     if (!newValue) setShowMotivation(false)
+  }
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const oldIndex = layout.indexOf(active.id as DashboardSection)
+      const newIndex = layout.indexOf(over.id as DashboardSection)
+      setLayout(arrayMove(layout, oldIndex, newIndex))
+    }
+  }
+
+  // Render section based on type
+  const renderSection = (sectionType: DashboardSection) => {
+    switch (sectionType) {
+      case 'active-goals':
+        return (
+          <ActiveGoalsSection
+            goals={goals}
+            animationsLoaded={animationsLoaded}
+            exitingItems={exitingItems}
+            enteringItems={enteringItems}
+          />
+        )
+      case 'recent-activity':
+        return (
+          <RecentActivitySection
+            activities={recentActivity}
+            animationsLoaded={animationsLoaded}
+            exitingItems={exitingItems}
+            enteringItems={enteringItems}
+          />
+        )
+      case 'upcoming-deadlines':
+        return (
+          <UpcomingDeadlinesSection
+            deadlines={upcomingDeadlines}
+            animationsLoaded={animationsLoaded}
+            exitingItems={exitingItems}
+            enteringItems={enteringItems}
+          />
+        )
+      case 'category-progress':
+        return (
+          <CategoryProgressSection
+            categories={categoryProgress}
+            showCategoryModal={showCategoryModal}
+            onToggleCategoryModal={() => setShowCategoryModal(!showCategoryModal)}
+          />
+        )
+      case 'quick-actions':
+        return <QuickActionsSection />
+      case 'partner-activities':
+        return (
+          <PartnerActivitiesSection
+            activities={recentActivity}
+            animationsLoaded={animationsLoaded}
+            exitingItems={exitingItems}
+            enteringItems={enteringItems}
+          />
+        )
+      default:
+        return null
+    }
   }
 
   // Play notification sound
@@ -269,7 +367,7 @@ export default function DashboardPage() {
       <AnimatedBackground />
       <MainLayout>
         <div className="space-y-6">
-          {/* Welcome Header Section */}
+          {/* Welcome Header Section - Fixed Position */}
           <WelcomeHeaderSection
             profile={profile}
             todayMotivation={todayMotivation}
@@ -280,53 +378,53 @@ export default function DashboardPage() {
             todayStats={todayStats}
           />
 
-          <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-2 2xl:justify-center">
-            {/* Active Goals */}
-            <ActiveGoalsSection
-              goals={goals}
-              animationsLoaded={animationsLoaded}
-              exitingItems={exitingItems}
-              enteringItems={enteringItems}
-            />
+          {/* Layout Controls */}
+          <DashboardLayoutControls
+            isEditMode={isEditMode}
+            onToggleEditMode={toggleEditMode}
+            onResetLayout={resetLayout}
+          />
 
-            {/* Recent Activity */}
-            <RecentActivitySection
-              activities={recentActivity}
-              animationsLoaded={animationsLoaded}
-              exitingItems={exitingItems}
-              enteringItems={enteringItems}
-            />
-          </div>
+          {/* Draggable Dashboard Sections - 6 Containers */}
+          {isEditMode ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={layout} strategy={verticalListSortingStrategy}>
+                <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 auto-rows-fr">
+                  {layout.map((sectionType) => {
+                    const section = renderSection(sectionType)
+                    if (!section) return null
 
-          <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-2 2xl:justify-center">
-            {/* Upcoming Deadlines */}
-            <UpcomingDeadlinesSection
-              deadlines={upcomingDeadlines}
-              animationsLoaded={animationsLoaded}
-              exitingItems={exitingItems}
-              enteringItems={enteringItems}
-            />
+                    return (
+                      <DraggableSection
+                        key={`draggable-${sectionType}`}
+                        id={sectionType}
+                        isEditMode={isEditMode}
+                      >
+                        {section}
+                      </DraggableSection>
+                    )
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 auto-rows-fr">
+              {layout.map((sectionType) => {
+                const section = renderSection(sectionType)
+                if (!section) return null
 
-            {/* Category Progress */}
-            <CategoryProgressSection
-              categories={categoryProgress}
-              showCategoryModal={showCategoryModal}
-              onToggleCategoryModal={() => setShowCategoryModal(!showCategoryModal)}
-            />
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-2 2xl:justify-center">
-            {/* Quick Actions */}
-            <QuickActionsSection />
-
-            {/* Partner Activities */}
-            <PartnerActivitiesSection
-              activities={recentActivity}
-              animationsLoaded={animationsLoaded}
-              exitingItems={exitingItems}
-              enteringItems={enteringItems}
-            />
-          </div>
+                return (
+                  <div key={`static-${sectionType}`} className="h-[420px]">
+                    {section}
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
           {/* Achievement Celebration */}
           <Celebration

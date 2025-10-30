@@ -394,13 +394,22 @@ export default function CreateGoalPage() {
         // Use group goals API
         const memberIds = groupMembers.filter(id => id !== authUser.id); // Exclude owner
         
+        if (memberIds.length === 0) {
+          toast.error('Please add at least one member to create a group goal')
+          return
+        }
+        
         const response = await fetch('/api/group-goals', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            goalData,
+            goalData: {
+              ...goalData,
+              is_group_goal: true,
+              group_goal_status: 'pending'
+            },
             memberIds
           })
         });
@@ -466,8 +475,8 @@ export default function CreateGoalPage() {
       const { checkAndUnlockAchievements } = await import('@/lib/achievements')
       await checkAndUnlockAchievements(authUser.id, 'goal_created')
 
-      // Create goal activities for multi-activity goals
-      if (goalType === "multi-activity" && activities.length > 0) {
+      // Create goal activities for multi-activity goals (only for non-group goals or if group goal creation didn't handle activities)
+      if (goalType === "multi-activity" && activities.length > 0 && (goalNature !== "group" || groupMembers.length <= 1)) {
         const goalActivities = activities
           .filter(activity => activity.trim())
           .map((activity, index) => ({
@@ -480,9 +489,39 @@ export default function CreateGoalPage() {
           }))
 
         if (goalActivities.length > 0) {
-          await supabase
+          const { error: activitiesError } = await supabase
             .from('goal_activities')
             .insert(goalActivities)
+          
+          if (activitiesError) {
+            console.error('Error creating activities:', activitiesError)
+            toast.error('Goal created but failed to add activities')
+          }
+        }
+      } else if (goalType === "multi-activity" && goalNature === "group" && groupMembers.length > 1) {
+        // For group goals, activities are handled separately after goal creation
+        if (activities.length > 0) {
+          const goalActivities = activities
+            .filter(activity => activity.trim())
+            .map((activity, index) => ({
+              goal_id: newGoal.id,
+              title: activity.trim(),
+              completed: false,
+              order_index: index,
+              assigned_to: activityAssignments[index] || null,
+              assigned_to_all: !activityAssignments[index]
+            }))
+
+          if (goalActivities.length > 0) {
+            const { error: activitiesError } = await supabase
+              .from('goal_activities')
+              .insert(goalActivities)
+            
+            if (activitiesError) {
+              console.error('Error creating group activities:', activitiesError)
+              toast.error('Group goal created but failed to add activities')
+            }
+          }
         }
       }
 

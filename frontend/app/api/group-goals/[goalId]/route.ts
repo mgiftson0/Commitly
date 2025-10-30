@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
-export async function DELETE(request: NextRequest, { params }: { params: { goalId: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { goalId: string } }
+) {
   try {
     const goalId = params.goalId
     
-    if (!goalId) {
-      return NextResponse.json({ error: 'Goal ID required' }, { status: 400 })
-    }
-
+    // Get current user
     const cookieStore = await cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -18,10 +18,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { goalI
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin of the group goal
+    // Check if user is admin (goal owner)
     const { data: goal, error: goalError } = await supabase
       .from('goals')
-      .select('user_id, is_group_goal')
+      .select('user_id, title, is_group_goal')
       .eq('id', goalId)
       .single()
 
@@ -29,31 +29,60 @@ export async function DELETE(request: NextRequest, { params }: { params: { goalI
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
     }
 
-    // Check if user is the goal owner or admin
-    let isAdmin = goal.user_id === user.id
-
-    if (goal.is_group_goal && !isAdmin) {
-      const { data: membership } = await supabase
-        .from('group_goal_members')
-        .select('role')
-        .eq('goal_id', goalId)
-        .eq('user_id', user.id)
-        .single()
-
-      isAdmin = membership?.role === 'admin' || membership?.role === 'creator'
+    if (goal.user_id !== user.id) {
+      return NextResponse.json({ error: 'Only the goal admin can delete this goal' }, { status: 403 })
     }
 
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Only admins can delete group goals' }, { status: 403 })
-    }
+    // Get all members to notify them (before deletion)
+    const { data: members } = await supabase
+      .from('group_goal_members')
+      .select('user_id, profile:profiles(first_name, last_name)')
+      .eq('goal_id', goalId)
+      .eq('status', 'accepted')
+      .neq('user_id', user.id) // Exclude the admin
 
-    // Delete the goal (cascading deletes will handle related records)
+    // Delete the goal (cascade will handle related records)
     const { error: deleteError } = await supabase
       .from('goals')
       .delete()
       .eq('id', goalId)
 
-    if (deleteError) throw deleteError
+    if (deleteError) {
+      console.error('Delete error:', deleteError)
+      return NextResponse.json({ error: deleteError.message }, { status: 400 })
+    }
+
+    // Notify all members about goal deletion
+    if (members && members.length > 0) {
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, username')
+        .eq('id', user.id)
+        .single()
+
+      const adminName = adminProfile 
+        ? `${adminProfile.first_name} ${adminProfile.last_name}`.trim() || adminProfile.username
+        : 'Admin'
+
+      const notifications = members.map(member => ({
+        user_id: member.user_id,
+        type: 'goal_deleted',
+        title: 'Group Goal Deleted',
+        message: `${adminName} deleted the group goal: "${goal.title}"`,
+        data: {
+          goal_id: goalId,
+          goal_title: goal.title,
+          deleted_by: user.id,
+          deleted_by_name: adminName
+        },
+        read: false
+      }))
+
+      const { error: notifError } = await supabase.from('notifications').insert(notifications)
+      if (notifError) {
+        console.error('Notification error:', notifError)
+      }
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -62,15 +91,15 @@ export async function DELETE(request: NextRequest, { params }: { params: { goalI
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { goalId: string } }) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { goalId: string } }
+) {
   try {
     const goalId = params.goalId
     const updates = await request.json()
     
-    if (!goalId) {
-      return NextResponse.json({ error: 'Goal ID required' }, { status: 400 })
-    }
-
+    // Get current user
     const cookieStore = await cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -79,7 +108,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { goalId
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin of the group goal
+    // Check if user is admin (goal owner)
     const { data: goal, error: goalError } = await supabase
       .from('goals')
       .select('user_id, is_group_goal')
@@ -90,35 +119,62 @@ export async function PATCH(request: NextRequest, { params }: { params: { goalId
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
     }
 
-    // Check if user is the goal owner or admin
-    let isAdmin = goal.user_id === user.id
-
-    if (goal.is_group_goal && !isAdmin) {
-      const { data: membership } = await supabase
-        .from('group_goal_members')
-        .select('role')
-        .eq('goal_id', goalId)
-        .eq('user_id', user.id)
-        .single()
-
-      isAdmin = membership?.role === 'admin' || membership?.role === 'creator'
-    }
-
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Only admins can edit group goals' }, { status: 403 })
+    if (goal.user_id !== user.id) {
+      return NextResponse.json({ error: 'Only the goal admin can edit this goal' }, { status: 403 })
     }
 
     // Update the goal
-    const { data, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from('goals')
       .update(updates)
       .eq('id', goalId)
-      .select()
-      .single()
 
-    if (updateError) throw updateError
+    if (updateError) {
+      console.error('Update error:', updateError)
+      return NextResponse.json({ error: updateError.message }, { status: 400 })
+    }
 
-    return NextResponse.json({ success: true, goal: data })
+    // If significant changes, notify members
+    if (updates.title || updates.description || updates.target_date) {
+      const { data: members } = await supabase
+        .from('group_goal_members')
+        .select('user_id')
+        .eq('goal_id', goalId)
+        .eq('status', 'accepted')
+        .neq('user_id', user.id)
+
+      if (members && members.length > 0) {
+        const { data: adminProfile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, username')
+          .eq('id', user.id)
+          .single()
+
+        const adminName = adminProfile 
+          ? `${adminProfile.first_name} ${adminProfile.last_name}`.trim() || adminProfile.username
+          : 'Admin'
+
+        const notifications = members.map(member => ({
+          user_id: member.user_id,
+          type: 'goal_updated',
+          title: 'Group Goal Updated',
+          message: `${adminName} updated the group goal details`,
+          data: {
+            goal_id: goalId,
+            updated_by: user.id,
+            updated_by_name: adminName
+          },
+          read: false
+        }))
+
+        const { error: notifError } = await supabase.from('notifications').insert(notifications)
+        if (notifError) {
+          console.error('Notification error:', notifError)
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error updating group goal:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

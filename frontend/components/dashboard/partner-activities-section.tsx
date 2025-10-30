@@ -43,10 +43,13 @@ export function PartnerActivitiesSection({
   }
 
   return (
-    <Card className="hover-lift h-[400px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-teal-400/50">
+    <Card className="hover-lift h-[420px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-teal-400/50 overflow-hidden">
       <CardHeader className="flex-shrink-0 pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Partner Activities</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Mutual Followers
+          </CardTitle>
           <Link href="/partners/find">
             <Button variant="ghost" size="sm" className="h-8">
               Find Partners
@@ -54,16 +57,13 @@ export function PartnerActivitiesSection({
             </Button>
           </Link>
         </div>
-        <CardDescription className="pt-1">
-          Recent achievements from your partners
-        </CardDescription>
       </CardHeader>
-      <CardContent className="pb-4">
+      <CardContent className="flex-1 overflow-y-auto pb-4">
         {activities.length === 0 ? (
           <div className="text-center py-6">
             <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground text-sm">
-              No partner activities yet
+              No mutual followers yet
             </p>
             <Link href="/partners/find" className="mt-2 inline-block">
               <Button variant="outline" size="sm" className="mt-2">

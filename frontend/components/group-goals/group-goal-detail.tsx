@@ -33,9 +33,11 @@ import {
   Settings
 } from "lucide-react"
 import { ActivityAssignment } from "./activity-assignment"
+import { GroupActivityProgress } from "./group-activity-progress"
 import {
   getGroupGoalMembers,
   getGroupGoalProgress,
+  getGroupGoalDetails,
   deleteGroupGoal,
   isGroupGoalAdmin,
   type GroupGoalMember
@@ -44,9 +46,11 @@ import { supabase, authHelpers } from "@/lib/supabase-client"
 
 interface GroupGoalDetailProps {
   goalId: string
+  isAdmin?: boolean
+  currentUserId?: string
 }
 
-export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
+export function GroupGoalDetail({ goalId, isAdmin = false, currentUserId }: GroupGoalDetailProps) {
   const [goal, setGoal] = useState<any>(null)
   const [members, setMembers] = useState<GroupGoalMember[]>([])
   const [activities, setActivities] = useState<any[]>([])
@@ -54,6 +58,7 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
   const [isOwner, setIsOwner] = useState(false)
   const [loading, setLoading] = useState(true)
   const [customMessage, setCustomMessage] = useState('')
+  const [completions, setCompletions] = useState<any[]>([])
 
   useEffect(() => {
     loadGoalData()
@@ -64,42 +69,29 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
     const user = await authHelpers.getCurrentUser()
     if (!user) return
 
-    // Load goal
-    const { data: goalData } = await supabase
-      .from('goals')
-      .select('*')
-      .eq('id', goalId)
-      .single()
+    try {
+      // Load comprehensive goal details
+      const result = await getGroupGoalDetails(goalId)
+      if (result.success && result.data) {
+        const { goal: goalData, members: membersData, activities: activitiesData, completions: completionsData } = result.data
+        
+        setGoal(goalData)
+        setMembers(membersData || [])
+        setActivities(activitiesData || [])
+        setCompletions(completionsData || [])
+        setIsOwner(goalData.user_id === user.id)
+      }
 
-    if (goalData) {
-      setGoal(goalData)
-      setIsOwner(goalData.user_id === user.id)
+      // Load progress
+      const progressResult = await getGroupGoalProgress(goalId)
+      if (progressResult.success && progressResult.data) {
+        setProgress(progressResult.data)
+      }
+    } catch (error) {
+      console.error('Error loading goal data:', error)
+    } finally {
+      setLoading(false)
     }
-
-    // Load members
-    const membersResult = await getGroupGoalMembers(goalId)
-    if (membersResult.success && membersResult.data) {
-      setMembers(membersResult.data as any)
-    }
-
-    // Load activities
-    const { data: activitiesData } = await supabase
-      .from('goal_activities')
-      .select('*')
-      .eq('goal_id', goalId)
-      .order('order_index', { ascending: true })
-
-    if (activitiesData) {
-      setActivities(activitiesData)
-    }
-
-    // Load progress
-    const progressResult = await getGroupGoalProgress(goalId)
-    if (progressResult.success && progressResult.data) {
-      setProgress(progressResult.data)
-    }
-
-    setLoading(false)
   }
 
   const handleDeleteGoal = async () => {
@@ -224,7 +216,7 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
                   <Users className="h-3 w-3 mr-1" />
                   Group Goal
                 </Badge>
-                {isOwner && (
+                {(isAdmin || isOwner) && (
                   <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-50 dark:bg-amber-950/20">
                     <Crown className="h-3 w-3 mr-1" />
                     Admin
@@ -244,7 +236,7 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
             </div>
             
             {/* Admin Actions */}
-            {isOwner && (
+            {(isAdmin || isOwner) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon">
@@ -252,7 +244,7 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.location.href = `/goals/group/${goalId}/edit`}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Goal
                   </DropdownMenuItem>
@@ -335,15 +327,32 @@ export function GroupGoalDetail({ goalId }: GroupGoalDetailProps) {
               <CardContent className="py-12 text-center">
                 <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No activities yet</p>
+                {isAdmin && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-4"
+                    onClick={() => window.location.href = `/goals/group/${goalId}/edit`}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Activities
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
             activities.map(activity => (
-              <ActivityAssignment
+              <GroupActivityProgress
                 key={activity.id}
-                activity={activity}
-                goalId={goalId}
-                isOwner={isOwner}
+                activityId={activity.id}
+                activityTitle={activity.title}
+                assignedMembers={activity.assigned_to_all 
+                  ? acceptedMembers.map(m => m.user_id)
+                  : activity.assigned_to 
+                    ? [activity.assigned_to]
+                    : []
+                }
+                currentUserId={currentUserId || ''}
                 onUpdate={loadGoalData}
               />
             ))

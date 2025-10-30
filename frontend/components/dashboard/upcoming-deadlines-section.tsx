@@ -31,20 +31,23 @@ export function UpcomingDeadlinesSection({
   const router = useRouter()
 
   return (
-    <Card className="hover-lift h-auto w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-orange-400/50">
+    <Card className="hover-lift h-[420px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-orange-400/50 overflow-hidden">
       <CardHeader className="flex-shrink-0 pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Upcoming Deadlines</CardTitle>
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Upcoming Deadlines
+            </CardTitle>
+
+          </div>
           <Button variant="ghost" size="sm" className="h-8">
             View All
             <ArrowRight className="h-3.5 w-3.5 ml-1" />
           </Button>
         </div>
-        <CardDescription className="pt-1">
-          Goals that need your attention
-        </CardDescription>
       </CardHeader>
-      <CardContent className="pb-4">
+      <CardContent className="flex-1 overflow-y-auto pb-4">
         {deadlines.length === 0 ? (
           <div className="text-center py-6">
             <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />

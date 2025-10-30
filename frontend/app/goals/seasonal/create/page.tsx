@@ -218,13 +218,22 @@ export default function CreateSeasonalGoalPage() {
         // Use group goals API
         const memberIds = groupMembers.filter(id => id !== user.id); // Exclude owner
         
+        if (memberIds.length === 0) {
+          toast.error('Please add at least one member to create a group goal')
+          return
+        }
+        
         const response = await fetch('/api/group-goals', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            goalData,
+            goalData: {
+              ...goalData,
+              is_group_goal: true,
+              group_goal_status: 'pending'
+            },
             memberIds
           })
         });
@@ -265,9 +274,14 @@ export default function CreateSeasonalGoalPage() {
             assigned_to_all: goalNature === "group" && !activityAssignments[index] ? true : false
           }))
 
-        await supabase
+        const { error: milestonesError } = await supabase
           .from('goal_activities')
           .insert(milestoneData)
+        
+        if (milestonesError) {
+          console.error('Error creating milestones:', milestonesError)
+          toast.error('Goal created but failed to add milestones')
+        }
       }
 
       // Create notification

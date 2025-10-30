@@ -1,15 +1,15 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Users, Target, Award, Zap } from "lucide-react"
 import Link from "next/link"
 
 export function QuickActionsSection() {
   return (
-    <Card className="hover-lift h-[400px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-green-400/50">
+    <Card className="hover-lift h-[420px] w-full flex flex-col hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 shadow-lg transition-all duration-200 border-2 border-green-400/50 overflow-hidden">
       <CardHeader className="flex-shrink-0 pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-          <Zap className="h-4 w-4 text-blue-600" />
+        <CardTitle className="flex items-center gap-2">
+          <Zap className="h-5 w-5" />
           Quick Actions
         </CardTitle>
       </CardHeader>
