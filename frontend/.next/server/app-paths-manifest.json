@@ -1,8 +1,8 @@
 {
-  "/notifications/page": "app/notifications/page.js",
-  "/profile/page": "app/profile/page.js",
   "/profile/[username]/page": "app/profile/[username]/page.js",
   "/goals/page": "app/goals/page.js",
+  "/profile/page": "app/profile/page.js",
   "/analytics/page": "app/analytics/page.js",
-  "/goals/[id]/page": "app/goals/[id]/page.js"
+  "/goals/[id]/page": "app/goals/[id]/page.js",
+  "/profile/edit/page": "app/profile/edit/page.js"
 }
