@@ -67,10 +67,16 @@ export default function GroupGoalDetailPage() {
   }, [goalId])
 
   const handleInvitationResponse = async (action: 'accepted' | 'declined') => {
-    if (!currentUser || !goalId || !pendingNotificationId) return
+    if (!currentUser || !goalId || !pendingNotificationId) {
+      console.error('Missing required data:', { currentUser: !!currentUser, goalId, pendingNotificationId })
+      toast.error('Missing invitation data. Please refresh and try again.')
+      return
+    }
     
     setActionLoading(true)
     try {
+      console.log('Sending invitation response:', { notificationId: pendingNotificationId, action })
+      
       const response = await fetch('/api/group-goals/invitations', {
         method: 'PATCH',
         headers: {
@@ -83,7 +89,8 @@ export default function GroupGoalDetailPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to process invitation')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to process invitation')
       }
 
       setInviteStatus(action)
@@ -161,19 +168,28 @@ export default function GroupGoalDetailPage() {
 
       if (memberData) {
         setInviteStatus(memberData.status as 'pending' | 'accepted' | 'declined')
+        console.log('Member status from group_goal_members:', memberData.status)
       } else {
-        // Check for pending notification
-        const { data: pendingNotification } = await supabase
+        // Check for pending notification for this specific goal
+        const { data: pendingNotifications, error: notifError } = await supabase
           .from('notifications')
-          .select('id')
+          .select('id, data')
           .eq('user_id', user.id)
           .eq('type', 'goal_created')
           .eq('read', false)
-          .contains('data', { goal_id: goalId, invitation_type: 'group_goal' })
-          .maybeSingle()
 
-        if (pendingNotification) {
-          setPendingNotificationId(pendingNotification.id)
+        console.log('Notifications found:', { pendingNotifications, notifError })
+
+        // Find notification with matching goal_id
+        const matchingNotification = pendingNotifications?.find(n => {
+          console.log('Checking notification:', n.id, 'with data:', n.data)
+          return n.data?.goal_id === goalId && (n.data?.invitation_type === 'group_goal' || n.data?.is_group_goal)
+        })
+
+        console.log('Matching notification:', matchingNotification)
+
+        if (matchingNotification) {
+          setPendingNotificationId(matchingNotification.id)
           setInviteStatus('pending')
         } else {
           setInviteStatus('loading')

@@ -151,6 +151,12 @@ export function ActivityAssignment({
       ? [...currentAssignedMembers, memberId]
       : currentAssignedMembers.filter(id => id !== memberId)
     
+    // Limit to max 5 members per activity
+    if (newAssignedMembers.length > 5) {
+      toast.error('Maximum 5 members can be assigned to an activity')
+      return
+    }
+    
     if (onAssignmentChange) {
       onAssignmentChange(activityIndex, null, false, newAssignedMembers)
     }
