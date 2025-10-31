@@ -1,4 +1,8 @@
 {
+  "app\\goals\\[id]\\page.tsx -> @/lib/achievements": {
+    "id": "app\\goals\\[id]\\page.tsx -> @/lib/achievements",
+    "files": []
+  },
   "app\\goals\\create\\page.tsx -> @/lib/achievement-tracker-db": {
     "id": "app\\goals\\create\\page.tsx -> @/lib/achievement-tracker-db",
     "files": [

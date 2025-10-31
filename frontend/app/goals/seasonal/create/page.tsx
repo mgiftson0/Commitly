@@ -106,25 +106,54 @@ export default function CreateSeasonalGoalPage() {
           username: profile?.username || 'you'
         })
 
-        const { data: partners } = await supabase
-          .from('accountability_partners')
-          .select(`
-            *,
-            partner_profile:profiles!accountability_partners_partner_id_fkey(*),
-            user_profile:profiles!accountability_partners_user_id_fkey(*)
-          `)
-          .or(`user_id.eq.${user.id},partner_id.eq.${user.id}`)
-          .eq('status', 'accepted')
+        // Get follows relationships - simple queries first
+        const { data: myFollowing } = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', user.id)
 
-        const partnersList = (partners || []).map(p => {
-          const isUserInitiator = p.user_id === user.id
-          const partnerProfile = isUserInitiator ? p.partner_profile : p.user_profile
-          return {
-            id: isUserInitiator ? p.partner_id : p.user_id,
-            name: partnerProfile ? `${partnerProfile.first_name || ''} ${partnerProfile.last_name || ''}`.trim() || 'Partner' : 'Partner',
-            username: partnerProfile?.username || 'partner'
-          }
-        })
+        const { data: myFollowers } = await supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('following_id', user.id)
+
+        // Find mutual connections
+        const followingIds = new Set(myFollowing?.map(f => f.following_id) || [])
+        const followerIds = new Set(myFollowers?.map(f => f.follower_id) || [])
+        
+        // Get mutual follower IDs
+        const mutualIds = Array.from(followingIds).filter(id => followerIds.has(id))
+
+        // If we have mutual followers, get their profiles
+        let partnersList = []
+        if (mutualIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, username, profile_picture_url')
+            .in('id', mutualIds)
+
+          partnersList = (profiles || []).map(profile => ({
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Partner',
+            username: profile.username || 'partner',
+            profile_picture_url: profile.profile_picture_url
+          }))
+        }
+        
+        // If no mutual follows, use all followers
+        if (partnersList.length === 0 && followerIds.size > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, username, profile_picture_url')
+            .in('id', Array.from(followerIds))
+
+          partnersList = (profiles || []).map(profile => ({
+            id: profile.id,
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Follower',
+            username: profile.username || 'follower',
+            profile_picture_url: profile.profile_picture_url
+          }))
+        }
 
         setAvailablePartners(partnersList)
       } catch (error) {

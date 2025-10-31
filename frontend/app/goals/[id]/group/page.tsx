@@ -14,6 +14,7 @@ import { useRouter, useParams } from "next/navigation"
 
 import { toast } from "sonner"
 import { MainLayout } from "@/components/layout/main-layout"
+import { supabase, authHelpers } from "@/lib/supabase-client"
 
 type Goal = {
   id: string
@@ -44,15 +45,17 @@ type Activity = {
 export default function GroupGoalDetailPage() {
   const [personalNote, setPersonalNote] = useState("")
   const [personalNotes, setPersonalNotes] = useState<string[]>([])
-  const [inviteStatus, setInviteStatus] = useState<'pending' | 'accepted' | 'declined'>('accepted')
+  const [inviteStatus, setInviteStatus] = useState<'pending' | 'accepted' | 'declined' | 'loading'>('loading')
   const [goal, setGoal] = useState<Goal | null>(null)
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [pendingNotificationId, setPendingNotificationId] = useState<string | null>(null)
   const params = useParams()
   const router = useRouter()
   const goalId = params.id as string
 
-  const currentUser = { id: 'mock-user-id', name: 'You' }
   const [groupMembers, setGroupMembers] = useState<{ id: string; name: string; role?: string; avatar?: string }[]>([])
 
   const [activityAssignments, setActivityAssignments] = useState<{[key: string]: string[]}>({})
@@ -63,89 +66,141 @@ export default function GroupGoalDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goalId])
 
+  const handleInvitationResponse = async (action: 'accepted' | 'declined') => {
+    if (!currentUser || !goalId || !pendingNotificationId) return
+    
+    setActionLoading(true)
+    try {
+      const response = await fetch('/api/group-goals/invitations', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invitationId: pendingNotificationId,
+          action
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to process invitation')
+      }
+
+      setInviteStatus(action)
+      toast.success(`Group goal invitation ${action}!`)
+      
+      // Refresh to show updated status
+      if (action === 'accepted') {
+        setTimeout(() => window.location.reload(), 1000)
+      }
+    } catch (error: any) {
+      console.error('Error handling invitation:', error)
+      toast.error(error.message || 'Failed to process invitation')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadGoalData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goalId])
+
   const loadGoalData = async () => {
     try {
-      try {
-        const storedGoals = localStorage.getItem('goals')
-        if (!storedGoals) throw new Error('No goals found')
-        const goals = JSON.parse(storedGoals)
-        const stored = goals.find((g: any) => String(g.id) === String(goalId))
-        if (stored) {
-          const mappedGoal: Goal = {
-            id: String(stored.id),
-            user_id: stored.goalOwner?.id || 'mock-user-id',
-            title: stored.title,
-            description: stored.description,
-            goal_type: stored.type as any,
-            visibility: stored.visibility as any,
-            start_date: stored.createdAt,
-            is_suspended: false,
-            created_at: stored.createdAt,
-            updated_at: stored.createdAt,
-          }
-          setGoal(mappedGoal)
-          const members = (stored.groupMembers || []).map((m: any) => ({ id: m.id, name: m.name, role: m.role || 'member', avatar: '/placeholder-avatar.jpg' }))
-          setGroupMembers(members)
-          const acts: Activity[] = (stored.activities || []).map((a: any) => ({
-            id: String(a.orderIndex),
-            goal_id: String(stored.id),
-            title: a.title,
-            description: undefined,
-            is_completed: false,
-            order_index: a.orderIndex,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }))
-          setActivities(acts)
-          setStoreMeta({ dueDate: stored.dueDate || null, recurrencePattern: stored.recurrencePattern, recurrenceDays: stored.recurrenceDays })
-          const ids = members.map((m: any) => m.id)
-          const assignments: { [key: string]: string[] } = {}
-          ;(stored.activities || []).forEach((a: any) => {
-            const assigned = Array.isArray(a.assignedTo) ? a.assignedTo : []
-            const key = String(a.orderIndex)
-            if (assigned.length > 0 && ids.length > 0 && assigned.every((id: string) => ids.includes(id)) && assigned.length === ids.length) {
-              assignments[key] = ['all', ...ids]
-            } else {
-              assignments[key] = assigned
-            }
-          })
-          setActivityAssignments(assignments)
-
-          setLoading(false)
-          return
-        }
-    } catch {}
-    const mockGoal: Goal = {
-        id: goalId,
-        user_id: '3',
-        title: 'Group: Team Fitness Challenge',
-        description: 'Group workout challenge with friends',
-        goal_type: 'multi' as const,
-        visibility: 'restricted' as const,
-        start_date: new Date().toISOString(),
-        is_suspended: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      const user = await authHelpers.getCurrentUser()
+      if (!user) {
+        router.push('/auth/login')
+        return
       }
-      const mockActivities: Activity[] = [
-        { id: '1', goal_id: goalId, title: 'Cardio (20 min)', description: undefined, is_completed: false, order_index: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-        { id: '2', goal_id: goalId, title: 'Strength (10 min)', description: undefined, is_completed: true, completed_at: new Date().toISOString(), order_index: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      ]
-      setGoal(mockGoal)
-      setGroupMembers([
-        { id: 'mock-user-id', name: 'You', role: 'member', avatar: '/placeholder-avatar.jpg' },
-        { id: '2', name: 'Mike Chen', role: 'member', avatar: '/placeholder-avatar.jpg' },
-        { id: '3', name: 'Emily Rodriguez', role: 'creator', avatar: '/placeholder-avatar.jpg' },
-      ])
-      setActivities(mockActivities)
+
+      setCurrentUser(user)
+
+      // Get goal details
+      const { data: goalData } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('id', goalId)
+        .maybeSingle()
+
+      if (!goalData) {
+        toast.error('Goal not found')
+        router.push('/goals')
+        return
+      }
+
+      setGoal(goalData)
+
+      // Get group members
+      const { data: membersData } = await supabase
+        .from('group_goal_members')
+        .select(`
+          *,
+          profile:profiles(first_name, last_name, profile_picture_url)
+        `)
+        .eq('goal_id', goalId)
+
+      if (membersData) {
+        const members = membersData.map((m: any) => ({
+          id: m.user_id,
+          name: `${m.profile?.first_name || ''} ${m.profile?.last_name || ''}`.trim() || 'Member',
+          role: m.role,
+          status: m.status,
+          avatar: m.profile?.profile_picture_url
+        }))
+        setGroupMembers(members)
+      }
+
+      // Check current user's membership status
+      const { data: memberData } = await supabase
+        .from('group_goal_members')
+        .select('status')
+        .eq('goal_id', goalId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (memberData) {
+        setInviteStatus(memberData.status as 'pending' | 'accepted' | 'declined')
+      } else {
+        // Check for pending notification
+        const { data: pendingNotification } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('type', 'goal_created')
+          .eq('read', false)
+          .contains('data', { goal_id: goalId, invitation_type: 'group_goal' })
+          .maybeSingle()
+
+        if (pendingNotification) {
+          setPendingNotificationId(pendingNotification.id)
+          setInviteStatus('pending')
+        } else {
+          setInviteStatus('loading')
+        }
+      }
+
+      // Get activities
+      const { data: activitiesData } = await supabase
+        .from('goal_activities')
+        .select('*')
+        .eq('goal_id', goalId)
+        .order('order_index')
+
+      if (activitiesData) {
+        setActivities(activitiesData)
+      }
+
       setLoading(false)
     } catch (error) {
-      toast.error("Failed to load goal")
+      console.error('Error loading goal:', error)
+      toast.error('Failed to load goal')
       setLoading(false)
     }
   }
 
   const isUserAssignedToActivity = (activityId: string) => {
+    if (!currentUser) return false
     const assigned = activityAssignments[activityId] || []
     if (assigned.includes('all')) return true
     return assigned.includes(currentUser.id)
@@ -218,12 +273,35 @@ export default function GroupGoalDetailPage() {
           <Card className="hover-lift border-yellow-200 bg-yellow-50/50">
             <CardContent className="p-4 flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium">You’ve been invited to join this group goal.</p>
+                <p className="text-sm font-medium">You've been invited to join this group goal.</p>
                 <p className="text-xs text-muted-foreground">Accept to participate and add your own activities.</p>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => { setInviteStatus('accepted'); toast.success('Invitation accepted') }}>Accept</Button>
-                <Button size="sm" variant="outline" onClick={() => { setInviteStatus('declined'); toast.success('Invitation declined') }}>Decline</Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleInvitationResponse('declined')}
+                  disabled={actionLoading}
+                  className="border-red-300 text-red-700 hover:bg-red-50"
+                >
+                  {actionLoading ? (
+                    <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Decline'
+                  )}
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={() => handleInvitationResponse('accepted')}
+                  disabled={actionLoading}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {actionLoading ? (
+                    <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Accept'
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>

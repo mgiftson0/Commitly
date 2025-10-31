@@ -35,6 +35,28 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized to update this activity' }, { status: 403 })
     }
 
+    // Check if all members have accepted or declined the group goal
+    const { data: goal } = await supabase
+      .from('goals')
+      .select('is_group_goal')
+      .eq('id', activity.goal_id)
+      .single()
+
+    if (goal?.is_group_goal) {
+      const { data: pendingMembers } = await supabase
+        .from('group_goal_members')
+        .select('id')
+        .eq('goal_id', activity.goal_id)
+        .eq('status', 'pending')
+
+      if (pendingMembers && pendingMembers.length > 0) {
+        return NextResponse.json({ 
+          error: 'Cannot update activities until all members have accepted or declined the group goal',
+          pending: true
+        }, { status: 409 })
+      }
+    }
+
     // Update activity completion for this user
     const { error: updateError } = await supabase
       .from('goal_activity_completions')

@@ -16,7 +16,8 @@ import {
   Clock, 
   MessageSquare,
   Target,
-  TrendingUp
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { 
@@ -48,6 +49,7 @@ export function GroupActivityProgress({
   const [notes, setNotes] = useState('')
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
   const [canEdit, setCanEdit] = useState(false)
+  const [pendingMembersWarning, setPendingMembersWarning] = useState(false)
 
   useEffect(() => {
     loadActivityProgress()
@@ -97,7 +99,14 @@ export function GroupActivityProgress({
         const errorMessage = result.error && typeof result.error === 'object' && 'message' in result.error 
           ? (result.error as any).message 
           : 'Failed to complete activity'
-        toast.error(errorMessage)
+        
+        // Check if it's a pending members error
+        if ((result.error as any)?.pending) {
+          setPendingMembersWarning(true)
+          toast.error('Cannot update: Waiting for all members to accept or decline the group goal')
+        } else {
+          toast.error(errorMessage)
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to complete activity')
@@ -157,6 +166,19 @@ export function GroupActivityProgress({
 
   return (
     <Card className="border-l-4 border-l-blue-500">
+      {pendingMembersWarning && (
+        <div className="bg-yellow-50 dark:bg-yellow-950/30 border-b-2 border-yellow-200 dark:border-yellow-800 p-3 rounded-t-lg">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-yellow-900 dark:text-yellow-50">Pending Member Responses</p>
+              <p className="text-xs text-yellow-700 dark:text-yellow-200 mt-1">
+                Waiting for all members to accept or decline this group goal before activities can be updated.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">

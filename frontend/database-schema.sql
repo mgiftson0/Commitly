@@ -41,6 +41,7 @@ ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES aut
 ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS visibility TEXT DEFAULT 'private';
 ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS goal_type TEXT DEFAULT 'single';
 ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS suspension_reason TEXT;
 ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
 
 -- Add seasonal goal fields

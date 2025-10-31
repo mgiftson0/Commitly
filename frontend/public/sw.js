@@ -3,11 +3,12 @@ self.addEventListener('push', function(event) {
     const data = event.data.json();
     const options = {
       body: data.body || data.message,
-      icon: '/icon-192x192.png',
-      badge: '/icon-192x192.png',
+      icon: '/Comittly-logo.png',
+      badge: '/Comittly-logo.png',
       tag: data.tag || 'commitly-notification',
       data: data.data || {},
-      actions: data.actions || []
+      actions: data.actions || [],
+      image: '/Comittly-logo.png' // Add image for rich notifications
     };
 
     event.waitUntil(

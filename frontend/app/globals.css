@@ -212,9 +212,10 @@
     --muted: 210 40% 98%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    /* Accent - Complementary colors */
-    --accent: 142 76% 36%;
-    --accent-foreground: 355.7 100% 97.3%;
+    /* Accent - Hover color for components (light) */
+    /* #66E1F3 converted to HSL: 191 92% 69% */
+    --accent: 191 92% 69%;
+    --accent-foreground: 210 40% 10%;
 
     /* Status colors */
     --destructive: 0 84.2% 60.2%;
@@ -274,9 +275,10 @@
     --muted: 215 27.9% 16.9%;
     --muted-foreground: 217.9 10.6% 64.9%;
 
-    /* Accent - Emerald */
-    --accent: 142 76% 36%;
-    --accent-foreground: 355.7 100% 97.3%;
+    /* Accent - Hover color for components (dark) */
+    /* #66E1F9 converted to HSL: 191 92% 69% */
+    --accent: 191 92% 69%;
+    --accent-foreground: 222.2 84% 4.9%;
 
     /* Status colors */
     --destructive: 0 62.8% 30.6%;

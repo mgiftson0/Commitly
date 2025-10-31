@@ -274,6 +274,62 @@ export async function declineGroupGoalInvitation(invitationId: string) {
 
     if (memberError) throw memberError
 
+    // Reassign activities that were assigned to this user
+    const { data: activitiesAssignedToUser } = await supabase
+      .from('goal_activities')
+      .select('id, assigned_members')
+      .eq('goal_id', invitation.goal_id)
+      .eq('assigned_to', user.id)
+
+    if (activitiesAssignedToUser && activitiesAssignedToUser.length > 0) {
+      // Get other accepted members to reassign to
+      const { data: acceptedMembers } = await supabase
+        .from('group_goal_members')
+        .select('user_id')
+        .eq('goal_id', invitation.goal_id)
+        .eq('status', 'accepted')
+        .neq('user_id', user.id)
+
+      // Reassign activities: either to all accepted members or unassign
+      for (const activity of activitiesAssignedToUser) {
+        const { error: updateError } = await supabase
+          .from('goal_activities')
+          .update({
+            assigned_to: null,
+            assigned_to_all: acceptedMembers && acceptedMembers.length > 0 // Assign to all remaining members
+          })
+          .eq('id', activity.id)
+
+        if (updateError) {
+          console.error('Error reassigning activity:', updateError)
+        }
+      }
+    }
+
+    // Also handle activities in assigned_members array
+    const { data: multiAssignedActivities } = await supabase
+      .from('goal_activities')
+      .select('id, assigned_members')
+      .eq('goal_id', invitation.goal_id)
+
+    if (multiAssignedActivities) {
+      for (const activity of multiAssignedActivities) {
+        const assigned = activity.assigned_members || []
+        if (assigned.includes(user.id)) {
+          // Remove this user from the assigned members
+          const updated = assigned.filter((id: string) => id !== user.id)
+          const { error: updateError } = await supabase
+            .from('goal_activities')
+            .update({ assigned_members: updated.length > 0 ? updated : null })
+            .eq('id', activity.id)
+
+          if (updateError) {
+            console.error('Error updating activity assignments:', updateError)
+          }
+        }
+      }
+    }
+
     return { success: true }
   } catch (error) {
     console.error('Error declining invitation:', error)

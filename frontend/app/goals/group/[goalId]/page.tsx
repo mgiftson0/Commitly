@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { ArrowLeft, Users, Crown, Edit, Trash2, Target, Calendar } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ArrowLeft, Users, Crown, Edit, Trash2, Target, Calendar, CheckCircle2, Clock, AlertCircle, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { MainLayout } from '@/components/layout/main-layout'
 import { GroupGoalDetails } from '@/components/goals/group-goal-details'
@@ -22,6 +23,7 @@ export default function GroupGoalViewPage() {
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [currentUserId, setCurrentUserId] = useState('')
+  const [goalData, setGoalData] = useState<any>({})
 
   useEffect(() => {
     loadGoal()
@@ -50,6 +52,20 @@ export default function GroupGoalViewPage() {
       }
 
       setGoal(goalData)
+
+      // Load members
+      const { data: members, error: membersError } = await supabase
+        .from('group_goal_members')
+        .select(`
+          *,
+          profile:profiles(first_name, last_name, username, profile_picture_url)
+        `)
+        .eq('goal_id', goalId)
+        .order('created_at', { ascending: true })
+      
+      if (!membersError) {
+        setGoalData({ members: members || [] })
+      }
 
       // Check if user is admin
       const isOwner = goalData.user_id === user.id
@@ -126,78 +142,173 @@ export default function GroupGoalViewPage() {
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center gap-4 p-4 border-b bg-card/50 backdrop-blur-sm">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <Users className="h-5 w-5 text-purple-600" />
-              <h1 className="text-xl font-bold">Group Goal</h1>
-              {isSeasonalGoal && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                  Seasonal
-                </Badge>
-              )}
-              {isAdmin && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                  <Crown className="h-3 w-3 mr-1" />
-                  Admin
-                </Badge>
-              )}
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-2 border-purple-200 dark:border-purple-800 shadow-xl p-6 sm:p-8">
+          {/* Decorative Elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-purple-200/20 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-pink-200/10 to-transparent rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+          
+          <div className="relative z-10">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <span className="text-3xl sm:text-4xl">👥</span>
+                  <Badge className="bg-purple-600 hover:bg-purple-700 text-white border border-purple-400 text-xs sm:text-sm">
+                    <Users className="h-3 w-3 mr-1" />
+                    Group Goal
+                  </Badge>
+                  {isSeasonalGoal && (
+                    <Badge className="bg-amber-600 hover:bg-amber-700 text-white border border-amber-400 text-xs sm:text-sm">
+                      ⭐ Seasonal
+                    </Badge>
+                  )}
+                  {isAdmin && (
+                    <Badge className="bg-blue-600 hover:bg-blue-700 text-white border border-blue-400 text-xs sm:text-sm">
+                      <Crown className="h-3 w-3 mr-1" />
+                      Admin
+                    </Badge>
+                  )}
+                </div>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-purple-900 dark:text-purple-50 mb-2">
+                  {goal?.title}
+                </h1>
+                {goal?.description && (
+                  <p className="text-sm sm:text-base text-purple-700 dark:text-purple-200 line-clamp-2">
+                    {goal.description}
+                  </p>
+                )}
+              </div>
+              
+              <div className="flex flex-wrap gap-2 sm:flex-col sm:items-end">
+                {isAdmin && (
+                  <>
+                    <Link href={`/goals/group/${goalId}/edit`}>
+                      <Button variant="outline" size="sm" className="border-2">
+                        <Edit className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Edit</span>
+                      </Button>
+                    </Link>
+                    <Button variant="destructive" size="sm" onClick={handleDelete}>
+                      <Trash2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Delete</span>
+                    </Button>
+                  </>
+                )}
+                <Button variant="outline" size="sm" className="border-2" onClick={() => router.push('/goals')}>
+                  <ArrowLeft className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Back</span>
+                </Button>
+              </div>
             </div>
           </div>
-          {isAdmin && (
-            <div className="flex gap-2">
-              <Link href={`/goals/group/${goalId}/edit`}>
-                <Button variant="outline" size="sm">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-              </Link>
-              <Button variant="destructive" size="sm" onClick={handleDelete}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            </div>
-          )}
         </div>
 
-        <Card className="ring-1 ring-pink-200/50 bg-gradient-to-br from-pink-50/60 via-white to-pink-50/30">
-          <CardHeader>
-            <CardTitle className="text-2xl mb-2">{goal.title}</CardTitle>
-            {goal.description && (
-              <p className="text-muted-foreground mb-4">{goal.description}</p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{goal.goal_type}</Badge>
-              <Badge variant="outline">{goal.category?.replace('_', ' ') || 'Personal'}</Badge>
-              <Badge variant="outline" className="capitalize">{goal.status}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
+        {/* Status & Progress Card */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Main Goal Info */}
+          <Card className="relative overflow-hidden border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-white to-purple-50 dark:from-slate-900 dark:to-purple-950/20 shadow-xl">
+            <CardHeader className="relative z-10">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Target className="h-5 w-5 text-purple-600" />
+                Goal Progress
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 relative z-10">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Overall Progress</span>
-                  <span className="text-sm font-bold">{goal.progress || 0}%</span>
+                  <span className="text-2xl font-bold text-purple-600">{goal?.progress || 0}%</span>
                 </div>
                 <Progress 
-                  value={goal.progress || 0} 
-                  className="h-3 [&>div]:bg-gradient-to-r [&>div]:from-pink-500 [&>div]:to-purple-500" 
+                  value={goal?.progress || 0} 
+                  className="h-3 [&>div]:bg-gradient-to-r [&>div]:from-purple-500 [&>div]:to-pink-500" 
                 />
               </div>
               
-              {goal.target_date && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>Due: {new Date(goal.target_date).toLocaleDateString()}</span>
+              {goal?.target_date && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                  <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Target Date</p>
+                    <p className="text-sm font-semibold">{new Date(goal.target_date).toLocaleDateString()}</p>
+                  </div>
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-sm font-semibold capitalize text-green-700 dark:text-green-300">
+                    {goal?.status || 'Active'}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <p className="text-sm font-semibold capitalize text-indigo-700 dark:text-indigo-300">
+                    {goal?.goal_type || 'Multi'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
+          {/* Members Summary */}
+          <Card className="relative overflow-hidden border-2 border-purple-200 dark:border-purple-800 bg-gradient-to-br from-white to-purple-50 dark:from-slate-900 dark:to-purple-950/20 shadow-xl">
+            <CardHeader className="relative z-10">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Users className="h-5 w-5 text-purple-600" />
+                Team Members
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 relative z-10">
+              {goalData?.members && goalData.members.length > 0 ? (
+                <>
+                  <div className="space-y-2">
+                    {goalData.members.slice(0, 3).map((member: any) => {
+                      const profile = member.profile
+                      const memberName = profile 
+                        ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || 'Member'
+                        : 'Member'
+                      const statusColor = member.status === 'accepted' ? 'bg-green-100' : member.status === 'declined' ? 'bg-red-100' : 'bg-yellow-100'
+                      
+                      return (
+                        <div key={member.id} className="flex items-center justify-between p-2 rounded-lg bg-card/50 border border-slate-200 dark:border-slate-700">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={profile?.profile_picture_url} />
+                              <AvatarFallback className="text-xs">
+                                {memberName.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{memberName}</p>
+                            </div>
+                          </div>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${statusColor} ${member.status === 'accepted' ? 'border-green-300' : member.status === 'declined' ? 'border-red-300' : 'border-yellow-300'}`}
+                          >
+                            {member.role === 'owner' && <Crown className="h-3 w-3 mr-1" />}
+                            {member.status}
+                          </Badge>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {goalData.members.length > 3 && (
+                    <p className="text-xs text-muted-foreground text-center pt-2 border-t">
+                      +{goalData.members.length - 3} more members
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No members yet</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Details Section */}
         <GroupGoalDetails 
           goalId={goalId} 
           isAdmin={isAdmin} 

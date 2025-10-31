@@ -140,7 +140,7 @@ export default function CreateGoalPage() {
         console.log('Mutual IDs:', mutualIds)
 
         // If we have mutual followers, get their profiles
-        let partnersList = []
+        let partnersList: any[] = []
         if (mutualIds.length > 0) {
           const { data: profiles } = await supabase
             .from('profiles')
@@ -840,11 +840,19 @@ export default function CreateGoalPage() {
                             .map((partner) => (
                               <SelectItem key={partner.id} value={partner.id} className="text-xs">
                                 <div className="flex items-center gap-2">
-                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                                    <span className="text-[10px] font-semibold">
-                                      {partner.name.charAt(0)}
-                                    </span>
-                                  </div>
+                                  {partner.profile_picture_url ? (
+                                    <img
+                                      src={partner.profile_picture_url}
+                                      alt={partner.name}
+                                      className="h-6 w-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                      <span className="text-[10px] font-semibold">
+                                        {partner.name.charAt(0)}
+                                      </span>
+                                    </div>
+                                  )}
                                   <div className="text-xs font-medium text-slate-600 dark:text-slate-200">
                                     {partner.name}
                                   </div>
@@ -867,11 +875,19 @@ export default function CreateGoalPage() {
                                 className="flex items-center justify-between rounded-lg border border-white bg-white p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
                               >
                                 <div className="flex items-center gap-2">
-                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                                    <span className="text-[11px] font-semibold">
-                                      {member.name.charAt(0)}
-                                    </span>
-                                  </div>
+                                  {member.profile_picture_url ? (
+                                    <img
+                                      src={member.profile_picture_url}
+                                      alt={member.name}
+                                      className="h-6 w-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                      <span className="text-[11px] font-semibold">
+                                        {member.name.charAt(0)}
+                                      </span>
+                                    </div>
+                                  )}
                                   <div className="text-xs font-medium text-slate-700 dark:text-slate-200">
                                     {member.name}
                                   </div>
@@ -1409,11 +1425,19 @@ export default function CreateGoalPage() {
                                 .map((partner) => (
                                   <SelectItem key={partner.id} value={partner.id} className="text-xs">
                                     <div className="flex items-center gap-2">
-                                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                                        <span className="text-[10px] font-semibold">
-                                          {partner.name.charAt(0)}
-                                        </span>
-                                      </div>
+                                      {partner.profile_picture_url ? (
+                                        <img
+                                          src={partner.profile_picture_url}
+                                          alt={partner.name}
+                                          className="h-6 w-6 rounded-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                          <span className="text-[10px] font-semibold">
+                                            {partner.name.charAt(0)}
+                                          </span>
+                                        </div>
+                                      )}
                                       <div className="text-xs font-medium text-slate-600 dark:text-slate-200">
                                         {partner.name}
                                       </div>
@@ -1436,11 +1460,19 @@ export default function CreateGoalPage() {
                                     className="flex items-center justify-between rounded-lg border border-white bg-white p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
                                   >
                                     <div className="flex items-center gap-2">
-                                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                                        <span className="text-[11px] font-semibold">
-                                          {partner.name.charAt(0)}
-                                        </span>
-                                      </div>
+                                      {partner.profile_picture_url ? (
+                                        <img
+                                          src={partner.profile_picture_url}
+                                          alt={partner.name}
+                                          className="h-6 w-6 rounded-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                                          <span className="text-[11px] font-semibold">
+                                            {partner.name.charAt(0)}
+                                          </span>
+                                        </div>
+                                      )}
                                       <div className="text-xs font-medium text-slate-700 dark:text-slate-200">
                                         {partner.name}
                                       </div>
