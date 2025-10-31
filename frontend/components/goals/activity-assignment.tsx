@@ -445,12 +445,19 @@ export function ActivityAssignment({
             return (
               <SelectItem key={member.id} value={member.id}>
                 <div className="flex items-center gap-2">
-                  <Avatar className="h-4 w-4">
-                    <AvatarImage src={member.profile?.profile_picture_url} />
-                    <AvatarFallback className="text-xs">
-                      {memberName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
+                  {member.profile?.profile_picture_url ? (
+                    <img 
+                      src={member.profile.profile_picture_url} 
+                      alt={memberName}
+                      className="h-4 w-4 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <span className="text-[9px] font-semibold">
+                        {memberName.charAt(0)}
+                      </span>
+                    </div>
+                  )}
                   <span>{memberName}</span>
                 </div>
               </SelectItem>

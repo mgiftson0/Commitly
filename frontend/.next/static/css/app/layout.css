@@ -5391,6 +5391,10 @@ nextjs-portal {
   --tw-border-opacity: 1;
   border-color: rgb(253 224 71 / var(--tw-border-opacity, 1));
 }
+.hover\:border-\[\#66E1F9\]:hover {
+  --tw-border-opacity: 1;
+  border-color: rgb(102 225 249 / var(--tw-border-opacity, 1));
+}
 .hover\:bg-accent:hover {
   background-color: hsl(var(--accent));
 }
@@ -5516,6 +5520,9 @@ nextjs-portal {
 }
 .hover\:bg-yellow-400\/35:hover {
   background-color: rgb(250 204 21 / 0.35);
+}
+.hover\:bg-\[\#66E1F9\]\/20:hover {
+  background-color: rgb(102 225 249 / 0.2);
 }
 .hover\:from-blue-500:hover {
   --tw-gradient-from: #3b82f6 var(--tw-gradient-from-position);

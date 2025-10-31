@@ -144,7 +144,7 @@ export default function CreateGoalPage() {
         if (mutualIds.length > 0) {
           const { data: profiles } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, username')
+            .select('id, first_name, last_name, username, profile_picture_url')
             .in('id', mutualIds)
 
           partnersList = (profiles || []).map(profile => ({
@@ -159,7 +159,7 @@ export default function CreateGoalPage() {
         if (partnersList.length === 0 && followerIds.size > 0) {
           const { data: profiles } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, username')
+            .select('id, first_name, last_name, username, profile_picture_url')
             .in('id', Array.from(followerIds))
 
           partnersList = (profiles || []).map(profile => ({
@@ -773,7 +773,7 @@ export default function CreateGoalPage() {
                           className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-xs transition ${
                             goalNature === "personal"
                               ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/40"
+                              : "border-border hover:bg-[#66E1F9]/20 hover:border-[#66E1F9]"
                           }`}
                         >
                           <RadioGroupItem value="personal" id="personal" className="sr-only" />
@@ -791,7 +791,7 @@ export default function CreateGoalPage() {
                           className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-xs transition ${
                             goalNature === "group"
                               ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/40"
+                              : "border-border hover:bg-[#66E1F9]/20 hover:border-[#66E1F9]"
                           }`}
                         >
                           <RadioGroupItem value="group" id="group" className="sr-only" />
@@ -939,7 +939,7 @@ export default function CreateGoalPage() {
                     >
                       <div className="grid gap-2 sm:grid-cols-2">
                         <div
-                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
+                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-[#66E1F9]/20 hover:border-[#66E1F9] ${
                             goalType === "single-activity"
                               ? "border-primary bg-primary/5"
                               : "border-border"
@@ -964,7 +964,7 @@ export default function CreateGoalPage() {
                         </div>
 
                         <div
-                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${
+                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-[#66E1F9]/20 hover:border-[#66E1F9] ${
                             goalType === "multi-activity"
                               ? "border-primary bg-primary/5"
                               : "border-border"
@@ -1024,7 +1024,7 @@ export default function CreateGoalPage() {
                     >
                       <div className="grid gap-2 sm:grid-cols-2">
                         <div
-                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${scheduleType === "date" ? "border-primary bg-primary/5" : "border-border"}`}
+                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-[#66E1F9]/20 hover:border-[#66E1F9] ${scheduleType === "date" ? "border-primary bg-primary/5" : "border-border"}`}
                         >
                           <RadioGroupItem value="date" id="schedule-date" />
                           <div className="flex-1">
@@ -1041,7 +1041,7 @@ export default function CreateGoalPage() {
                           <Calendar className="h-3 w-3 text-muted-foreground" />
                         </div>
                         <div
-                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-accent/30 ${scheduleType === "recurring" ? "border-primary bg-primary/5" : "border-border"}`}
+                          className={`flex items-center space-x-2 p-2 rounded border transition-all cursor-pointer hover:bg-[#66E1F9]/20 hover:border-[#66E1F9] ${scheduleType === "recurring" ? "border-primary bg-primary/5" : "border-border"}`}
                         >
                           <RadioGroupItem
                             value="recurring"

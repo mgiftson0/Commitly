@@ -593,9 +593,17 @@ export default function CreateSeasonalGoalPage() {
                           {allGroupCandidates.filter((p) => p.id !== currentUser?.id).filter((p) => !groupMembers.includes(p.id)).map((partner) => (
                             <SelectItem key={partner.id} value={partner.id}>
                               <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                                  <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
-                                </div>
+                                {partner.profile_picture_url ? (
+                                  <img 
+                                    src={partner.profile_picture_url} 
+                                    alt={partner.name}
+                                    className="w-6 h-6 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
+                                  </div>
+                                )}
                                 <div>
                                   <div className="text-sm font-medium">{partner.name}</div>
                                   <div className="text-xs text-muted-foreground">@{partner.username}</div>
@@ -613,9 +621,17 @@ export default function CreateSeasonalGoalPage() {
                             return (
                               <div key={memberId} className="flex items-center justify-between p-2 rounded-md bg-background border">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                                    <span className="text-sm font-medium">{member.name.charAt(0)}</span>
-                                  </div>
+                                  {member.profile_picture_url ? (
+                                    <img 
+                                      src={member.profile_picture_url} 
+                                      alt={member.name}
+                                      className="w-8 h-8 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                                      <span className="text-sm font-medium">{member.name.charAt(0)}</span>
+                                    </div>
+                                  )}
                                   <div>
                                     <div className="text-sm font-medium">{member.name}</div>
                                     <div className="text-xs text-muted-foreground">@{member.username}</div>
@@ -740,9 +756,17 @@ export default function CreateSeasonalGoalPage() {
                             availablePartners.filter((p) => !selectedPartners.includes(p.id)).map((partner) => (
                               <SelectItem key={partner.id} value={partner.id}>
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                                    <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
-                                  </div>
+                                  {partner.profile_picture_url ? (
+                                    <img 
+                                      src={partner.profile_picture_url} 
+                                      alt={partner.name}
+                                      className="w-6 h-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                      <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
+                                    </div>
+                                  )}
                                   <div>
                                     <div className="text-sm font-medium">{partner.name}</div>
                                     <div className="text-xs text-muted-foreground">@{partner.username}</div>
@@ -762,9 +786,17 @@ export default function CreateSeasonalGoalPage() {
                             return (
                               <div key={partnerId} className="flex items-center justify-between p-2 rounded-md bg-background border">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                                    <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
-                                  </div>
+                                  {partner.profile_picture_url ? (
+                                    <img 
+                                      src={partner.profile_picture_url} 
+                                      alt={partner.name}
+                                      className="w-6 h-6 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                                      <span className="text-xs font-medium">{partner.name.charAt(0)}</span>
+                                    </div>
+                                  )}
                                   <div className="text-sm font-medium">{partner.name}</div>
                                 </div>
                                 <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedPartners(selectedPartners.filter((id) => id !== partnerId))}>
