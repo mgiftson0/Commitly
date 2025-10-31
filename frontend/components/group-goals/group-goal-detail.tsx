@@ -40,9 +40,13 @@ import {
   getGroupGoalDetails,
   deleteGroupGoal,
   isGroupGoalAdmin,
+  canUpdateGroupGoalProgress,
+  checkAllMembersResponded,
   type GroupGoalMember
 } from "@/lib/group-goals"
 import { supabase, authHelpers } from "@/lib/supabase-client"
+import { GoalStatusBadge, CompactGoalStatus } from "@/components/goals/goal-status-badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface GroupGoalDetailProps {
   goalId: string
@@ -59,6 +63,8 @@ export function GroupGoalDetail({ goalId, isAdmin = false, currentUserId }: Grou
   const [loading, setLoading] = useState(true)
   const [customMessage, setCustomMessage] = useState('')
   const [completions, setCompletions] = useState<any[]>([])
+  const [canUpdate, setCanUpdate] = useState(true)
+  const [updateBlockReason, setUpdateBlockReason] = useState<string>('')
 
   useEffect(() => {
     loadGoalData()
@@ -87,6 +93,11 @@ export function GroupGoalDetail({ goalId, isAdmin = false, currentUserId }: Grou
       if (progressResult.success && progressResult.data) {
         setProgress(progressResult.data)
       }
+
+      // Check if progress can be updated
+      const updateCheck = await canUpdateGroupGoalProgress(goalId)
+      setCanUpdate(updateCheck.canUpdate)
+      setUpdateBlockReason(updateCheck.reason || '')
     } catch (error) {
       console.error('Error loading goal data:', error)
     } finally {
@@ -206,8 +217,19 @@ export function GroupGoalDetail({ goalId, isAdmin = false, currentUserId }: Grou
 
   return (
     <div className="space-y-6">
+      {/* Progress Update Block Alert */}
+      {!canUpdate && (
+        <Alert variant="default" className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+          <AlertCircle className="h-4 w-4 text-yellow-600" />
+          <AlertTitle className="text-yellow-900 dark:text-yellow-100">Progress Updates Blocked</AlertTitle>
+          <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+            {updateBlockReason}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header */}
-      <Card>
+      <Card className="shadow-lg border-2 border-pink-100 dark:border-pink-900/30">
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">

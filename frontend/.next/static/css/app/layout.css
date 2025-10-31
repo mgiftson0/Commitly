@@ -1430,9 +1430,6 @@ video {
 .min-h-\[500px\] {
   min-height: 500px;
 }
-.min-h-\[600px\] {
-  min-height: 600px;
-}
 .min-h-\[80px\] {
   min-height: 80px;
 }
@@ -1441,6 +1438,9 @@ video {
 }
 .min-h-svh {
   min-height: 100svh;
+}
+.min-h-\[600px\] {
+  min-height: 600px;
 }
 .w-0 {
   width: 0px;
@@ -3811,10 +3811,6 @@ video {
   padding-left: 1rem;
   padding-right: 1rem;
 }
-.px-5 {
-  padding-left: 1.25rem;
-  padding-right: 1.25rem;
-}
 .px-6 {
   padding-left: 1.5rem;
   padding-right: 1.5rem;
@@ -3862,6 +3858,10 @@ video {
 .py-8 {
   padding-top: 2rem;
   padding-bottom: 2rem;
+}
+.px-5 {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
 }
 .pb-12 {
   padding-bottom: 3rem;
@@ -3932,14 +3932,14 @@ video {
 .pt-4 {
   padding-top: 1rem;
 }
-.pt-5 {
-  padding-top: 1.25rem;
-}
 .pt-6 {
   padding-top: 1.5rem;
 }
 .pt-8 {
   padding-top: 2rem;
+}
+.pt-5 {
+  padding-top: 1.25rem;
 }
 .text-left {
   text-align: left;
@@ -7740,10 +7740,6 @@ nextjs-portal {
 
   .sm\:mb-8 {
     margin-bottom: 2rem;
-  }
-
-  .sm\:ml-2 {
-    margin-left: 0.5rem;
   }
 
   .sm\:mr-2 {

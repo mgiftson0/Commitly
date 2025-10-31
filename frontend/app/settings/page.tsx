@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { useUserSettings } from "@/hooks/use-user-settings"
 import { useToast } from "@/hooks/use-toast"
+import { PushNotificationSettings } from "@/components/notifications/push-notification-settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -317,6 +318,9 @@ export default function SettingsPage() {
                       <Switch checked={tempSettings.pushNotifications} onCheckedChange={(checked) => handleInputChange("pushNotifications", checked)} />
                     </div>
                   </div>
+                </div>
+                <div className="mt-4">
+                  <PushNotificationSettings />
                 </div>
               </div>
             </TabsContent>

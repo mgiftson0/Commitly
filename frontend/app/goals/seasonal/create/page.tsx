@@ -284,54 +284,95 @@ export default function CreateSeasonalGoalPage() {
         }
       }
 
-      // Create notification
-      try {
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: user.id,
-            title: 'Seasonal Goal Created! 🌟',
-            message: `You created a new seasonal goal: ${title}`,
-            type: 'seasonal_goal_created',
-            read: false,
-            data: { goal_id: newGoal.id, duration_type: durationType }
-          })
-      } catch (notifError) {
-        console.error('Failed to create notification:', notifError)
+      // Send accountability partner requests for personal goals
+      if (goalNature === "personal" && selectedPartners.length > 0) {
+        try {
+          const partnerRequests = selectedPartners.map(partnerId => ({
+            requester_id: user.id,
+            partner_id: partnerId,
+            goal_id: newGoal.id,
+            status: 'pending',
+            message: `Help me with my seasonal goal: ${title}`
+          }))
+
+          const { error: partnerError } = await supabase
+            .from('accountability_partners')
+            .insert(partnerRequests)
+
+          if (partnerError) {
+            console.error('Error creating partner requests:', partnerError)
+          } else {
+            // Create notifications for each partner
+            const partnerNotifications = selectedPartners.map(partnerId => ({
+              user_id: partnerId,
+              type: 'accountability_request',
+              title: 'New Accountability Partner Request 🤝',
+              message: `${currentUser?.name || 'Someone'} invited you as an accountability partner for: "${title}"`,
+              data: {
+                goal_id: newGoal.id,
+                requester_id: user.id,
+                goal_title: title,
+                goal_type: 'seasonal'
+              },
+              read: false
+            }))
+
+            await supabase.from('notifications').insert(partnerNotifications)
+            toast.success(`Accountability partner requests sent to ${selectedPartners.length} partner${selectedPartners.length > 1 ? 's' : ''}`)
+          }
+        } catch (partnerError) {
+          console.error('Failed to send partner requests:', partnerError)
+        }
       }
 
-      // Check for seasonal goal achievements
-      try {
-        const { data: seasonalGoalCount } = await supabase
-          .from('goals')
-          .select('id', { count: 'exact' })
-          .eq('user_id', user.id)
-          .eq('is_seasonal', true)
-        
-        if (seasonalGoalCount === 1) {
-          await supabase
-            .from('user_achievements')
-            .insert({
-              user_id: user.id,
-              achievement_type: 'first_seasonal_goal',
-              unlocked_at: new Date().toISOString(),
-              data: { goal_id: newGoal.id, duration_type: durationType }
-            })
-        }
-        
-        if (durationType === 'annual' && seasonalGoalCount >= 3) {
-          await supabase
-            .from('user_achievements')
-            .insert({
-              user_id: user.id,
-              achievement_type: 'annual_planner',
-              unlocked_at: new Date().toISOString(),
-              data: { seasonal_goal_count: seasonalGoalCount }
-            })
-        }
-      } catch (achievementError) {
-        console.error('Failed to check seasonal achievements:', achievementError)
+      // Create notification
+    try {
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          title: 'Seasonal Goal Created! 🌟',
+          message: `You created a new seasonal goal: ${title}`,
+          type: 'seasonal_goal_created',
+          read: false,
+          data: { goal_id: newGoal.id, duration_type: durationType }
+        })
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError)
+    }
+
+    // Check for seasonal goal achievements
+    try {
+      const { data: seasonalGoalCount } = await supabase
+        .from('goals')
+        .select('id', { count: 'exact' })
+        .eq('user_id', user.id)
+        .eq('is_seasonal', true)
+      
+      if (seasonalGoalCount === 1) {
+        await supabase
+          .from('user_achievements')
+          .insert({
+            user_id: user.id,
+            achievement_type: 'first_seasonal_goal',
+            unlocked_at: new Date().toISOString(),
+            data: { goal_id: newGoal.id, duration_type: durationType }
+          })
       }
+      
+      if (durationType === 'annual' && seasonalGoalCount >= 3) {
+        await supabase
+          .from('user_achievements')
+          .insert({
+            user_id: user.id,
+            achievement_type: 'annual_planner',
+            unlocked_at: new Date().toISOString(),
+            data: { seasonal_goal_count: seasonalGoalCount }
+          })
+      }
+    } catch (achievementError) {
+      console.error('Failed to check seasonal achievements:', achievementError)
+    }
 
       toast.success('Seasonal goal created successfully!')
       window.dispatchEvent(new CustomEvent('goalCreated', { detail: { goalId: newGoal.id } }))

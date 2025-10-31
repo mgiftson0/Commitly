@@ -306,6 +306,7 @@ export default function NotificationsPage() {
   }
 
   const handleGroupGoalInvitation = async (notificationId: string, goalId: string, action: 'accepted' | 'declined') => {
+    setActionLoading(notificationId)
     try {
       const response = await fetch('/api/group-goals/invitations', {
         method: 'PATCH',
@@ -325,9 +326,16 @@ export default function NotificationsPage() {
       await deleteNotification(notificationId)
       toast.success(`Group goal invitation ${action}!`)
       
+      // Refresh to show updated goals
+      if (action === 'accepted') {
+        setTimeout(() => window.location.href = '/goals', 1000)
+      }
+      
     } catch (error: any) {
       console.error('Error handling group goal invitation:', error)
       toast.error(error.message || 'Failed to process invitation')
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -672,26 +680,38 @@ export default function NotificationsPage() {
                         )}
 
                         {/* Group goal invitation actions */}
-                        {notification.data?.invitation_type === 'group_goal' && notification.data?.goal_id && (
+                        {((notification.type === 'goal_created' && notification.data?.invitation_type === 'group_goal') || notification.data?.invitation_type === 'group_goal') && notification.data?.goal_id && notification.data?.inviter_id && (
                           <div className="space-y-2 mt-2">
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs font-medium text-primary">
                               Group Goal Invitation
                             </div>
                             <div className="flex gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleGroupGoalInvitation(notification.id, notification.data.goal_id, 'declined')}
-                                className="text-xs h-6 px-2 border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleGroupGoalInvitation(notification.id, notification.data.goal_id, 'declined')
+                                }}
+                                className="flex-1 text-xs h-7 border-destructive/30 hover:bg-destructive/10 hover:border-destructive/50"
+                                disabled={actionLoading === notification.id}
                               >
-                                Decline
+                                {actionLoading === notification.id ? (
+                                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                                ) : 'Decline'}
                               </Button>
                               <Button
                                 size="sm"
-                                onClick={() => handleGroupGoalInvitation(notification.id, notification.data.goal_id, 'accepted')}
-                                className="text-xs h-6 px-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleGroupGoalInvitation(notification.id, notification.data.goal_id, 'accepted')
+                                }}
+                                className="flex-1 text-xs h-7 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                                disabled={actionLoading === notification.id}
                               >
-                                Accept
+                                {actionLoading === notification.id ? (
+                                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                                ) : 'Accept'}
                               </Button>
                             </div>
                           </div>

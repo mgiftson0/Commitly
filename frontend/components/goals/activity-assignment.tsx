@@ -52,6 +52,7 @@ export function ActivityAssignment({
   groupMembers, 
   assignment, 
   assignedToAll = false,
+  assignedMembers = [],
   isOwner = false,
   onAssignmentChange,
   onUpdate
@@ -409,6 +410,12 @@ export function ActivityAssignment({
               <span>All Members ({acceptedMembers.length})</span>
             </div>
           </SelectItem>
+          <SelectItem value="multiple">
+            <div className="flex items-center gap-2">
+              <Users className="h-3 w-3" />
+              <span>Select Multiple</span>
+            </div>
+          </SelectItem>
           {acceptedMembers.map((member) => {
             const memberName = member.profile 
               ? `${member.profile.first_name || ''} ${member.profile.last_name || ''}`.trim() || member.profile.username || member.name
@@ -430,6 +437,41 @@ export function ActivityAssignment({
           })}
         </SelectContent>
       </Select>
+
+      {/* Multiple Member Selection in Creation Flow */}
+      {getCurrentValue() === 'multiple' && (
+        <div className="space-y-2 mt-2 p-2 border rounded-lg bg-muted/20">
+          <p className="text-xs font-medium">Select Members ({currentAssignedMembers.length} selected):</p>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {acceptedMembers.map((member) => {
+              const memberName = member.profile 
+                ? `${member.profile.first_name || ''} ${member.profile.last_name || ''}`.trim() || member.profile.username || member.name
+                : member.name
+              
+              return (
+                <div key={member.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`member-create-${member.id}`}
+                    checked={currentAssignedMembers.includes(member.id)}
+                    onCheckedChange={(checked) => handleMemberToggle(member.id, checked as boolean)}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-4 w-4">
+                      <AvatarImage src={member.profile?.profile_picture_url} />
+                      <AvatarFallback className="text-xs">
+                        {memberName.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <label htmlFor={`member-create-${member.id}`} className="text-xs cursor-pointer">
+                      {memberName}
+                    </label>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

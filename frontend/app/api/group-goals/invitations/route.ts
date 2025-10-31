@@ -43,13 +43,22 @@ export async function PATCH(request: NextRequest) {
       console.error('Invitation update error:', inviteError)
     }
 
-    // If accepted, add user as group member
+    // Update group goal members table based on action
     if (action === 'accepted') {
       await supabase.from('group_goal_members').upsert({
         goal_id: goalId,
         user_id: user.id,
         role: 'member',
         status: 'accepted',
+        can_edit: false
+      })
+    } else if (action === 'declined') {
+      // Add as declined member - this will trigger activity reassignment
+      await supabase.from('group_goal_members').upsert({
+        goal_id: goalId,
+        user_id: user.id,
+        role: 'member',
+        status: 'declined',
         can_edit: false
       })
     }

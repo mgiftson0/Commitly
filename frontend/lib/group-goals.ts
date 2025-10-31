@@ -191,7 +191,17 @@ export async function acceptGroupGoalInvitation(invitationId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { error } = await supabase
+    // Get invitation details
+    const { data: invitation } = await supabase
+      .from('group_goal_invitations')
+      .select('goal_id, invitee_id')
+      .eq('id', invitationId)
+      .single()
+
+    if (!invitation) throw new Error('Invitation not found')
+
+    // Update invitation status
+    const { error: inviteError } = await supabase
       .from('group_goal_invitations')
       .update({
         status: 'accepted',
@@ -200,7 +210,21 @@ export async function acceptGroupGoalInvitation(invitationId: string) {
       .eq('id', invitationId)
       .eq('invitee_id', user.id)
 
-    if (error) throw error
+    if (inviteError) throw inviteError
+
+    // Add user as accepted member
+    const { error: memberError } = await supabase
+      .from('group_goal_members')
+      .upsert({
+        goal_id: invitation.goal_id,
+        user_id: user.id,
+        role: 'member',
+        status: 'accepted',
+        can_edit: false
+      })
+
+    if (memberError) throw memberError
+
     return { success: true }
   } catch (error) {
     console.error('Error accepting invitation:', error)
@@ -216,7 +240,17 @@ export async function declineGroupGoalInvitation(invitationId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { error } = await supabase
+    // Get invitation details
+    const { data: invitation } = await supabase
+      .from('group_goal_invitations')
+      .select('goal_id, invitee_id')
+      .eq('id', invitationId)
+      .single()
+
+    if (!invitation) throw new Error('Invitation not found')
+
+    // Update invitation status
+    const { error: inviteError } = await supabase
       .from('group_goal_invitations')
       .update({
         status: 'declined',
@@ -225,7 +259,21 @@ export async function declineGroupGoalInvitation(invitationId: string) {
       .eq('id', invitationId)
       .eq('invitee_id', user.id)
 
-    if (error) throw error
+    if (inviteError) throw inviteError
+
+    // Add user as declined member (triggers activity reassignment)
+    const { error: memberError } = await supabase
+      .from('group_goal_members')
+      .upsert({
+        goal_id: invitation.goal_id,
+        user_id: user.id,
+        role: 'member',
+        status: 'declined',
+        can_edit: false
+      })
+
+    if (memberError) throw memberError
+
     return { success: true }
   } catch (error) {
     console.error('Error declining invitation:', error)
@@ -786,6 +834,72 @@ export async function getGroupGoalProgress(goalId: string) {
   } catch (error) {
     console.error('Error fetching progress:', error)
     return { error, success: false }
+  }
+}
+
+/**
+ * Check if all members have responded to group goal invitation
+ */
+export async function checkAllMembersResponded(goalId: string): Promise<boolean> {
+  try {
+    const { data: pendingMembers } = await supabase
+      .from('group_goal_members')
+      .select('id')
+      .eq('goal_id', goalId)
+      .eq('status', 'pending')
+
+    return !pendingMembers || pendingMembers.length === 0
+  } catch (error) {
+    console.error('Error checking member responses:', error)
+    return false
+  }
+}
+
+/**
+ * Check if user can update group goal progress
+ * Only allowed if all members have accepted or declined
+ */
+export async function canUpdateGroupGoalProgress(goalId: string): Promise<{ canUpdate: boolean; reason?: string }> {
+  try {
+    const { data: goal } = await supabase
+      .from('goals')
+      .select('is_group_goal')
+      .eq('id', goalId)
+      .single()
+
+    // Not a group goal, can update freely
+    if (!goal?.is_group_goal) {
+      return { canUpdate: true }
+    }
+
+    // Check if all members have responded
+    const allResponded = await checkAllMembersResponded(goalId)
+    
+    if (!allResponded) {
+      return { 
+        canUpdate: false, 
+        reason: 'Waiting for all members to accept or decline the invitation' 
+      }
+    }
+
+    // Check if at least one member accepted
+    const { data: acceptedMembers } = await supabase
+      .from('group_goal_members')
+      .select('id')
+      .eq('goal_id', goalId)
+      .eq('status', 'accepted')
+
+    if (!acceptedMembers || acceptedMembers.length === 0) {
+      return {
+        canUpdate: false,
+        reason: 'No members have accepted this group goal'
+      }
+    }
+
+    return { canUpdate: true }
+  } catch (error) {
+    console.error('Error checking update permission:', error)
+    return { canUpdate: false, reason: 'Error checking permissions' }
   }
 }
 

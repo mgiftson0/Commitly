@@ -614,6 +614,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/send-notification/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/send-notification">> = Specific
+  const handler = {} as typeof import("../../app/api/send-notification/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/send-push/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/send-push">> = Specific
+  const handler = {} as typeof import("../../app/api/send-push/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/session/log/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/session/log">> = Specific

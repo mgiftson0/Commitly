@@ -16,6 +16,7 @@ import {
   Clock
 } from "lucide-react"
 import { useState } from "react"
+import { CompactGoalStatus } from "@/components/goals/goal-status-badge"
 
 interface GroupGoalMember {
   id: string
@@ -40,6 +41,12 @@ interface GroupGoalCardProps {
     category?: string
     created_at: string
     target_date?: string
+    end_date?: string
+    is_completed?: boolean
+    is_paused?: boolean
+    is_suspended?: boolean
+    completed_at?: string
+    resumed_at?: string
   }
   members: GroupGoalMember[]
   isAdmin?: boolean
@@ -131,29 +138,15 @@ export function GroupGoalCard({ goal, members, isAdmin, messageCount = 0, onView
         </div>
 
         {/* Status and Category */}
-        <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between text-xs flex-wrap gap-2">
           <div className="flex items-center gap-2 flex-wrap">
             {goal.category && (
               <Badge variant="outline" className="text-xs">
                 {goal.category}
               </Badge>
             )}
-            <Badge 
-              variant={goal.status === 'active' ? 'default' : 'secondary'}
-              className={goal.status === 'active' ? 'bg-green-600' : ''}
-            >
-              {goal.status}
-            </Badge>
           </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span className="truncate">
-              {goal.target_date 
-                ? `Due ${new Date(goal.target_date).toLocaleDateString()}` 
-                : `Created ${new Date(goal.created_at).toLocaleDateString()}`
-              }
-            </span>
-          </div>
+          <CompactGoalStatus goal={goal} />
         </div>
 
         {/* Encouragement Section */}
