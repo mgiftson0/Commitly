@@ -1430,6 +1430,9 @@ video {
 .min-h-\[500px\] {
   min-height: 500px;
 }
+.min-h-\[600px\] {
+  min-height: 600px;
+}
 .min-h-\[80px\] {
   min-height: 80px;
 }
@@ -1438,9 +1441,6 @@ video {
 }
 .min-h-svh {
   min-height: 100svh;
-}
-.min-h-\[600px\] {
-  min-height: 600px;
 }
 .w-0 {
   width: 0px;
@@ -2300,9 +2300,6 @@ video {
 }
 .border-muted-foreground\/20 {
   border-color: hsl(var(--muted-foreground) / 0.2);
-}
-.border-muted\/20 {
-  border-color: hsl(var(--muted) / 0.2);
 }
 .border-muted\/30 {
   border-color: hsl(var(--muted) / 0.3);
@@ -3811,6 +3808,10 @@ video {
   padding-left: 1rem;
   padding-right: 1rem;
 }
+.px-5 {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
 .px-6 {
   padding-left: 1.5rem;
   padding-right: 1.5rem;
@@ -3858,10 +3859,6 @@ video {
 .py-8 {
   padding-top: 2rem;
   padding-bottom: 2rem;
-}
-.px-5 {
-  padding-left: 1.25rem;
-  padding-right: 1.25rem;
 }
 .pb-12 {
   padding-bottom: 3rem;
@@ -3932,14 +3929,14 @@ video {
 .pt-4 {
   padding-top: 1rem;
 }
+.pt-5 {
+  padding-top: 1.25rem;
+}
 .pt-6 {
   padding-top: 1.5rem;
 }
 .pt-8 {
   padding-top: 2rem;
-}
-.pt-5 {
-  padding-top: 1.25rem;
 }
 .text-left {
   text-align: left;
@@ -5606,9 +5603,6 @@ nextjs-portal {
 .hover\:text-primary-foreground:hover {
   color: hsl(var(--primary-foreground));
 }
-.hover\:text-primary\/80:hover {
-  color: hsl(var(--primary) / 0.8);
-}
 .hover\:text-white:hover {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
@@ -5732,6 +5726,9 @@ nextjs-portal {
 .focus\:border-transparent:focus {
   border-color: transparent;
 }
+.focus\:border-primary:focus {
+  border-color: hsl(var(--primary));
+}
 .focus\:bg-accent:focus {
   background-color: hsl(var(--accent));
 }
@@ -5754,6 +5751,11 @@ nextjs-portal {
   --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
   box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
 }
+.focus\:ring-1:focus {
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+}
 .focus\:ring-blue-500:focus {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(59 130 246 / var(--tw-ring-opacity, 1));
@@ -5770,6 +5772,9 @@ nextjs-portal {
 }
 .focus\:ring-ring:focus {
   --tw-ring-color: hsl(var(--ring));
+}
+.focus\:ring-primary\/20:focus {
+  --tw-ring-color: hsl(var(--primary) / 0.2);
 }
 .focus\:ring-offset-2:focus {
   --tw-ring-offset-width: 2px;
@@ -6726,6 +6731,10 @@ nextjs-portal {
 .dark\:bg-amber-900\/30:is(.dark *) {
   background-color: rgb(120 53 15 / 0.3);
 }
+.dark\:bg-amber-950:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(69 26 3 / var(--tw-bg-opacity, 1));
+}
 .dark\:bg-amber-950\/20:is(.dark *) {
   background-color: rgb(69 26 3 / 0.2);
 }
@@ -6770,8 +6779,9 @@ nextjs-portal {
   --tw-bg-opacity: 1;
   background-color: rgb(14 116 144 / var(--tw-bg-opacity, 1));
 }
-.dark\:bg-cyan-950\/30:is(.dark *) {
-  background-color: rgb(8 51 68 / 0.3);
+.dark\:bg-cyan-950:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(8 51 68 / var(--tw-bg-opacity, 1));
 }
 .dark\:bg-destructive\/60:is(.dark *) {
   background-color: hsl(var(--destructive) / 0.6);
@@ -6852,9 +6862,6 @@ nextjs-portal {
 .dark\:bg-pink-950\/20:is(.dark *) {
   background-color: rgb(80 7 36 / 0.2);
 }
-.dark\:bg-pink-950\/30:is(.dark *) {
-  background-color: rgb(80 7 36 / 0.3);
-}
 .dark\:bg-purple-700:is(.dark *) {
   --tw-bg-opacity: 1;
   background-color: rgb(126 34 206 / var(--tw-bg-opacity, 1));
@@ -6886,6 +6893,10 @@ nextjs-portal {
 .dark\:bg-red-900\/50:is(.dark *) {
   background-color: rgb(127 29 29 / 0.5);
 }
+.dark\:bg-red-950:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(69 10 10 / var(--tw-bg-opacity, 1));
+}
 .dark\:bg-red-950\/20:is(.dark *) {
   background-color: rgb(69 10 10 / 0.2);
 }
@@ -6898,8 +6909,9 @@ nextjs-portal {
 .dark\:bg-sky-900\/30:is(.dark *) {
   background-color: rgb(12 74 110 / 0.3);
 }
-.dark\:bg-sky-950\/30:is(.dark *) {
-  background-color: rgb(8 47 73 / 0.3);
+.dark\:bg-sky-950:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(8 47 73 / var(--tw-bg-opacity, 1));
 }
 .dark\:bg-slate-700:is(.dark *) {
   --tw-bg-opacity: 1;
@@ -6931,15 +6943,17 @@ nextjs-portal {
 .dark\:bg-teal-900\/50:is(.dark *) {
   background-color: rgb(19 78 74 / 0.5);
 }
-.dark\:bg-teal-950\/30:is(.dark *) {
-  background-color: rgb(4 47 46 / 0.3);
+.dark\:bg-teal-950:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(4 47 46 / var(--tw-bg-opacity, 1));
 }
 .dark\:bg-violet-700:is(.dark *) {
   --tw-bg-opacity: 1;
   background-color: rgb(109 40 217 / var(--tw-bg-opacity, 1));
 }
-.dark\:bg-violet-950\/30:is(.dark *) {
-  background-color: rgb(46 16 101 / 0.3);
+.dark\:bg-violet-950:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(46 16 101 / var(--tw-bg-opacity, 1));
 }
 .dark\:bg-white:is(.dark *) {
   --tw-bg-opacity: 1;

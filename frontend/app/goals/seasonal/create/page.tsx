@@ -643,12 +643,12 @@ export default function CreateSeasonalGoalPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="health-fitness">Health & Fitness</SelectItem>
-                        <SelectItem value="learning">Learning & Education</SelectItem>
-                        <SelectItem value="career">Career & Business</SelectItem>
-                        <SelectItem value="creative">Creative Arts</SelectItem>
-                        <SelectItem value="personal">Personal Growth</SelectItem>
-                        <SelectItem value="relationships">Relationships</SelectItem>
-                        <SelectItem value="finance">Finance</SelectItem>
+                        <SelectItem value="career">Career</SelectItem>
+                        <SelectItem value="learning">Learning</SelectItem>
+                        <SelectItem value="personal">Personal</SelectItem>
+                        <SelectItem value="wellness">Wellness</SelectItem>
+                        <SelectItem value="creative">Creative</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -788,29 +788,20 @@ export default function CreateSeasonalGoalPage() {
                       <SelectContent>
                         <SelectItem value="private">
                           <div className="flex items-center gap-2">
-                            <Lock className="h-4 w-4" />
-                            <div>
-                              <div className="font-medium">Private</div>
-                              <div className="text-xs text-muted-foreground">Only you can see</div>
-                            </div>
+                            <Lock className="h-3 w-3" />
+                            <span className="text-xs">Private</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="restricted">
                           <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <div>
-                              <div className="font-medium">Partners Only</div>
-                              <div className="text-xs text-muted-foreground">Only your partners can see</div>
-                            </div>
+                            <Users className="h-3 w-3" />
+                            <span className="text-xs">Partners</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="public">
                           <div className="flex items-center gap-2">
-                            <Globe className="h-4 w-4" />
-                            <div>
-                              <div className="font-medium">Public</div>
-                              <div className="text-xs text-muted-foreground">Everyone can see</div>
-                            </div>
+                            <Globe className="h-3 w-3" />
+                            <span className="text-xs">Public</span>
                           </div>
                         </SelectItem>
                       </SelectContent>

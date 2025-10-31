@@ -142,6 +142,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [displayLimit, setDisplayLimit] = useState(10)
   const router = useRouter()
 
   useEffect(() => {
@@ -441,20 +442,25 @@ export default function NotificationsPage() {
 
   const getNotificationBackground = (type: string) => {
     switch (type) {
-      case 'goal_completed': return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
-      case 'streak_milestone': return 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'
-      case 'achievement_unlocked': return 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
-      case 'partner_request': return 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800'
-      case 'goal_partner_request': return 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800'
-      case 'encouragement_received': return 'bg-pink-50 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800'
-      case 'streak_at_risk': return 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
-      case 'goal_reminder': return 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-200 dark:border-cyan-800'
-      case 'weekly_report': return 'bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800'
-      case 'feature_announcement': return 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800'
-      case 'goal_shared': return 'bg-sky-50 dark:bg-sky-950/30 border-sky-200 dark:border-sky-800'
-      case 'goal_created': return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
-      default: return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+      case 'goal_completed': return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
+      case 'streak_milestone': return 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950'
+      case 'achievement_unlocked': return 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950'
+      case 'partner_request': return 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950'
+      case 'goal_partner_request': return 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950'
+      case 'encouragement_received': return 'border-pink-200 bg-pink-50 dark:border-pink-800 dark:bg-pink-950'
+      case 'streak_at_risk': return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950'
+      case 'goal_reminder': return 'border-cyan-200 bg-cyan-50 dark:border-cyan-800 dark:bg-cyan-950'
+      case 'weekly_report': return 'border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-950'
+      case 'feature_announcement': return 'border-violet-200 bg-violet-50 dark:border-violet-800 dark:bg-violet-950'
+      case 'goal_shared': return 'border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950'
+      case 'goal_created': return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
+      default: return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
     }
+  }
+
+  const isUserNotification = (notification: Notification) => {
+    const userTypes = ['partner_request', 'goal_partner_request', 'encouragement_received', 'goal_shared']
+    return userTypes.includes(notification.type) || notification.data?.sender_name || notification.data?.requester_name
   }
 
   const timeAgo = (date: string) => {
@@ -520,7 +526,7 @@ export default function NotificationsPage() {
 
         {/* Notifications List */}
         <div className="space-y-2">
-          {notifications.map((notification) => {
+          {notifications.slice(0, displayLimit).map((notification) => {
             const Icon = getNotificationIcon(notification.type)
             const color = getNotificationColor(notification.type)
             const backgroundStyle = getNotificationBackground(notification.type)
@@ -540,10 +546,18 @@ export default function NotificationsPage() {
                   
                   <div className="relative p-2.5 flex-1 flex flex-col justify-between">
                     <div className="flex items-start gap-2">
-                      {/* Icon */}
-                      <div className={`relative flex-shrink-0 p-1.5 rounded-lg bg-gradient-to-br ${color.replace('text-', 'from-').replace('-600', '-100')} ${color.replace('text-', 'to-').replace('-600', '-50')} border border-current/20`}>
-                        <Icon className={`h-3.5 w-3.5 ${color} relative z-10`} />
-                      </div>
+                      {/* Logo or Profile Picture */}
+                      {isUserNotification(notification) ? (
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                          <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-primary/10">
+                            {(notification.data?.sender_name || notification.data?.requester_name)?.[0] || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <div className="relative flex-shrink-0 p-2 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                          <img src="/Comittly-logo.png" alt="Commitly" className="h-5 w-5 relative z-10" />
+                        </div>
+                      )}
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
@@ -749,17 +763,18 @@ export default function NotificationsPage() {
           }
         `}</style>
 
-        {/* Footer with link to landing page */}
-        <div className="text-center py-4 border-t border-muted/20">
-          <p className="text-xs text-muted-foreground mb-2">
-            Want to learn more about Commitly?
-          </p>
-          <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80" asChild>
-            <Link href="/">
-              Visit Landing Page →
-            </Link>
-          </Button>
-        </div>
+        {/* View More Button */}
+        {notifications.length > displayLimit && (
+          <div className="text-center py-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setDisplayLimit(prev => Math.min(prev + 10, notifications.length))}
+              className="bg-background/50 backdrop-blur-sm border-primary/30 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200"
+            >
+              View More ({notifications.length - displayLimit} remaining)
+            </Button>
+          </div>
+        )}
       </div>
     </MainLayout>
   )

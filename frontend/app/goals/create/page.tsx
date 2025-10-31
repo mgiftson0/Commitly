@@ -113,7 +113,8 @@ export default function CreateGoalPage() {
         setCurrentUser({
           id: user.id,
           name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'You' : 'You',
-          username: profile?.username || 'you'
+          username: profile?.username || 'you',
+          profile_picture_url: profile?.profile_picture_url
         })
 
         // Get follows relationships - simple queries first
@@ -149,7 +150,8 @@ export default function CreateGoalPage() {
           partnersList = (profiles || []).map(profile => ({
             id: profile.id,
             name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Partner',
-            username: profile.username || 'partner'
+            username: profile.username || 'partner',
+            profile_picture_url: profile.profile_picture_url
           }))
         }
         
@@ -163,7 +165,8 @@ export default function CreateGoalPage() {
           partnersList = (profiles || []).map(profile => ({
             id: profile.id,
             name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Follower',
-            username: profile.username || 'follower'
+            username: profile.username || 'follower',
+            profile_picture_url: profile.profile_picture_url
           }))
         }
 
@@ -769,8 +772,8 @@ export default function CreateGoalPage() {
                           htmlFor="personal"
                           className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-xs transition ${
                             goalNature === "personal"
-                              ? "border-blue-300 bg-blue-50 shadow-[0_10px_18px_rgba(37,99,235,0.12)]"
-                              : "border-slate-200 bg-white hover:border-blue-200"
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/40"
                           }`}
                         >
                           <RadioGroupItem value="personal" id="personal" className="sr-only" />
@@ -787,8 +790,8 @@ export default function CreateGoalPage() {
                           htmlFor="group"
                           className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-xs transition ${
                             goalNature === "group"
-                              ? "border-blue-300 bg-blue-50 shadow-[0_10px_18px_rgba(37,99,235,0.12)]"
-                              : "border-slate-200 bg-white hover:border-blue-200"
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/40"
                           }`}
                         >
                           <RadioGroupItem value="group" id="group" className="sr-only" />
@@ -909,19 +912,11 @@ export default function CreateGoalPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="health-fitness" className="text-xs">Health & Fitness</SelectItem>
-                        <SelectItem value="career" className="text-xs">Career & Business</SelectItem>
-                        <SelectItem value="learning" className="text-xs">Learning & Education</SelectItem>
-                        <SelectItem value="personal" className="text-xs">Personal Growth</SelectItem>
-                        <SelectItem value="relationships" className="text-xs">Relationships</SelectItem>
-                        <SelectItem value="finance" className="text-xs">Finance</SelectItem>
-                        <SelectItem value="travel" className="text-xs">Travel</SelectItem>
-                        <SelectItem value="creative" className="text-xs">Creative Arts</SelectItem>
-                        <SelectItem value="technology" className="text-xs">Technology</SelectItem>
-                        <SelectItem value="sports" className="text-xs">Sports</SelectItem>
-                        <SelectItem value="music" className="text-xs">Music</SelectItem>
-                        <SelectItem value="reading" className="text-xs">Reading</SelectItem>
+                        <SelectItem value="career" className="text-xs">Career</SelectItem>
+                        <SelectItem value="learning" className="text-xs">Learning</SelectItem>
+                        <SelectItem value="personal" className="text-xs">Personal</SelectItem>
                         <SelectItem value="wellness" className="text-xs">Wellness</SelectItem>
-                        <SelectItem value="productivity" className="text-xs">Productivity</SelectItem>
+                        <SelectItem value="creative" className="text-xs">Creative</SelectItem>
                         <SelectItem value="other" className="text-xs">Other</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1070,7 +1065,7 @@ export default function CreateGoalPage() {
 
                     {scheduleType === "date" ? (
                       <div className="space-y-2">
-                        <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="grid gap-2 grid-cols-2">
                           <div className="space-y-1">
                             <Label htmlFor="specificStartDate" className="text-xs font-medium">
                               Start Date <span className="text-destructive">*</span>
@@ -1125,7 +1120,7 @@ export default function CreateGoalPage() {
                             Max 2 months from today
                           </p>
                         </div>
-                        <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="grid gap-2 grid-cols-3">
                           <div className="space-y-1">
                             <Label className="text-xs font-medium">
                               Pattern <span className="text-destructive">*</span>
@@ -1494,46 +1489,26 @@ export default function CreateGoalPage() {
                       <SelectContent>
                         <SelectItem value="private">
                           <div className="flex items-center gap-2">
-                            <Lock className="h-4 w-4" />
-                            <div>
-                              <div className="font-medium">Private</div>
-                              <div className="text-xs text-muted-foreground">
-                                Only you can see
-                              </div>
-                            </div>
+                            <Lock className="h-3 w-3" />
+                            <span className="text-xs">Private</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="followers">
                           <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <div>
-                              <div className="font-medium">Followers</div>
-                              <div className="text-xs text-muted-foreground">
-                                Your followers can see
-                              </div>
-                            </div>
+                            <Users className="h-3 w-3" />
+                            <span className="text-xs">Followers</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="accountability_partners">
                           <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <div>
-                              <div className="font-medium">Accountability Partners</div>
-                              <div className="text-xs text-muted-foreground">
-                                Only your partners can see
-                              </div>
-                            </div>
+                            <Users className="h-3 w-3" />
+                            <span className="text-xs">Partners</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="public">
                           <div className="flex items-center gap-2">
-                            <Globe className="h-4 w-4" />
-                            <div>
-                              <div className="font-medium">Public</div>
-                              <div className="text-xs text-muted-foreground">
-                                Everyone can see
-                              </div>
-                            </div>
+                            <Globe className="h-3 w-3" />
+                            <span className="text-xs">Public</span>
                           </div>
                         </SelectItem>
                       </SelectContent>
@@ -1647,22 +1622,24 @@ export default function CreateGoalPage() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border border-slate-200 bg-white p-0 dark:border-slate-800 dark:bg-slate-900">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Goal Creation Progress</CardTitle>
-                <CardDescription className="text-xs">Complete each step to publish with confidence.</CardDescription>
+            <Card className="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  Progress
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="space-y-2 text-xs">
+                <div className="grid grid-cols-2 gap-2 text-xs">
                   {[
-                    { label: "Goal Title", complete: Boolean(title) },
-                    { label: "Goal Type", complete: Boolean(goalType) },
+                    { label: "Title", complete: Boolean(title) },
+                    { label: "Type", complete: Boolean(goalType) },
                     { label: "Category", complete: Boolean(category) },
                     { label: "Visibility", complete: Boolean(visibility) },
                   ].map((step) => (
-                    <div key={step.label} className={`flex items-center gap-2 ${step.complete ? "text-emerald-600" : "text-slate-400"}`}>
-                      {step.complete ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border-2 border-current" />}
-                      <span>{step.label}</span>
+                    <div key={step.label} className={`flex items-center gap-1.5 ${step.complete ? "text-primary" : "text-muted-foreground"}`}>
+                      {step.complete ? <CheckCircle2 className="h-3 w-3" /> : <div className="h-3 w-3 rounded-full border border-current" />}
+                      <span className="text-xs">{step.label}</span>
                     </div>
                   ))}
                 </div>
@@ -1678,7 +1655,7 @@ export default function CreateGoalPage() {
                             ? 25
                             : 0
                   }
-                  className="h-2"
+                  className="h-1.5"
                 />
               </CardContent>
             </Card>

@@ -976,10 +976,10 @@ export default function GoalsPage() {
               {/* Filters */}
               <div className="flex gap-2 flex-wrap overflow-x-auto">
                 <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-28 sm:w-32 text-xs sm:text-sm">
+                  <SelectTrigger className="w-28 sm:w-32 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg shadow-sm hover:border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-lg border border-slate-200 shadow-lg">
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="single">Single</SelectItem>
                     <SelectItem value="recurring">Recurring</SelectItem>
@@ -988,10 +988,10 @@ export default function GoalsPage() {
                 </Select>
 
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-28 sm:w-32 text-xs sm:text-sm">
+                  <SelectTrigger className="w-28 sm:w-32 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg shadow-sm hover:border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-lg border border-slate-200 shadow-lg">
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
@@ -1000,11 +1000,11 @@ export default function GoalsPage() {
                 </Select>
 
                 <Select value={filterCategory} onValueChange={setFilterCategory}>
-                  <SelectTrigger className="w-32 sm:w-40 text-xs sm:text-sm">
-                    <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <SelectTrigger className="w-32 sm:w-40 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg shadow-sm hover:border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all">
+                    <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-primary" />
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-lg border border-slate-200 shadow-lg">
                     <SelectItem value="all">All Categories</SelectItem>
                     {categories.map(cat => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
@@ -1013,10 +1013,10 @@ export default function GoalsPage() {
                 </Select>
 
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-28 sm:w-32 text-xs sm:text-sm">
+                  <SelectTrigger className="w-28 sm:w-32 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg shadow-sm hover:border-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all">
                     <SelectValue placeholder="Sort" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-lg border border-slate-200 shadow-lg">
                     <SelectItem value="recent">Recent</SelectItem>
                     <SelectItem value="progress">Progress</SelectItem>
                     <SelectItem value="streak">Streak</SelectItem>

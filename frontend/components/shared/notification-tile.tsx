@@ -32,14 +32,14 @@ export function NotificationTile({
   const router = useRouter()
 
   const getNotificationColor = (type: string) => {
-    if (type === 'goal_completed') return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
-    if (type === 'streak_milestone') return 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800'
-    if (type === 'partner_joined') return 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800'
-    if (type === 'goal_created') return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
-    if (type === 'activity_completed') return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
-    if (type === 'encouragement_received') return 'bg-pink-50 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800'
-    if (type === 'achievement_unlocked') return 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
-    return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+    if (type === 'goal_completed') return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
+    if (type === 'streak_milestone') return 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950'
+    if (type === 'partner_joined') return 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950'
+    if (type === 'goal_created') return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
+    if (type === 'activity_completed') return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
+    if (type === 'encouragement_received') return 'border-pink-200 bg-pink-50 dark:border-pink-800 dark:bg-pink-950'
+    if (type === 'achievement_unlocked') return 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950'
+    return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
   }
 
   return (
@@ -50,8 +50,8 @@ export function NotificationTile({
         else if (goalId) router.push(`/goals/${goalId}`)
       }}
     >
-      <div className="p-1.5 rounded bg-white dark:bg-slate-800/50 mt-0.5 flex-shrink-0">
-        <Icon className={`h-3.5 w-3.5 ${color}`} />
+      <div className="p-2 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 mt-0.5 flex-shrink-0">
+        <img src="/Comittly-logo.png" alt="Commitly" className="h-5 w-5" />
       </div>
       <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
         <div>

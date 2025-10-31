@@ -287,12 +287,19 @@ export function ActivityAssignment({
                     return (
                       <SelectItem key={member.id} value={member.id}>
                         <div className="flex items-center gap-2">
-                          <Avatar className="h-4 w-4">
-                            <AvatarImage src={member.profile?.profile_picture_url} />
-                            <AvatarFallback className="text-xs">
-                              {memberName.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
+                          {member.profile?.profile_picture_url ? (
+                            <img 
+                              src={member.profile.profile_picture_url} 
+                              alt={memberName}
+                              className="h-3 w-3 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-3 w-3 items-center justify-center rounded-full bg-primary/10 text-primary">
+                              <span className="text-[8px] font-semibold">
+                                {memberName.charAt(0)}
+                              </span>
+                            </div>
+                          )}
                           <span>{memberName}</span>
                         </div>
                       </SelectItem>
@@ -322,12 +329,19 @@ export function ActivityAssignment({
                             onCheckedChange={(checked) => handleMemberToggle(member.id, checked as boolean)}
                           />
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-4 w-4">
-                              <AvatarImage src={member.profile?.profile_picture_url} />
-                              <AvatarFallback className="text-xs">
-                                {memberName.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
+                            {member.profile?.profile_picture_url ? (
+                              <img 
+                                src={member.profile.profile_picture_url} 
+                                alt={memberName}
+                                className="h-3 w-3 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-3 w-3 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <span className="text-[8px] font-semibold">
+                                  {memberName.charAt(0)}
+                                </span>
+                              </div>
+                            )}
                             <label htmlFor={`member-${member.id}`} className="text-xs cursor-pointer">
                               {memberName}
                             </label>
@@ -358,12 +372,19 @@ export function ActivityAssignment({
                   return (
                     <div key={member.user_id} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={profile?.profile_picture_url} />
-                          <AvatarFallback className="text-xs">
-                            {memberName.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
+                        {profile?.profile_picture_url ? (
+                          <img 
+                            src={profile.profile_picture_url} 
+                            alt={memberName}
+                            className="h-4 w-4 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <span className="text-[9px] font-semibold">
+                              {memberName.charAt(0)}
+                            </span>
+                          </div>
+                        )}
                         <span>{memberName}</span>
                       </div>
                       {isCompleted ? (
@@ -456,12 +477,19 @@ export function ActivityAssignment({
                     onCheckedChange={(checked) => handleMemberToggle(member.id, checked as boolean)}
                   />
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-4 w-4">
-                      <AvatarImage src={member.profile?.profile_picture_url} />
-                      <AvatarFallback className="text-xs">
-                        {memberName.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
+                    {member.profile?.profile_picture_url ? (
+                      <img 
+                        src={member.profile.profile_picture_url} 
+                        alt={memberName}
+                        className="h-3 w-3 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-3 w-3 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <span className="text-[8px] font-semibold">
+                          {memberName.charAt(0)}
+                        </span>
+                      </div>
+                    )}
                     <label htmlFor={`member-create-${member.id}`} className="text-xs cursor-pointer">
                       {memberName}
                     </label>
