@@ -1,8 +1,9 @@
 {
-  "/api/group-goals/route": "app/api/group-goals/route.js",
-  "/goals/page": "app/goals/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/notifications/page": "app/notifications/page.js",
+  "/goals/page": "app/goals/page.js",
   "/goals/[id]/page": "app/goals/[id]/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/goals/create/page": "app/goals/create/page.js"
+  "/goals/create/page": "app/goals/create/page.js",
+  "/goals/[id]/update/page": "app/goals/[id]/update/page.js"
 }
